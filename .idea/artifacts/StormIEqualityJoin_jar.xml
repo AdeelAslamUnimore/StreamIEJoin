@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="StormIEqualityJoin:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/StormIEqualityJoin_jar</output-path>
+    <root id="archive" name="StormIEqualityJoin.jar">
+      <element id="module-output" name="StormIEqualityJoin" />
+    </root>
+  </artifact>
+</component>
