@@ -37,8 +37,8 @@ public class TestCorrectness {
 
 
 //
-    new TestCorrectness().insertEast(20000);
-   new TestCorrectness().insertWest(20000);
+//    new TestCorrectness().insertEast(20000);
+//   new TestCorrectness().insertWest(20000);
         new TestCorrectness().test();
 
 
@@ -115,6 +115,7 @@ public class TestCorrectness {
             East east= new East();
             east.setId_East(rs.getInt("id"));
             east.setDuration(rs.getInt("duration"));
+
             east.setRevenue(rs.getInt("revenue"));
             eastList.add(east);
         }
@@ -240,6 +241,7 @@ public class TestCorrectness {
                 permutationArrayListCost.add(new Permutation(nodeRightCost.getKeys().get(i).getKey(), nodeRightCost.getKeys().get(i).getValues()));
             }
             nodeRightCost = nodeRightCost.getNext();
+          //  System.out.println("Here");
         }
         Node nodeLeftDuration1 = bPlusTreeEastDuration.leftMostNode();
         Node nodeLeftRevenue1 = bPlusTreeEastRevenue.leftMostNode();
