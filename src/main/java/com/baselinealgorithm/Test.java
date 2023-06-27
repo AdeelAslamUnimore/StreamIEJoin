@@ -1,8 +1,8 @@
 package com.baselinealgorithm;
 
 import com.baselinealgorithm.chainbplusandcss.CSSTree;
-import com.baselinealgorithm.chainbplusandcss.CSSTree1;
 
+import java.util.HashSet;
 import java.util.Random;
 
 public class Test {
@@ -75,7 +75,7 @@ public class Test {
         cssTree.insert(9000, 30);
         cssTree.insert(4500, 40);
         cssTree.insert(4600, 60);
-        cssTree.insert(14, 1);
+        cssTree.insert(14, 100);
 //        cssTree.insert(11, 2);
 //        cssTree.insert(8, 3);
 //        cssTree.insert(8,4);
@@ -100,11 +100,11 @@ public class Test {
 //        cssTree.insert(100, 18);
 
         Random random1 = new Random();
-        for (int i = 1; i < 2000; i++) {
-
-            cssTree.insert(i, i);
+        for (int i = 1; i < 20; i++) {
+            cssTree.insert(random.nextInt(100), i);
         }
-        cssTree.searchSmaller(40);
+       HashSet<Integer> hashSet=cssTree.searchSmaller(60);
+        System.out.println(hashSet);
     }
 
 }

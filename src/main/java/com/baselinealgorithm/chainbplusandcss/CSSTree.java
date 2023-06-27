@@ -1,9 +1,6 @@
 package com.baselinealgorithm.chainbplusandcss;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 
 /**
  * Made by Adeel Aslam and Giovanni Simonini
@@ -462,45 +459,47 @@ public class CSSTree {
 
     }
 
-    public void searchGreater(int key) {
+    public HashSet<Integer> searchGreater(int key) {
         //BitMatrixSpareseBit costHS;
-
+        HashSet<Integer> hashSetForAllIdsGreaterThanAKey= new HashSet<>();
         Node node = nodeWithBlockPointer(this.rootBlock, key);
-
-        Node relevenetNode = findRelevantNode(node, key);
-        if (relevenetNode == null) {
-            node = node;
-        } else {
-
-            node = relevenetNode;
+        Node referentNode = findRelevantNode(node, key);
+        node = (referentNode == null) ? node : referentNode;
+        for(Key keys:node.getKeys()){
+            if(keys.getKey()>key){
+                hashSetForAllIdsGreaterThanAKey.addAll(keys.getValue());
+            }
         }
-
         while (node != null) {
-            System.out.println(node.getKeys() + ".....");
             node = node.getNext();
-            // System.out.println(node.getPrev().getKeys());
-
+            if(node!=null){
+                for(Key keys:node.getKeys()){
+                    hashSetForAllIdsGreaterThanAKey.addAll(keys.getValue());
+                }
+            }
         }
+        return hashSetForAllIdsGreaterThanAKey;
     }
 
-    public void searchSmaller(int key) {
-        //BitMatrixSpareseBit costHS;
-
+    public HashSet<Integer> searchSmaller(int key) {
+        HashSet<Integer> smallestHashSetIds= new HashSet<>();
         Node node = nodeWithBlockPointer(this.rootBlock, key);
-
-        Node relevenetNode = findRelevantNode(node, key);
-        if (relevenetNode == null) {
-            node = node;
-        } else {
-
-            node = relevenetNode;
+        Node referentNode = findRelevantNode(node, key);
+        node = (referentNode == null) ? node : referentNode;
+        for(Key keys:node.getKeys()){
+            if(keys.getKey()<key){
+                smallestHashSetIds.addAll(keys.getValue());
+            }
         }
         while (node != null) {
-            System.out.println(node.getKeys() + ".....");
             node = node.getPrev();
-            // System.out.println(node.getPrev().getKeys());
-
+            if(node!=null){
+                for(Key keys:node.getKeys()){
+                        smallestHashSetIds.addAll(keys.getValue());
+                }
+            }
         }
+        return smallestHashSetIds;
     }
     /**
      * This method searches for the nearest key in a list of nodes based on a given key.

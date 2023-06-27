@@ -1,29 +1,28 @@
-package com.baselinealgorithm.chainindexbplustree;
+package com.baselinealgorithm.chainbplusandcss;
 
-import com.stormiequality.BTree.BPlusTree;
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.OutputFieldsDeclarer;
 import org.apache.storm.topology.base.BaseRichBolt;
 import org.apache.storm.tuple.Tuple;
-
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Map;
 
-public class RightStreamPredicateBplusTree extends BaseRichBolt {
-    private LinkedList<BPlusTree> revenue=null;
-    private LinkedList<BPlusTree> cost=null;
+public class RightStreamPredicateCSSTree extends BaseRichBolt {
+    private LinkedList<CSSTree> revenue=null;
+    private LinkedList<CSSTree> cost=null;
     private int treeRemovalThreshold;
     private int treeArchiveThresholdRevenue;
     private int treeArchiveThresholdCost;
     private int treeArchiveUserDefined;
     private OutputCollector outputCollector;
-    private int bPlusTreeInitilization;
-    public RightStreamPredicateBplusTree(int treeRemovalThreshold, int treeArchiveUserDefined, int bPlusTreeInitilization){
+    private int cssTreeInitilization;
+    private HashSet<Integer> hashSet;
+    public RightStreamPredicateCSSTree(int treeRemovalThreshold, int treeArchiveUserDefined, int cssTreeInitilization){
         this.treeRemovalThreshold=treeRemovalThreshold;
         this.treeArchiveUserDefined=treeArchiveUserDefined;
-        this.bPlusTreeInitilization=bPlusTreeInitilization;
+        this.cssTreeInitilization = cssTreeInitilization;
     }
     @Override
     public void prepare(Map<String, Object> map, TopologyContext topologyContext, OutputCollector outputCollector) {
@@ -36,22 +35,22 @@ public class RightStreamPredicateBplusTree extends BaseRichBolt {
     public void execute(Tuple tuple) {
         if(tuple.getSourceStreamId().equals("Left")){
             if(!revenue.isEmpty()){
-                BPlusTree currentBplusTreeDuration= revenue.getLast();
-                currentBplusTreeDuration.insert(tuple.getIntegerByField("Tuple"), tuple.getIntegerByField("ID"));
+                CSSTree currentCSSTreeDuration= revenue.getLast();
+                currentCSSTreeDuration.insert(tuple.getIntegerByField("Tuple"), tuple.getIntegerByField("ID"));
                 treeArchiveThresholdRevenue++;
                 if(treeArchiveThresholdRevenue==treeArchiveUserDefined){
                     treeArchiveThresholdRevenue=0;
-                    BPlusTree bPlusTree= new BPlusTree(bPlusTreeInitilization);
-                    revenue.add(bPlusTree);
+                    CSSTree cssTree= new CSSTree(cssTreeInitilization);
+                    revenue.add(cssTree);
                 }
             }else
             {
-                BPlusTree bPlusTree= new BPlusTree(bPlusTreeInitilization);
-                bPlusTree.insert(tuple.getIntegerByField("Tuple"), tuple.getIntegerByField("ID"));
-                revenue.add(bPlusTree);
+                CSSTree cssTree= new CSSTree(cssTreeInitilization);
+                cssTree.insert(tuple.getIntegerByField("Tuple"), tuple.getIntegerByField("ID"));
+                revenue.add(cssTree);
             }
-            for (BPlusTree bPlusTree : cost) {
-               HashSet<Integer> hashSetGreater=bPlusTree.greaterThenSpecificValueHashSet(tuple.getIntegerByField("Tuple"));
+            for (CSSTree cssTree : cost) {
+                HashSet<Integer> hashSetGreater=cssTree.searchGreater(tuple.getIntegerByField("Tuple"));
                 //EmitLogic tomorrow
             }
 
@@ -59,22 +58,22 @@ public class RightStreamPredicateBplusTree extends BaseRichBolt {
         }
         if(tuple.getSourceStreamId().equals("Right")){
             if(!cost.isEmpty()){
-                BPlusTree currentBplusTreeDuration= cost.getLast();
-                currentBplusTreeDuration.insert(tuple.getIntegerByField("Tuple"), tuple.getIntegerByField("ID"));
+                CSSTree currentCSSTreeDuration= cost.getLast();
+                currentCSSTreeDuration.insert(tuple.getIntegerByField("Tuple"), tuple.getIntegerByField("ID"));
                 treeArchiveThresholdCost++;
                 if(treeArchiveThresholdCost==treeArchiveUserDefined){
                     treeArchiveThresholdCost=0;
-                    BPlusTree bPlusTree= new BPlusTree(bPlusTreeInitilization);
-                    cost.add(bPlusTree);
+                    CSSTree cssTree= new CSSTree(cssTreeInitilization);
+                    cost.add(cssTree);
                 }
             }else
             {
-                BPlusTree bPlusTree= new BPlusTree(bPlusTreeInitilization);
-                bPlusTree.insert(tuple.getIntegerByField("Tuple"), tuple.getIntegerByField("ID"));
-                cost.add(bPlusTree);
+                CSSTree cssTree= new CSSTree(cssTreeInitilization);
+                cssTree.insert(tuple.getIntegerByField("Tuple"), tuple.getIntegerByField("ID"));
+                cost.add(cssTree);
             }
-            for (BPlusTree bPlusTree : revenue) {
-                HashSet<Integer> hashSetsLess=bPlusTree.lessThenSpecificValueHash(tuple.getIntegerByField("Tuple"));
+            for (CSSTree cssTree : revenue) {
+               HashSet<Integer> lessThanValues= cssTree.searchSmaller(tuple.getIntegerByField("Tuple"));
                 //EmitLogic tomorrow
             }
 
@@ -83,6 +82,7 @@ public class RightStreamPredicateBplusTree extends BaseRichBolt {
             cost.remove(cost.getFirst());
             revenue.remove(revenue.getFirst());
         }
+
     }
 
     @Override
