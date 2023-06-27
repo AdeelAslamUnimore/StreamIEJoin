@@ -519,5 +519,66 @@ return bitSet;
         }
         return bitSet;
     }
+    public HashSet greaterThenSpecificValueHashSet(int key){
+        HashSet hashSet=new HashSet();
+        if (this.root == null) {
+            //throw new IllegalArgumentException("Root is NULL");
+            return  null;
+        }
+        //System.out.println(this.root.getKeys().size());
+        Node currNode = this.root;
+        while (currNode.getChildren().size() != 0) {
+            currNode = currNode.getChildren().get(binarySearchWithinInternalNode(key, currNode.getKeys()));
+        }
+        for(Key item: currNode.getKeys()){
+            if(item.getKey()<=key){
+                continue;
+            }
+            for(int i: item.getValues()) {
+                hashSet.add(i);
+            }
+        }
+        currNode= currNode.getNext();
+        while(currNode!=null){
+            for(Key item: currNode.getKeys()){
+                for(int i: item.getValues()) {
+                    hashSet.add(i);
+                }
+            }
 
+            currNode= currNode.getNext();
+        }
+        return hashSet;
+    }
+    public HashSet lessThenSpecificValueHash(int key ){
+        HashSet hashSet=new HashSet();
+        if (this.root == null) {
+            //throw new IllegalArgumentException("Root is NULL");
+            return  null;
+        }
+        //System.out.println(this.root.getKeys().size());
+        Node currNode = this.root;
+        while (currNode.getChildren().size() != 0) {
+            currNode = currNode.getChildren().get(binarySearchWithinInternalNode(key, currNode.getKeys()));
+        }
+        for(Key item: currNode.getKeys()){
+            if(item.getKey()>=key){
+                break;
+            }
+            for(int i: item.getValues()) {
+                hashSet.add(i);
+            }
+        }
+        currNode= currNode.getPrev();
+        while(currNode!=null){
+            for(Key item: currNode.getKeys()){
+                for(int i: item.getValues()) {
+                    hashSet.add(i);
+                }
+            }
+
+            currNode= currNode.getPrev();
+        }
+        return hashSet;
+    }
     }
