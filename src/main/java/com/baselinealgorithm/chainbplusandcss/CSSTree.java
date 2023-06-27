@@ -22,11 +22,11 @@ public class CSSTree {
             this.rootBlock = new Block();
             this.listBlocks.add(this.rootBlock);
             Key key1 = new Key(); //Key object
-            // List<Integer> values = new ArrayList<Integer>(); // Set of Values
+            List<Integer> values = new ArrayList<Integer>(); // Set of Values
             key1.setKey(key);
             key1.setId(value);
-            // values.add(value);
-            // key1.setValue(values);
+            values.add(value);
+            key1.setValue(values);
             List<Key> keys = new ArrayList<Key>();
             keys.add(key1);
             Node node = new Node();
@@ -85,7 +85,7 @@ public class CSSTree {
         loop1:
         for (int i = 0; i < keys.size(); i++) {
             if (key == keys.get(i).getKey()) {
-                // keys.get(i).getValue().add(value);
+                keys.get(i).getValue().add(value);
                 //  System.out.println(key);
                 localEqualityCheck = true;
                 break loop1;
@@ -94,11 +94,11 @@ public class CSSTree {
         }
         if (localEqualityCheck == false) {
             Key key1 = new Key();
-            // List<Integer> values = new ArrayList<Integer>();
+            List<Integer> values = new ArrayList<Integer>();
             key1.setKey(key);
             key1.setId(value);
-//            values.add(value);
-//            key1.setValue(values);
+            values.add(value);
+            key1.setValue(values);
             keys.add(key1);
             node.setKeys(keys);
             //collectionSort
@@ -292,12 +292,26 @@ public class CSSTree {
     }
 
     public void searchGreater(int key) {
+        //BitMatrixSpareseBit costHS;
+
         Node node = updatedRelevantNodeWithBlockNumber(this.rootBlock, key);
-        System.out.println(node);
-        //  int i=0;
+
+        Node relevenetNode =findRelevenetNode(node,  key);
+        if(relevenetNode==null) {
+            node= node;
+        }else{
+
+            node=relevenetNode;
+        }
+
+        System.out.println(",,,," + node);
+
+        //  node=node.getPrev();
         while (node.getNext() != null) {
+            System.out.println(node.getNext().getKeys() + ".....");
             node = node.getNext();
-            System.out.println(".." + node.getKeys() + "....");
+            // System.out.println(node.getPrev().getKeys());
+
         }
     }
 

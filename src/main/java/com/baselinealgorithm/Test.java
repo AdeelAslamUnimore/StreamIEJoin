@@ -101,12 +101,12 @@ public class Test {
 //        cssTree.insert(100, 18);
 
         Random random1= new Random();
-        for(int i=1;i<100000;i++){
+        for(int i=1;i<1000;i++){
 
 
-        cssTree.insert(random.nextInt(5000),i);
+        cssTree.insert(random.nextInt(20000),i);
     }
-     cssTree.searchSmaller(500);
+     cssTree.searchSmaller(2000);
     }
 
 
