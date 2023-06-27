@@ -6,7 +6,7 @@ import java.util.Random;
 
 public class Test {
     public static void main(String[] args) {
-        CSSTree cssTree = new CSSTree(4);
+        CSSTree cssTree = new CSSTree(10);
         Random random = new Random();
         //    for(int i=0;i<20;i++){
         cssTree.insert(14, 1);
@@ -106,8 +106,7 @@ public class Test {
 
         cssTree.insert(random.nextInt(20000),i);
     }
-     cssTree.searchSmaller(2000);
+     cssTree.searchSmaller( 2000);
     }
-
 
 }
