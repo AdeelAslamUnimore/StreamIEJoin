@@ -296,8 +296,6 @@ public class TestCorrectness {
 
     public ArrayList<Offset> offsetComputation(Node nodeForLeft, BPlusTree rightBTree, OutputCollector collector, int taskId, String streamID, String nodeName, Tuple
             tuple) {
-
-
         offsetComputationExtremeCase( nodeForLeft,  rightBTree);
              //   System.exit(-1);
 

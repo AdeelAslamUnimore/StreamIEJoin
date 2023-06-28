@@ -575,23 +575,182 @@ public class CSSTree {
 
     public Node findRelevantNode(Node node, int key) {
         Node node1 = node;
-        label1:
+       boolean check=false;
         while (node1 != null) {
             // binary search
-            for (Key key1 : node1.getKeys()) {
-                if (key1.getKey() <= key) {
-                    //  node = node;
-                    break label1;
+            label2: for (int i=0;i< node1.getKeys().size();i++) {
+                if(node1.getKeys().get(0).getKey()>key){
+                    break ;
                 }
+                else{
+//                    System.out.println("Here"+key);
+                    check=true;
+                    break ;
+                }
+//                if (node1.getKeys().get(i).getKey() <= key) {
+//                    //  node = node;
+//                    check=true;
+//                    break ;
+//                }
             }
-
+            if(check){
+                break;
+            }
             node1 = node1.getPrev();
 
         }
         return node1;
     }
 
+    public void insertBulkUpdate(int key, List<Integer> value) {
+        /**
+         * This condition checks if the root block is null and initializes it along with other necessary components.
+         *
+         * Initialization steps:
+         * 1. Create a new root block.
+         * 2. Add the root block to the list of blocks.
+         * 3. Create a new key object and set its properties.
+         * 4. Create a list of values and add the initial value.
+         * 5. Set the values list as the value of the key.
+         * 6. Create a list of keys and add the key to it.
+         * 7. Create a new node and set its properties.
+         * 8. Set the list of keys in the node.
+         * 9. Set the node as a leaf node.
+         * 10. Set the root block as the block pointer of the node.
+         * 11. Create a list of nodes and add the node to it.
+         * 12. Set the list of nodes in the root block.
+         *
+         * Note: Uncomment and modify the required lines of code based on the specific implementation details.
+         */
+        if (this.rootBlock == null) {
+            this.rootBlock = new Block();
+            this.listBlocks.add(this.rootBlock);
+            Key key1 = new Key(); //Key object
+            List<Integer> values = new ArrayList<Integer>(); // Set of Values
+            key1.setKey(key);
+           // key1.setId(value);
+            values.addAll(value);
+            key1.setValue(values);
+            List<Key> keys = new ArrayList<Key>();
+            keys.add(key1);
+            Node node = new Node();
+            node.setKeys(keys);
+            node.setIsleaf(true);
+            node.setBlockPointer(this.rootBlock);
+            //node.setNodeID(1);
+            List<Node> nodeList = new ArrayList<Node>();
+            nodeList.add(node);
+            this.rootBlock.setListOfNodes(nodeList);
+
+            //node.setCurrentBlockIndexInArrayList(this.listBlocks.indexOf(this.rootBlock)); //this.listBlocks.indexOf(this.rootBlock)
+
+        }
+        /**
+         * This condition checks if the root block exists and the root node is a leaf node with available space for insertion.
+         * If the condition is true, it performs the key insertion into the root node.
+         *
+         * Key insertion steps:
+         * 1. Retrieve the root node from the root block.
+         * 2. Call the insertionNodeKey() method to insert the key into the root node.
+         *
+         * Note: Uncomment and modify the required lines of code based on the specific implementation details.
+         */
+
+        else if ((this.rootBlock.getListOfNodes().get(0).isIsleaf() == true) && (this.rootBlock.getListOfNodes().get(0).getKeys().size() < orderOfTree)) {
+            insertionNodeKeyMerge(this.rootBlock.getListOfNodes().get(0), key, value);
+
+        }
+        /**
+         * This else block handles the case when none of the previous conditions are met.
+         * It performs the key insertion into the appropriate node of the tree.
+         *
+         * Key insertion steps:
+         * 1. Set the currentNode as the first node of the root block.
+         * 2. If the currentNode is not a leaf node, update it to the node based on the block pointer.
+         * 3. Find the relevant node for key insertion.
+         * 4. If the relevant node is null, insert the key into the currentNode.
+         * 5. If the relevant node is not null, insert the key into the relevant node and update the currentNode.
+         * 6. Check if the currentNode exceeds the maximum number of keys allowed.
+         * 7. If it exceeds, perform the split operation on the currentNode.
+         *
+         * Note: Uncomment and modify the required lines of code based on the specific implementation details.
+         */
 
 
+        else {
+
+            Node currentNode = this.rootBlock.getListOfNodes().get(0);
+
+            if (!(currentNode.isIsleaf())) {
+
+                currentNode = nodeWithBlockPointer(currentNode.getBlockPointer(), key);
+
+            }
+
+            Node relevenetNode = findRelevantNode(currentNode, key);
+            if (relevenetNode == null) {
+                insertionNodeKeyMerge(currentNode, key, value);
+            } else {
+                insertionNodeKeyMerge(relevenetNode, key, value);
+                currentNode = relevenetNode;
+            }
+
+
+            if (currentNode.getKeys().size() > orderOfTree) {
+                split(currentNode);
+
+            }
+
+        }
+
+    }
+
+    private void insertionNodeKeyMerge(Node node, int key, List<Integer> value) {
+
+        boolean localEqualityCheck = false;
+        List<Key> keys = node.getKeys();
+        /*
+        Loop that checks the new key already exists
+        Update only the associated value list with the value of the key
+        Switch on the loop to avoid next scaning
+         */
+        for (Key existingKey : keys) {
+            if (key == existingKey.getKey()) {
+                existingKey.getValue().addAll(value);
+                return;
+            }
+        }
+        /**
+         * This section of code creates a new Key object, sets its properties, adds it to the list of keys in the node,
+         * and sorts the keys in ascending order based on their key values.
+         *
+         * Key creation and sorting steps:
+         * 1. Create a new Key object.
+         * 2. Create a list to store the values associated with the key.
+         * 3. Set the key value and identification in the Key object.
+         * 4. Add the value to the values list.
+         * 5. Set the values list in the Key object.
+         * 6. Add the Key object to the list of keys in the node.
+         * 7. Sort the keys in ascending order based on their key values using the Collections.sort() method with a custom Comparator.
+         *
+         * Note: Uncomment and modify the required lines of code based on the specific implementation details.
+         */
+
+        Key key1 = new Key();
+        List<Integer> values = new ArrayList<Integer>();
+        key1.setKey(key);
+
+        values.addAll(value);
+        key1.setValue(values);
+        keys.add(key1);
+        node.setKeys(keys);
+        //collectionSort
+        Collections.sort(keys, new Comparator<Key>() {
+            @Override
+            public int compare(Key s1, Key s2) {
+                return Integer.compare(s1.getKey(), s2.getKey());
+            }
+        });
+    }
 
 }

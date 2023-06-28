@@ -2,15 +2,19 @@ package com.baselinealgorithm;
 
 import com.baselinealgorithm.chainbplusandcss.CSSTree;
 
-import java.util.HashSet;
-import java.util.Random;
+import java.util.*;
 
 public class Test {
     public static void main(String[] args) {
+
         CSSTree cssTree = new CSSTree(4);
         Random random = new Random();
+        List<Integer>list= new ArrayList<>();
+      //  list.add(0);
+        list.add(180050);
+        list.add(1800);
         //    for(int i=0;i<20;i++){
-        cssTree.insert(14, 1);
+        //cssTree.insertBulkUpdate(64, list);
         cssTree.insert(11, 2);
         cssTree.insert(8, 3);
         cssTree.insert(8, 4);
@@ -76,6 +80,8 @@ public class Test {
         cssTree.insert(4500, 40);
         cssTree.insert(4600, 60);
         cssTree.insert(14, 100);
+        cssTree.insertBulkUpdate(64, list);
+        cssTree.insert(11, 2);
 //        cssTree.insert(11, 2);
 //        cssTree.insert(8, 3);
 //        cssTree.insert(8,4);
@@ -100,11 +106,11 @@ public class Test {
 //        cssTree.insert(100, 18);
 
         Random random1 = new Random();
-        for (int i = 1; i < 20; i++) {
-            cssTree.insert(random.nextInt(100), i);
+        for (int i = 1; i < 20000; i++) {
+            cssTree.insert(random.nextInt(1000), i);
         }
-       HashSet<Integer> hashSet=cssTree.searchSmaller(60);
-        System.out.println(hashSet);
+       HashSet<Integer> hashSet=cssTree.searchGreater(100);
+       // System.out.println(hashSet);
     }
 
 }
