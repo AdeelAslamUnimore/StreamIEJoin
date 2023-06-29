@@ -534,16 +534,18 @@ return bitSet;
             if(item.getKey()<=key){
                 continue;
             }
-            for(int i: item.getValues()) {
-                hashSet.add(i);
-            }
+            hashSet.addAll(item.getValues());
+//            for(int i: item.getValues()) {
+//                hashSet.add(i);
+//            }
         }
         currNode= currNode.getNext();
         while(currNode!=null){
             for(Key item: currNode.getKeys()){
-                for(int i: item.getValues()) {
-                    hashSet.add(i);
-                }
+                hashSet.addAll(item.getValues());
+//                for(int i: item.getValues()) {
+//                    hashSet.add(i);
+//                }
             }
 
             currNode= currNode.getNext();

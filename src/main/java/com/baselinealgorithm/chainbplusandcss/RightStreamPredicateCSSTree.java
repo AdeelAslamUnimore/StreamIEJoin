@@ -1,86 +1,58 @@
 package com.baselinealgorithm.chainbplusandcss;
 
+import com.stormiequality.BTree.BPlusTree;
+import com.stormiequality.BTree.Key;
+import com.stormiequality.BTree.Node;
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.OutputFieldsDeclarer;
 import org.apache.storm.topology.base.BaseRichBolt;
 import org.apache.storm.tuple.Tuple;
+
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Map;
 
 public class RightStreamPredicateCSSTree extends BaseRichBolt {
-    private LinkedList<CSSTree> revenue=null;
-    private LinkedList<CSSTree> cost=null;
-    private int treeRemovalThreshold;
-    private int treeArchiveThresholdRevenue;
-    private int treeArchiveThresholdCost;
-    private int treeArchiveUserDefined;
+    private LinkedList<CSSTree> revenueLinkedListCSSTree=null;
+    private LinkedList<CSSTree> costLinkedListCSSTree=null;
+    private BPlusTree revenueBPlusTree=null;
+    private BPlusTree costBPlusTree=null;
+    private int archiveCount;
+    private int revenueArchiveCount;
+    private int costArchiveCount;
+    private int tupleRemovalCount;
+    private int tupleRemovalCountForLocal;
+    private int orderOfTreeBothBPlusTreeAndCSSTree;
     private OutputCollector outputCollector;
-    private int cssTreeInitilization;
-    private HashSet<Integer> hashSet;
-    public RightStreamPredicateCSSTree(int treeRemovalThreshold, int treeArchiveUserDefined, int cssTreeInitilization){
-        this.treeRemovalThreshold=treeRemovalThreshold;
-        this.treeArchiveUserDefined=treeArchiveUserDefined;
-        this.cssTreeInitilization = cssTreeInitilization;
+    public RightStreamPredicateCSSTree(int archiveCount, int tupleRemovalCount, int orderOfTreeBothBPlusTreeAndCSSTree){
+        this.archiveCount=archiveCount;
+        this.tupleRemovalCount=tupleRemovalCount;
+        this.orderOfTreeBothBPlusTreeAndCSSTree=orderOfTreeBothBPlusTreeAndCSSTree;
     }
     @Override
     public void prepare(Map<String, Object> map, TopologyContext topologyContext, OutputCollector outputCollector) {
-        revenue= new LinkedList<>();
-        cost= new LinkedList<>();
-        this.outputCollector= outputCollector;
+        this.revenueLinkedListCSSTree= new LinkedList<>();
+        this.costLinkedListCSSTree= new LinkedList<>();
+        this.revenueBPlusTree= new BPlusTree(orderOfTreeBothBPlusTreeAndCSSTree);
+        this.costBPlusTree= new BPlusTree(orderOfTreeBothBPlusTreeAndCSSTree);
+        this.revenueArchiveCount=0;
+        this.costArchiveCount=0;
+        this.outputCollector=outputCollector;
     }
 
     @Override
     public void execute(Tuple tuple) {
+        tupleRemovalCountForLocal++;
         if(tuple.getSourceStreamId().equals("Left")){
-            if(!revenue.isEmpty()){
-                CSSTree currentCSSTreeDuration= revenue.getLast();
-                currentCSSTreeDuration.insert(tuple.getIntegerByField("Tuple"), tuple.getIntegerByField("ID"));
-                treeArchiveThresholdRevenue++;
-                if(treeArchiveThresholdRevenue==treeArchiveUserDefined){
-                    treeArchiveThresholdRevenue=0;
-                    CSSTree cssTree= new CSSTree(cssTreeInitilization);
-                    revenue.add(cssTree);
-                }
-            }else
-            {
-                CSSTree cssTree= new CSSTree(cssTreeInitilization);
-                cssTree.insert(tuple.getIntegerByField("Tuple"), tuple.getIntegerByField("ID"));
-                revenue.add(cssTree);
-            }
-            for (CSSTree cssTree : cost) {
-                HashSet<Integer> hashSetGreater=cssTree.searchGreater(tuple.getIntegerByField("Tuple"));
-                //EmitLogic tomorrow
-            }
-
-
+           leftPredicateEvaluation (tuple,outputCollector);
         }
         if(tuple.getSourceStreamId().equals("Right")){
-            if(!cost.isEmpty()){
-                CSSTree currentCSSTreeDuration= cost.getLast();
-                currentCSSTreeDuration.insert(tuple.getIntegerByField("Tuple"), tuple.getIntegerByField("ID"));
-                treeArchiveThresholdCost++;
-                if(treeArchiveThresholdCost==treeArchiveUserDefined){
-                    treeArchiveThresholdCost=0;
-                    CSSTree cssTree= new CSSTree(cssTreeInitilization);
-                    cost.add(cssTree);
-                }
-            }else
-            {
-                CSSTree cssTree= new CSSTree(cssTreeInitilization);
-                cssTree.insert(tuple.getIntegerByField("Tuple"), tuple.getIntegerByField("ID"));
-                cost.add(cssTree);
-            }
-            for (CSSTree cssTree : revenue) {
-               HashSet<Integer> lessThanValues= cssTree.searchSmaller(tuple.getIntegerByField("Tuple"));
-                //EmitLogic tomorrow
-            }
-
+            rightPredicateEvaluation(tuple,outputCollector);
         }
-        if(cost.size()==treeRemovalThreshold||revenue.size()==treeRemovalThreshold){
-            cost.remove(cost.getFirst());
-            revenue.remove(revenue.getFirst());
+        if(tupleRemovalCountForLocal>=tupleRemovalCount){
+            this.costLinkedListCSSTree.remove(costLinkedListCSSTree.getFirst());
+            this.revenueLinkedListCSSTree.remove(revenueLinkedListCSSTree.getFirst());
         }
 
     }
@@ -89,4 +61,64 @@ public class RightStreamPredicateCSSTree extends BaseRichBolt {
     public void declareOutputFields(OutputFieldsDeclarer outputFieldsDeclarer) {
 
     }
+    private void rightPredicateEvaluation(Tuple tuple, OutputCollector outputCollector){
+        // Insertion
+        costBPlusTree.insert(tuple.getIntegerByField("Tuple"), tuple.getIntegerByField("ID"));
+        costArchiveCount++;
+        HashSet<Integer> hashSetIds= new HashSet<>();
+        //Results form BPlus Tree searching
+        hashSetIds.addAll(revenueBPlusTree.lessThenSpecificValueHash(tuple.getIntegerByField("Tuple")));
+        // Results from immutable B+ CSS Tree
+        if(!revenueLinkedListCSSTree.isEmpty())
+            for(int i=0;i<revenueLinkedListCSSTree.size();i++){
+                hashSetIds.addAll(revenueLinkedListCSSTree.get(i).searchSmaller(tuple.getIntegerByField("Tuple")));
+        /// Writer Emittier of tuples
+
+        //Archive Interval achieve Then merge the active BPlus Tree into CSS Tree
+        if(costArchiveCount>=archiveCount){
+            costArchiveCount=0;
+            com.stormiequality.BTree.Node node= costBPlusTree.leftMostNode();
+            CSSTree cssTree= new CSSTree(orderOfTreeBothBPlusTreeAndCSSTree);
+            while(node!=null){
+                for(com.stormiequality.BTree.Key key: node.getKeys()){
+                    cssTree.insertBulkUpdate(key.getKey(),key.getValues());
+                }
+
+                node= node.getNext();
+            }
+            //Insert into the linkedList
+            costLinkedListCSSTree.add(cssTree);
+        }
+    }}
+    private void leftPredicateEvaluation(Tuple tuple, OutputCollector outputCollector){
+        revenueBPlusTree.insert(tuple.getIntegerByField("Tuple"), tuple.getIntegerByField("ID"));
+        revenueArchiveCount++;
+        HashSet<Integer> hashSetIds= new HashSet<>();
+        //Results form BPlus Tree
+        hashSetIds.addAll(costBPlusTree.greaterThenSpecificValueHashSet(tuple.getIntegerByField("Tuple")));
+        // Results from immutable B+ CSS Tree
+        if(!costLinkedListCSSTree.isEmpty())
+            for(int i=0;i<costLinkedListCSSTree.size();i++){
+                hashSetIds.addAll(costLinkedListCSSTree.get(i).searchGreater(tuple.getIntegerByField("Tuple")));
+            }
+        /// Writer Emittier of tuples
+
+        //Archive Interval achieve Then merge the active BPlus Tree into CSS Tree
+        if(revenueArchiveCount>=archiveCount){
+            revenueArchiveCount=0;
+            Node node= revenueBPlusTree.leftMostNode();
+            CSSTree cssTree= new CSSTree(orderOfTreeBothBPlusTreeAndCSSTree);
+            while(node!=null){
+                for(Key key: node.getKeys()){
+                    cssTree.insertBulkUpdate(key.getKey(),key.getValues());
+                }
+
+                node= node.getNext();
+            }
+            //Insert into the linkedList
+            revenueLinkedListCSSTree.add(cssTree);
+        }
+
+    }
+
 }

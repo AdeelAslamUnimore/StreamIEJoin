@@ -18,9 +18,10 @@ public class RightStreamPredicateBplusTree extends BaseRichBolt {
     private int treeArchiveThresholdRevenue;
     private int treeArchiveThresholdCost;
     private int treeArchiveUserDefined;
+    private int tupleRemovalCountForLocal;
     private OutputCollector outputCollector;
     private int bPlusTreeInitilization;
-    public RightStreamPredicateBplusTree(int treeRemovalThreshold, int treeArchiveUserDefined, int bPlusTreeInitilization){
+    public RightStreamPredicateBplusTree(int treeArchiveUserDefined, int treeRemovalThreshold, int bPlusTreeInitilization){
         this.treeRemovalThreshold=treeRemovalThreshold;
         this.treeArchiveUserDefined=treeArchiveUserDefined;
         this.bPlusTreeInitilization=bPlusTreeInitilization;
@@ -34,12 +35,13 @@ public class RightStreamPredicateBplusTree extends BaseRichBolt {
 
     @Override
     public void execute(Tuple tuple) {
+        tupleRemovalCountForLocal++;
         if(tuple.getSourceStreamId().equals("Left")){
             if(!revenue.isEmpty()){
                 BPlusTree currentBplusTreeDuration= revenue.getLast();
                 currentBplusTreeDuration.insert(tuple.getIntegerByField("Tuple"), tuple.getIntegerByField("ID"));
                 treeArchiveThresholdRevenue++;
-                if(treeArchiveThresholdRevenue==treeArchiveUserDefined){
+                if(treeArchiveThresholdRevenue>=treeArchiveUserDefined){
                     treeArchiveThresholdRevenue=0;
                     BPlusTree bPlusTree= new BPlusTree(bPlusTreeInitilization);
                     revenue.add(bPlusTree);
@@ -62,7 +64,7 @@ public class RightStreamPredicateBplusTree extends BaseRichBolt {
                 BPlusTree currentBplusTreeDuration= cost.getLast();
                 currentBplusTreeDuration.insert(tuple.getIntegerByField("Tuple"), tuple.getIntegerByField("ID"));
                 treeArchiveThresholdCost++;
-                if(treeArchiveThresholdCost==treeArchiveUserDefined){
+                if(treeArchiveThresholdCost>=treeArchiveUserDefined){
                     treeArchiveThresholdCost=0;
                     BPlusTree bPlusTree= new BPlusTree(bPlusTreeInitilization);
                     cost.add(bPlusTree);
@@ -79,7 +81,7 @@ public class RightStreamPredicateBplusTree extends BaseRichBolt {
             }
 
         }
-        if(cost.size()==treeRemovalThreshold||revenue.size()==treeRemovalThreshold){
+        if(tupleRemovalCountForLocal>=treeRemovalThreshold){
             cost.remove(cost.getFirst());
             revenue.remove(revenue.getFirst());
         }

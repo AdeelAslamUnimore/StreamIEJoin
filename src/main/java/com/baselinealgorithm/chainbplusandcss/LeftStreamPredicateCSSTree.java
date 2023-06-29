@@ -1,5 +1,8 @@
 package com.baselinealgorithm.chainbplusandcss;
 
+import com.stormiequality.BTree.BPlusTree;
+import com.stormiequality.BTree.Key;
+import com.stormiequality.BTree.Node;
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.OutputFieldsDeclarer;
@@ -11,82 +14,112 @@ import java.util.LinkedList;
 import java.util.Map;
 
 public class LeftStreamPredicateCSSTree extends BaseRichBolt {
-    private LinkedList<CSSTree> duration =null;
-    private LinkedList<CSSTree> time =null;
-    private int treeRemovalThreshold;
-    private int treeArchiveThresholdRevenue;
-    private int treeArchiveThresholdCost;
-    private int treeArchiveUserDefined;
+    private LinkedList<CSSTree> durationLinkedListCSSTree=null;
+    private LinkedList<CSSTree> timeLinkedListCSSTree=null;
+    private BPlusTree durationBPlusTree=null;
+    private BPlusTree timeBPlusTree=null;
+    private int archiveCount;
+    private int durationArchiveCount;
+    private int timeArchiveCount;
+    private int tupleRemovalCount;
+    private int orderOfTreeBothBPlusTreeAndCSSTree;
+    private int tupleRemovalCountForLocal;
     private OutputCollector outputCollector;
-    private int cssTreeInitializations;
-    private HashSet<Integer> hashSet;
-    public LeftStreamPredicateCSSTree(int treeRemovalThreshold, int treeArchiveUserDefined, int cssTreeInitializations){
-        this.treeRemovalThreshold=treeRemovalThreshold;
-        this.treeArchiveUserDefined=treeArchiveUserDefined;
-        this.cssTreeInitializations = cssTreeInitializations;
+    public LeftStreamPredicateCSSTree(int archiveCount, int tupleRemovalCount, int orderOfTreeBothBPlusTreeAndCSSTree){
+        this.archiveCount=archiveCount;
+        this.tupleRemovalCount=tupleRemovalCount;
+        this.orderOfTreeBothBPlusTreeAndCSSTree=orderOfTreeBothBPlusTreeAndCSSTree;
     }
     @Override
     public void prepare(Map<String, Object> map, TopologyContext topologyContext, OutputCollector outputCollector) {
-        duration = new LinkedList<>();
-        time = new LinkedList<>();
-        this.outputCollector= outputCollector;
+        this.durationLinkedListCSSTree= new LinkedList<>();
+        this.timeLinkedListCSSTree= new LinkedList<>();
+        this.durationBPlusTree= new BPlusTree(orderOfTreeBothBPlusTreeAndCSSTree);
+        this.timeBPlusTree= new BPlusTree(orderOfTreeBothBPlusTreeAndCSSTree);
+        this.durationArchiveCount=0;
+        this.timeArchiveCount=0;
+        this.outputCollector=outputCollector;
     }
 
     @Override
     public void execute(Tuple tuple) {
-        if(tuple.getSourceStreamId().equals("Left")){
-            if(!duration.isEmpty()){
-                CSSTree currentCSSTreeDuration= duration.getLast();
-                currentCSSTreeDuration.insert(tuple.getIntegerByField("Tuple"), tuple.getIntegerByField("ID"));
-                treeArchiveThresholdRevenue++;
-                if(treeArchiveThresholdRevenue==treeArchiveUserDefined){
-                    treeArchiveThresholdRevenue=0;
-                    CSSTree cssTree= new CSSTree(cssTreeInitializations);
-                    duration.add(cssTree);
-                }
-            }else
-            {
-                CSSTree cssTree= new CSSTree(cssTreeInitializations);
-                cssTree.insert(tuple.getIntegerByField("Tuple"), tuple.getIntegerByField("ID"));
-                duration.add(cssTree);
+        tupleRemovalCountForLocal++;
+            if(tuple.getSourceStreamId().equals("Left")){
+                leftPredicateEvaluation(tuple,outputCollector);
             }
-            for (CSSTree cssTree : time) {
-                HashSet<Integer> hashSetGreater=cssTree.searchSmaller(tuple.getIntegerByField("Tuple"));
-                //EmitLogic tomorrow
+            if(tuple.getSourceStreamId().equals("Right")){
+                rightPredicateEvaluation(tuple,outputCollector);
             }
-
-
-        }
-        if(tuple.getSourceStreamId().equals("Right")){
-            if(!time.isEmpty()){
-                CSSTree currentCSSTreeDuration= time.getLast();
-                currentCSSTreeDuration.insert(tuple.getIntegerByField("Tuple"), tuple.getIntegerByField("ID"));
-                treeArchiveThresholdCost++;
-                if(treeArchiveThresholdCost==treeArchiveUserDefined){
-                    treeArchiveThresholdCost=0;
-                    CSSTree cssTree= new CSSTree(cssTreeInitializations);
-                    time.add(cssTree);
-                }
-            }else
-            {
-                CSSTree cssTree= new CSSTree(cssTreeInitializations);
-                cssTree.insert(tuple.getIntegerByField("Tuple"), tuple.getIntegerByField("ID"));
-                time.add(cssTree);
+            if(tupleRemovalCountForLocal>=tupleRemovalCount){
+                timeLinkedListCSSTree.remove(timeLinkedListCSSTree.getFirst());
+                durationLinkedListCSSTree.remove(durationLinkedListCSSTree.getFirst());
             }
-            for (CSSTree cssTree : duration) {
-                HashSet<Integer> lessThanValues= cssTree.searchGreater(tuple.getIntegerByField("Tuple"));
-                //EmitLogic tomorrow
-            }
-
-        }
-        if(time.size()==treeRemovalThreshold|| duration.size()==treeRemovalThreshold){
-            time.remove(time.getFirst());
-            duration.remove(duration.getFirst());
-        }
 
     }
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer outputFieldsDeclarer) {
 
-    }}
+    }
+    private void rightPredicateEvaluation(Tuple tuple, OutputCollector outputCollector){
+        // Insertion
+        timeBPlusTree.insert(tuple.getIntegerByField("Tuple"), tuple.getIntegerByField("ID"));
+        timeArchiveCount++;
+        HashSet<Integer> hashSetIds= new HashSet<>();
+        //Results form BPlus Tree searching
+        hashSetIds.addAll(durationBPlusTree.lessThenSpecificValueHash(tuple.getIntegerByField("Tuple")));
+        // Results from immutable B+ CSS Tree
+        if(!durationLinkedListCSSTree.isEmpty())
+            for(int i=0;i<durationLinkedListCSSTree.size();i++){
+                hashSetIds.addAll(durationLinkedListCSSTree.get(i).searchSmaller(tuple.getIntegerByField("Tuple")));
+            }
+        /// Writer Emittier of tuples
+
+        //Archive Interval achieve Then merge the active BPlus Tree into CSS Tree
+        if(timeArchiveCount>=archiveCount){
+            timeArchiveCount=0;
+            Node node= timeBPlusTree.leftMostNode();
+            CSSTree cssTree= new CSSTree(orderOfTreeBothBPlusTreeAndCSSTree);
+            while(node!=null){
+                for(Key key: node.getKeys()){
+                    cssTree.insertBulkUpdate(key.getKey(),key.getValues());
+                }
+
+                node= node.getNext();
+            }
+            //Insert into the linkedList
+            timeLinkedListCSSTree.add(cssTree);
+        }
+    }
+    private void leftPredicateEvaluation(Tuple tuple, OutputCollector outputCollector){
+        durationBPlusTree.insert(tuple.getIntegerByField("Tuple"), tuple.getIntegerByField("ID"));
+        durationArchiveCount++;
+        HashSet<Integer> hashSetIds= new HashSet<>();
+        //Results form BPlus Tree
+        hashSetIds.addAll(timeBPlusTree.greaterThenSpecificValueHashSet(tuple.getIntegerByField("Tuple")));
+       // Results from immutable B+ CSS Tree
+        if(!timeLinkedListCSSTree.isEmpty())
+        for(int i=0;i<timeLinkedListCSSTree.size();i++){
+            hashSetIds.addAll(timeLinkedListCSSTree.get(i).searchGreater(tuple.getIntegerByField("Tuple")));
+        }
+        /// Writer Emittier of tuples
+
+        //Archive Interval achieve Then merge the active BPlus Tree into CSS Tree
+        if(durationArchiveCount>=archiveCount){
+            durationArchiveCount=0;
+          Node node= durationBPlusTree.leftMostNode();
+          CSSTree cssTree= new CSSTree(orderOfTreeBothBPlusTreeAndCSSTree);
+          while(node!=null){
+              for(Key key: node.getKeys()){
+                  cssTree.insertBulkUpdate(key.getKey(),key.getValues());
+              }
+
+              node= node.getNext();
+          }
+          //Insert into the linkedList
+          durationLinkedListCSSTree.add(cssTree);
+        }
+
+    }
+
+}

@@ -17,6 +17,7 @@ public class LeftPredicateBoltBST extends BaseRichBolt {
     int tupleCountForRemoval=0;
     private OutputCollector outputCollector;
     private HashSet<Integer> hashSet=null;
+    private int tupleRemovalCountForLocal;
     public LeftPredicateBoltBST(int tupleCountForArchive, int tupleCountForRemoval){
         this.tupleCountForArchive=tupleCountForArchive;
         this.tupleCountForRemoval= tupleCountForRemoval;
@@ -31,21 +32,24 @@ public class LeftPredicateBoltBST extends BaseRichBolt {
 
     @Override
     public void execute(Tuple tuple) {
-        tupleCountForRemoval++;
+     tupleRemovalCountForLocal++;
         if(tuple.getSourceStreamId().equals("Left")){
             if(!duration.isEmpty()){
                 RedBlackBST treeForTupleInsertion=duration.getLast();
                 treeForTupleInsertion.put(tuple.getIntegerByField("Tuple"), tuple.getIntegerByField("ID"));
-                if (treeForTupleInsertion.size() == tupleCountForArchive) {
+                if (treeForTupleInsertion.size() >= tupleCountForArchive) {
                     RedBlackBST newRedBlackBST = new RedBlackBST();
                     duration.add(newRedBlackBST);
                 }
             }
             else{
-                RedBlackBST redBlackBSTForRevenue = new RedBlackBST();
+                RedBlackBST redBlackBSTForDuration = new RedBlackBST();
                 //Adding tuple to the linked list when list is not empty:
-                redBlackBSTForRevenue.put(tuple.getIntegerByField("Tuple"), tuple.getIntegerByField("ID"));
+                redBlackBSTForDuration.put(tuple.getIntegerByField("Tuple"), tuple.getIntegerByField("ID"));
+                duration.add(redBlackBSTForDuration);
+
             }
+            ///Searching
             for (RedBlackBST redBlackBST : time) {
                 for(Node  nodeThatContainsGreater: redBlackBST.getNodesGreaterThan(tuple.getIntegerByField("tuple"))){
                     for(int id: nodeThatContainsGreater.getVals()){
@@ -60,15 +64,18 @@ public class LeftPredicateBoltBST extends BaseRichBolt {
             if (!time.isEmpty()) {
                 RedBlackBST treeForTupleInsertion = time.getLast();
                 treeForTupleInsertion.put(tuple.getIntegerByField("Tuple"), tuple.getIntegerByField("ID"));
-                if (treeForTupleInsertion.size() == tupleCountForArchive) {
+                if (treeForTupleInsertion.size() >= tupleCountForArchive) {
                     RedBlackBST newRedBlackBST = new RedBlackBST();
                     time.add(newRedBlackBST);
                 }
             } else {
-                RedBlackBST redBlackBSTForRevenue = new RedBlackBST();
+                RedBlackBST redBlackBSTForTime = new RedBlackBST();
                 //Adding tuple to the linked list when list is not empty:
-                redBlackBSTForRevenue.put(tuple.getIntegerByField("Tuple"), tuple.getIntegerByField("ID"));
+                redBlackBSTForTime.put(tuple.getIntegerByField("Tuple"), tuple.getIntegerByField("ID"));
+                time.add(redBlackBSTForTime);
+
             }
+            //// Searching
             for (RedBlackBST redBlackBST : duration) {
                 for(Node  nodeThatContainsGreater: redBlackBST.lessThanKey(tuple.getIntegerByField("tuple"))){
                     for(int id: nodeThatContainsGreater.getVals()){
@@ -79,7 +86,7 @@ public class LeftPredicateBoltBST extends BaseRichBolt {
 
             }
         }
-        if(time.size()==tupleCountForRemoval||duration.size()==tupleCountForRemoval){
+        if(tupleRemovalCountForLocal>=tupleCountForRemoval){
             time.remove(time.getFirst());
             duration.remove(duration.getFirst());
         }
