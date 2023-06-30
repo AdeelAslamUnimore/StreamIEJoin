@@ -197,7 +197,7 @@ public class JoinBoltForBPlusTree extends WindowBoltForBPlusTree implements Seri
 
             LeftStreamBPlusTree.insert(tuple.getIntegerByField("Tuple"),tuple.getIntegerByField("ID"));
             long startSearchTime=System.currentTimeMillis();
-            BitSet RBitSet= RightStreamBPlusTree. lessThenSpecificValue(tuple.getIntegerByField("Tuple"),bitSetSize);
+            BitSet RBitSet= RightStreamBPlusTree. lessThenSpecificValue(tuple.getIntegerByField("Tuple"));
           //  System.out.println(RBitSet+",,,RightBitStream");
          //   long endSearchTime=System.currentTimeMillis()-startSearchTime;
             if(RBitSet!=null) {
@@ -212,7 +212,7 @@ public class JoinBoltForBPlusTree extends WindowBoltForBPlusTree implements Seri
             // BitSet If Tuple is from right stream R.r>S.s  it first insert then search on other stream
             RightStreamBPlusTree.insert(tuple.getIntegerByField("Tuple"),tuple.getIntegerByField("ID"));
             long startSearchTime=System.currentTimeMillis();
-            BitSet LBitSet=  LeftStreamBPlusTree. greaterThenSpecificValue(tuple.getIntegerByField("Tuple"), bitSetSize);
+            BitSet LBitSet=  LeftStreamBPlusTree. greaterThenSpecificValue(tuple.getIntegerByField("Tuple"));
             //long endSearchTime=System.currentTimeMillis()-startSearchTime;
             if(LBitSet!=null) {
                 byte[] bytArrayLBitSet = convertToByteArray(LBitSet);
@@ -229,7 +229,7 @@ public class JoinBoltForBPlusTree extends WindowBoltForBPlusTree implements Seri
 
             LeftStreamBPlusTree.insert(tuple.getIntegerByField("Tuple"),tuple.getIntegerByField("ID"));
             long startSearchTime=System.currentTimeMillis();
-            BitSet RBitSet= RightStreamBPlusTree. greaterThenSpecificValue(tuple.getIntegerByField("Tuple"),bitSetSize);
+            BitSet RBitSet= RightStreamBPlusTree. greaterThenSpecificValue(tuple.getIntegerByField("Tuple"));
          // System.out.println(RBitSet+"....LeftStream"+ ".."+tuple.getIntegerByField("Tuple"));
             //long endSearchTime=System.currentTimeMillis()-startSearchTime;
             if(RBitSet!=null) {
@@ -243,7 +243,7 @@ public class JoinBoltForBPlusTree extends WindowBoltForBPlusTree implements Seri
 
             RightStreamBPlusTree.insert(tuple.getIntegerByField("Tuple"),tuple.getIntegerByField("ID"));
             long startSearchTime=System.currentTimeMillis();
-            BitSet LBitSet=  LeftStreamBPlusTree. lessThenSpecificValue(tuple.getIntegerByField("Tuple"), bitSetSize);
+            BitSet LBitSet=  LeftStreamBPlusTree. lessThenSpecificValue(tuple.getIntegerByField("Tuple"));
           //  System.out.println(LBitSet+"....RightStream");
            // long endSearchTime=System.currentTimeMillis()-startSearchTime;
             if(LBitSet!=null) {

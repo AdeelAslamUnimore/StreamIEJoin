@@ -61,6 +61,9 @@ public class Offset {
     public void setBitSet(BitSet bitSet) {
         this.bitSet = bitSet;
     }
+    public Integer getKeyForSearch() {
+        return Integer.valueOf(key);
+    }
 
     @Override
     public String toString() {

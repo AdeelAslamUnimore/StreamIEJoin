@@ -9,6 +9,9 @@ public class Permutation {
 
 
     private List<Integer> listOfIDs;
+    public Permutation(int index){
+        this.index=index;
+    }
     public Permutation(int index, int value) {
         this.index = index;
         this.value = value;

@@ -23,7 +23,7 @@ import java.util.BitSet;
 import java.util.List;
 import java.util.Map;
 
-public class MutableBPlusTree extends BaseRichBolt {
+public class MutableBPlusTreeBolt extends BaseRichBolt {
     //left stream for MutableBPlusTree
     private BPlusTree leftStreamBPlusTree;
     // right stream for MutableBPlusTree

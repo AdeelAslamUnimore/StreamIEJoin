@@ -111,7 +111,7 @@ public class JoinBoltBTree extends BaseRichBolt {
     }
     public void lessPredicateEvaluation1(Tuple tuple) throws IOException {
         if(tuple.getValueByField("StreamID").equals("LeftStream")){
-            BitSet RBitSet= RightBPlusTree. lessThenSpecificValue(tuple.getIntegerByField("Tuple"),counterSize);
+            BitSet RBitSet= RightBPlusTree. lessThenSpecificValue(tuple.getIntegerByField("Tuple"));
             if(RBitSet!=null) {
                 byte[] byteRightBatch = convertToByteArray(RBitSet);
                 Values values = new Values(byteRightBatch, tuple.getIntegerByField("ID"));
@@ -122,7 +122,7 @@ public class JoinBoltBTree extends BaseRichBolt {
         }
         if(tuple.getValueByField("StreamID").equals("RightStream")){
             // BitSet If Tuple is from right stream R.r>S.s  it first insert then search on other stream
-            BitSet LBitSet=  LeftBPlusTree. greaterThenSpecificValue(tuple.getIntegerByField("Tuple"), counterSize);
+            BitSet LBitSet=  LeftBPlusTree. greaterThenSpecificValue(tuple.getIntegerByField("Tuple"));
             if(LBitSet!=null) {
                 byte[] byteLeftBatch = convertToByteArray(LBitSet);
                 //  System.out.println(LBitSet+"...."+"RightStreamLeftEvalution");
@@ -136,7 +136,7 @@ public class JoinBoltBTree extends BaseRichBolt {
     }
     public void greaterPredicateEvaluation1(Tuple tuple) throws IOException {
         if(tuple.getValueByField("StreamID").equals("LeftStream")){
-            BitSet RBitSet= RightBPlusTree. greaterThenSpecificValue(tuple.getIntegerByField("Tuple"),counterSize);
+            BitSet RBitSet= RightBPlusTree. greaterThenSpecificValue(tuple.getIntegerByField("Tuple"));
             if(RBitSet!=null) {
                 byte[] byteLeftBatch = convertToByteArray(RBitSet);
                 Values values = new Values(byteLeftBatch, tuple.getIntegerByField("ID"));
@@ -146,7 +146,7 @@ public class JoinBoltBTree extends BaseRichBolt {
         }
         if(tuple.getValueByField("StreamID").equals("RightStream")) {
 
-            BitSet LBitSet = LeftBPlusTree.lessThenSpecificValue(tuple.getIntegerByField("Tuple"), counterSize);
+            BitSet LBitSet = LeftBPlusTree.lessThenSpecificValue(tuple.getIntegerByField("Tuple"));
           //System.out.println(LBitSet);
             if (LBitSet != null) {
               byte[] byteLeftBatch = convertToByteArray(LBitSet);
