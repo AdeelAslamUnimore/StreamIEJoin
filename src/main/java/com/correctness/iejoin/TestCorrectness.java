@@ -60,8 +60,8 @@ public class TestCorrectness {
 
             bPlusTree.insert(duration, id);
         }
-        BitSet bitSet1 = bPlusTree.greaterThenSpecificValue(500, 1000);
-        BitSet bitSet2 = bPlusTree.lessThenSpecificValue(750, 1000);
+        BitSet bitSet1 = bPlusTree.greaterThenSpecificValue(500);
+        BitSet bitSet2 = bPlusTree.lessThenSpecificValue(750);
         bitSet1.and(bitSet2);
 //        System.out.println("HEre" + count);
 //        System.out.println(bitSet1);

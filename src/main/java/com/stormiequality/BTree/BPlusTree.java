@@ -457,8 +457,8 @@ public class BPlusTree implements Serializable {
             }
             return keyNode;
         }
-        public BitSet lessThenSpecificValue(int key,int bitSize ){
-            BitSet bitSet=new BitSet(bitSize);
+        public BitSet lessThenSpecificValue(int key){
+            BitSet bitSet=new BitSet();
         if (this.root == null) {
             //throw new IllegalArgumentException("Root is NULL");
            	return  null;
@@ -488,8 +488,8 @@ public class BPlusTree implements Serializable {
         }
 return bitSet;
     }
-    public BitSet greaterThenSpecificValue(int key,int bitSize ){
-        BitSet bitSet=new BitSet(bitSize);
+    public BitSet greaterThenSpecificValue(int key ){
+        BitSet bitSet=new BitSet();
         if (this.root == null) {
             //throw new IllegalArgumentException("Root is NULL");
             	return  null;
