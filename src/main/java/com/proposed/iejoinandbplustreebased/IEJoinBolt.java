@@ -108,6 +108,9 @@ public class IEJoinBolt extends BaseRichBolt {
         if (tuple.getSourceStreamId().equals("RightOffset")) {
             offsetComputation(tuple, false, listRightOffset);
         }
+        /*
+        To Do Use queues for holding incoming tuples for completeness;
+         */
     }
 
     @Override
