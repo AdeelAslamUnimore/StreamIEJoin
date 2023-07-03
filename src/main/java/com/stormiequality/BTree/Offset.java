@@ -15,6 +15,9 @@ public class Offset {
     private int index;
     private BitSet bitSet;
     private int size;
+    public Offset(int key){
+        this.key=key;
+    }
     public Offset(int key, int index) {
         this.key = key;
         this.index = index;

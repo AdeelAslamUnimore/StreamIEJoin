@@ -1,55 +1,97 @@
 package com.stormiequality.test;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
+import com.baselinealgorithm.Test;
+import com.stormiequality.BTree.Offset;
+import com.sun.org.apache.xpath.internal.operations.Bool;
+import org.apache.storm.Testing;
+
+import java.util.*;
 
 class BinarySearch {
-    public static void main(String[] args) {
-        // Create a list
-        List<Domain> l = new ArrayList<Domain>();
-        l.add(new Domain(10, "www.geeksforgeeks.org"));
-        l.add(new Domain(20, "practice.geeksforgeeks.org"));
-        l.add(new Domain(30, "code.geeksforgeeks.org"));
-        l.add(new Domain(40, "www.geeksforgeeks.org"));
-        l.add(new Domain(80, "code.geeksforgeeks.org"));
-        l.add(new Domain(1000, "www.geeksforgeeks.org"));
 
-        Comparator<Domain> c = new Comparator<Domain>() {
-            public int compare(Domain u1, Domain u2) {
-                return Integer.compare(u1.getId(), u2.getId());
+    public static void main(String[] args) {
+        boolean number=false;
+      new BinarySearch().testBoolean(new boolean[]{number});
+       System.out.println(number);
+    }
+    public static  void testBoolean(boolean[] flagWrapper ){
+        flagWrapper[0] = true;
+    }
+
+    public static void computingNumber(){
+        List<TestingDomain> list = new ArrayList<>();
+        list.add(new TestingDomain(10));
+        list.add(new TestingDomain(20));
+        list.add(new TestingDomain(20));
+        list.add(new TestingDomain(30));
+        list.add(new TestingDomain(40));
+        list.add(new TestingDomain(50));
+        list.add(new TestingDomain(50));
+        list.add(new TestingDomain(60));
+
+        TestingDomain target = new TestingDomain(50);
+//////////// This is for Normal
+        Comparator<TestingDomain> comparator = new Comparator<TestingDomain>() {
+            public int compare(TestingDomain obj1, TestingDomain obj2) {
+                return Integer.compare(obj1.getId(), obj2.getId());
             }
         };
 
-        // Searching a domain with key value 10. To search
-        // we create an object of domain with key 10.
-        Domain searchKey1 = new Domain(200, null);
-        int index = Collections.binarySearch(l, searchKey1, c);
-        if (index >= 0) {
-            System.out.println("Found at index " + index);
-        } else {
-            index = -(index + 1); // Get the insertion point
-            if (index >= l.size()) {
-                System.out.println("Key not found. No greater key exists.");
+        int low = 0;
+        int high = list.size() - 1;
+        int result = -1;
+
+        while (low <= high) {
+            int mid = low + (high - low) / 2;
+
+            if (comparator.compare(list.get(mid), target) >= 0) {
+                result = mid;
+                high = mid - 1;
             } else {
-                Domain next = l.get(index);
-                System.out.println("Key not found. Nearest key greater than the search key is " + next.getId() + " at index " + index);
+                low = mid + 1;
             }
         }
 
-        // Searching an item with key 15
-        Domain searchKey2 = new Domain(89, null);
-        index = Collections.binarySearch(l, searchKey2, c);
-        if (index >= 0) {
-            System.out.println("Found at index " + index);
+        if (result != -1) {
+            System.out.println("First greater or equal object index: " + result);
         } else {
-            index = -(index + 1); // Get the insertion point
-            if (index >= l.size()) {
-                System.out.println("Key not found. No greater key exists."+(l.size()-1));
-            } else {
-                Domain next = l.get(index);
-                System.out.println("Key not found. Nearest key greater than the search key is " + next.getId() + " at index " + index);
+            System.out.println("No greater or equal object found.");
+        }
+    }
+    public static void findNumber(){
+        //// THis is for not West Stream case
+        List<TestingDomain> l = new ArrayList<TestingDomain>();
+        l.add(new TestingDomain(10, "www.geeksforgeeks.org"));
+        l.add(new TestingDomain(20, "practice.geeksforgeeks.org"));
+        l.add(new TestingDomain(20, "code.geeksforgeeks.org"));
+        l.add(new TestingDomain(20, "www.geeksforgeeks.org"));
+        l.add(new TestingDomain(80, "code.geeksforgeeks.org"));
+        l.add(new TestingDomain(1000, "www.geeksforgeeks.org"));
+        TestingDomain offset= new TestingDomain(20,"iii");
+        Comparator<TestingDomain> comparator = new Comparator<TestingDomain>() {
+            public int compare(TestingDomain u1, TestingDomain u2) {
+                return Integer.compare(u1.getId(), u2.getId());
             }
+        };
+        int result = -1;
+
+        int low = 0;
+        int high = l.size() - 1;
+
+        while (low <= high) {
+            int mid = low + (high - low) / 2;
+
+            if (comparator.compare(l.get(mid), offset) > 0) {
+                result = mid;
+                high = mid - 1;
+            } else {
+                low = mid + 1;
+            }
+        }
+
+        if (result != -1) {
+            System.out.println("First greatest object index: " + result);
+        } else {
+            System.out.println("No greater object found.");
         }
     }
 }

@@ -1,9 +1,12 @@
 package com.stormiequality.test;
 
-public class Domain {
+public class TestingDomain {
     private int id;
     private String url;
-    public Domain(int id, String url){
+    public TestingDomain(int id){
+        this.id=id;
+    }
+    public TestingDomain(int id, String url){
         this.id=id;
         this.url= url;
     }
