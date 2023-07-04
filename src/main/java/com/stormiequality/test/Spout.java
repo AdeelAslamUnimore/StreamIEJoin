@@ -30,10 +30,10 @@ public class Spout extends BaseRichSpout {
     @Override
     public void nextTuple() {
         counter++;
-        int revenue = random.nextInt(100000 -1)+1;
-        int cost= random.nextInt(100000-1)+1;
-        int duration=random.nextInt(1500000-900000)+900000;
-        int time=random.nextInt(1500000-900000)+900000;
+        int revenue = random.nextInt(1000 -1)+1;
+        int cost= random.nextInt(1000-1)+1;
+        int duration=random.nextInt(1500-9000)+9000;
+        int time=random.nextInt(1500-9000)+9000;
 
         Values left = new Values(duration,revenue,id,"Left"+counter);
         Values right= new Values(time, cost, id,"Right"+counter);

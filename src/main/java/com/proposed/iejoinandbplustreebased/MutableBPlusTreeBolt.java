@@ -41,9 +41,14 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
     // RightPredicateID
     private String rightPredicateBitSetStreamID = null;
     // Left StreamID
-    private String leftStream = null;
+    private String leftStreamSmaller = null;
     //Right StreamID
-    private String rightStream = null;
+    private String rightStreamSmaller = null;
+
+
+    private String leftStreamGreater = null;
+    //Right StreamID
+    private String rightStreamGreater = null;
     // Right batch permutation
     //List Permutation Down Stream Tasks the size is fixed 2
     // 0 for left 1 for right
@@ -81,8 +86,10 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
     @Override
     public void prepare(Map<String, Object> map, TopologyContext topologyContext, OutputCollector outputCollector) {
         try {
-            this.leftStream = (String) map.get("LeftPredicateTuple");
-            this.rightStream = (String) map.get("RightPredicateTuple");
+            this.leftStreamSmaller = (String) map.get("LeftSmallerPredicateTuple");
+            this.rightStreamSmaller = (String) map.get("RightSmallerPredicateTuple");
+            this.leftStreamGreater = (String) map.get("LeftGreaterPredicateTuple");
+            this.rightStreamGreater = (String) map.get("RightGreaterPredicateTuple");
             this.leftPredicateBitSetStreamID = (String) map.get("LeftBitSetEvaluation");
             this.rightPredicateBitSetStreamID = (String) map.get("RightBitSetEvaluation");
             leftStreamBPlusTree = new BPlusTree(Constants.ORDER_OF_B_PLUS_TREE);
@@ -181,7 +188,7 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
 
     // Completely evaluate the < predicate here
     private void lessPredicateEvaluation(Tuple tuple) {
-        if (tuple.getSourceStreamId().equals(leftStream)) {
+        if (tuple.getSourceStreamId().equals(leftStreamSmaller)) {
             // Inserting the tuple into the BTree location;
             leftStreamBPlusTree.insert(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.TUPLE_ID));
             // Evaluating Tuples from right stream BPlus Tree.
@@ -201,7 +208,7 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
 
         }
 
-        if (tuple.getSourceStreamId().equals(rightStream)) {
+        if (tuple.getSourceStreamId().equals(rightStreamSmaller)) {
             // Insert into the other stream
             rightStreamBPlusTree.insert(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.TUPLE_ID));
             // Evaluation of the query
@@ -225,7 +232,7 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
     // Completely evaluate the > predicte right part of query predicate
     // leftStream: this leftStream depicts the left tuple from right part of predicate
     public void greaterPredicateEvaluation(Tuple tuple) {
-        if (tuple.getSourceStreamId().equals(leftStream)) {
+        if (tuple.getSourceStreamId().equals(leftStreamGreater)) {
             leftStreamBPlusTree.insert(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.TUPLE_ID));
             BitSet bitSet = rightStreamBPlusTree.lessThenSpecificValue(tuple.getIntegerByField(Constants.TUPLE));
             if (bitSet != null) {
@@ -240,7 +247,7 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
             }
         }
         // rightStream: this rightStream depicts the right tuple from right part of predicate
-        if (tuple.getSourceStreamId().equals(rightStream)) {
+        if (tuple.getSourceStreamId().equals(rightStreamGreater)) {
             rightStreamBPlusTree.insert(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.TUPLE_ID));
             BitSet bitSet = leftStreamBPlusTree.greaterThenSpecificValue(tuple.getIntegerByField(Constants.TUPLE));
             if (bitSet != null) {
