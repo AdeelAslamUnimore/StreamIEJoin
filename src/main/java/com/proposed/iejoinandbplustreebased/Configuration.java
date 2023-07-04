@@ -14,8 +14,8 @@ public class Configuration {
     //  Map<String, Object> mapJoinerBoltConstant= new HashMap<>();
       mapJoinerBoltConstant.put("LeftPredicateSourceStreamIDBitSet","PredicateLeft");
       mapJoinerBoltConstant.put("RightPredicateSourceStreamIDBitSet","PredicateRight");
-      mapJoinerBoltConstant.put("LeftPredicateTuple","Left");
-      mapJoinerBoltConstant.put("RightPredicateTuple","Right");
+      mapJoinerBoltConstant.put("LeftPredicateTuple","LeftStreamTuples");
+      mapJoinerBoltConstant.put("RightPredicateTuple","RightStream");
 
       mapJoinerBoltConstant.put("LeftSmallerPredicateTuple","LeftSmaller");
       mapJoinerBoltConstant.put("RightSmallerPredicateTuple","RightSmaller");

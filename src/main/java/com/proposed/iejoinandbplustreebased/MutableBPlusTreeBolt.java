@@ -64,13 +64,12 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
      * constructor that holds the variables
      *
      * @param operator                   <, >  define the operator for operation
-     * @param mergeIntervalDefinedByUser is the sub window size for mutable component
      * @PermtuationStreamID is the stream id provided by parameters however, it exists in configuration file
      * @OffsetStreamID is the streamID is also provided by parameter from configuration file.
      */
-    public MutableBPlusTreeBolt(String operator, int mergeIntervalDefinedByUser, String permutationStreamID, String offsetStreamID) {
+    public MutableBPlusTreeBolt(String operator, String permutationStreamID, String offsetStreamID) {
         this.operator = operator;
-        this.mergeIntervalDefinedByUser = mergeIntervalDefinedByUser;
+        this.mergeIntervalDefinedByUser = Constants.mutableWindowSize;
         this.permutationComputationStreamID = permutationStreamID;
         this.offsetComputationStreamID = offsetStreamID;
 
@@ -175,9 +174,9 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
     @Override
     public void declareOutputFields(OutputFieldsDeclarer outputFieldsDeclarer) {
         //Left part of predicate
-        outputFieldsDeclarer.declareStream(leftPredicateBitSetStreamID, new Fields(Constants.BYTE_ARRAY));
+        outputFieldsDeclarer.declareStream(leftPredicateBitSetStreamID, new Fields(Constants.BYTE_ARRAY,Constants.TUPLE_ID));
         //Right part of predicate
-        outputFieldsDeclarer.declareStream(rightPredicateBitSetStreamID, new Fields(Constants.BYTE_ARRAY));
+        outputFieldsDeclarer.declareStream(rightPredicateBitSetStreamID, new Fields(Constants.BYTE_ARRAY,Constants.TUPLE_ID));
         //Permutation Array
         outputFieldsDeclarer.declareStream(permutationComputationStreamID, new Fields(Constants.TUPLE, Constants.PERMUTATION_TUPLE_IDS, Constants.BATCH_COMPLETION_FLAG));
         //Offset Array
@@ -197,7 +196,7 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
                 try {
                     byte[] bytArrayRBitSet = convertToByteArray(bitSet);
                     // Only emitting the bit array  tuple is due to acking mechanisim
-                    this.outputCollector.emit(leftPredicateBitSetStreamID, tuple, new Values(bytArrayRBitSet));
+                    this.outputCollector.emit(leftPredicateBitSetStreamID, tuple, new Values(bytArrayRBitSet, tuple.getIntegerByField(Constants.TUPLE_ID)));
                     this.outputCollector.ack(tuple);
                     // Emitting Logic for tuples
 
@@ -218,7 +217,7 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
                 try {
                     byte[] bytArrayLBitSet = convertToByteArray(bitSet);
                     // Emitting Tuple logic
-                    this.outputCollector.emit(leftPredicateBitSetStreamID, tuple, new Values(bytArrayLBitSet));
+                    this.outputCollector.emit(leftPredicateBitSetStreamID, tuple, new Values(bytArrayLBitSet, tuple.getIntegerByField(Constants.TUPLE_ID)));
                     this.outputCollector.ack(tuple);
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -239,7 +238,7 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
                 try {
                     byte[] bytArrayRBitSet = convertToByteArray(bitSet);
                     //Emit logic here tuple emitting
-                    this.outputCollector.emit(rightPredicateBitSetStreamID, tuple, new Values(bytArrayRBitSet));
+                    this.outputCollector.emit(rightPredicateBitSetStreamID, tuple, new Values(bytArrayRBitSet, tuple.getIntegerByField(Constants.TUPLE_ID)));
                     this.outputCollector.ack(tuple);
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -254,7 +253,7 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
                 try {
                     //Emiting the tuples to the downStream processing tasks
                     byte[] bytArrayRBitSet = convertToByteArray(bitSet);
-                    this.outputCollector.emit(rightPredicateBitSetStreamID, tuple, new Values(bytArrayRBitSet));
+                    this.outputCollector.emit(rightPredicateBitSetStreamID, tuple, new Values(bytArrayRBitSet, tuple.getIntegerByField(Constants.TUPLE_ID)));
                     this.outputCollector.ack(tuple);
                 } catch (IOException e) {
 
