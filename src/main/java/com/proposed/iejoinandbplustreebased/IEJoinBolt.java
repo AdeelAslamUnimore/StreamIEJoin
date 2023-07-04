@@ -8,10 +8,8 @@ import org.apache.storm.topology.OutputFieldsDeclarer;
 import org.apache.storm.topology.base.BaseRichBolt;
 import org.apache.storm.tuple.Tuple;
 
-import java.util.ArrayList;
-import java.util.BitSet;
-import java.util.Comparator;
-import java.util.Map;
+import javax.management.Query;
+import java.util.*;
 
 public class IEJoinBolt extends BaseRichBolt {
     /**
@@ -32,8 +30,12 @@ public class IEJoinBolt extends BaseRichBolt {
      */
     private ArrayList<Permutation> listLeftPermutation;
     private ArrayList<Permutation> listRightPermutation;
+    private String leftStreamPermutation;
+    private String rightSteamPermutation;
     private ArrayList<Offset> listLeftOffset;
     private ArrayList<Offset> listRightOffset;
+    private String leftStreamOffset;
+    private String rightSteamOffset;
     /*
         This counter is used for flush out the data structures that holds the keys.
      */
@@ -43,6 +45,16 @@ public class IEJoinBolt extends BaseRichBolt {
     /*
             This is the constructor used for tuple  taking  removing tuples by users
      */
+    private boolean flagDuringMerge; //For tuple
+    // StreamID For Merge Operation
+    private String mergeOperationStreamID;
+    // New Tuple Stream IDs
+    private String leftStreamID;
+    private String rightStreamID;
+    // Two queues that holds the left and right Stream Items during merge
+    private Queue<Integer> leftStreamQueue;
+    private Queue<Integer> rightStreamQueue;
+
     public IEJoinBolt(int tupleRemovalCounterByUser) {
         this.tupleRemovalCounterByUser = tupleRemovalCounterByUser;
     }
@@ -61,6 +73,16 @@ public class IEJoinBolt extends BaseRichBolt {
         this.listRightPermutation = new ArrayList<>();
         this.listLeftOffset = new ArrayList<>();
         this.listRightOffset = new ArrayList<>();
+        this.leftStreamQueue = new LinkedList<>();
+        this.rightStreamQueue = new LinkedList<>();
+        this.mergeOperationStreamID = (String) map.get("MergingFlag");
+        this.leftStreamID = (String) map.get("LeftPredicateTuple");
+        this.rightStreamID = (String) map.get("RightPredicateTuple");
+        this.leftStreamOffset = (String) map.get("LeftBatchOffset");
+        this.rightSteamOffset = (String) map.get("RightBatchOffset");
+        this.leftStreamPermutation= (String) map.get("LeftBatchPermutation");
+        this.rightSteamPermutation= (String) map.get("RightBatchPermutation");
+        this.flagDuringMerge = false;
 
     }
 
@@ -74,12 +96,26 @@ public class IEJoinBolt extends BaseRichBolt {
      */
     @Override
     public void execute(Tuple tuple) {
+        // hold items during merge
+        if (tuple.getSourceStreamId().equals(mergeOperationStreamID)) {
+            flagDuringMerge = tuple.getBooleanByField(Constants.MERGING_OPERATION_FLAG);
+        }
         /*
         This if statement is for probing input tuples for that task.
          */
-        if ((tuple.getSourceStreamId().equals("LeftStream")) || (tuple.getSourceStreamId().equals("RightStream"))) {
+        if ((tuple.getSourceStreamId().equals(this.leftStreamID)) || (tuple.getSourceStreamId().equals(this.rightStreamID))) {
+            if (flagDuringMerge) {
+                (tuple.getSourceStreamId().equals(this.leftStreamID) ? this.leftStreamQueue : this.rightStreamQueue)
+                        .offer(tuple.getIntegerByField(Constants.TUPLE));
+            }
+            // Probing is performed over here
             if (checkConditionForAllPermutationAndOffsetArrays(isLeftStreamPermutation, isRightStreamPermutation, isLeftStreamOffset, isRightStreamOffset)) {
-                int tupleValue = tuple.getIntegerByField("");
+                // Probing of results of batch during merge operation;
+                if (flagDuringMerge) {
+                    mergeOperationTupleProbing(leftStreamQueue, rightStreamQueue);
+                    flagDuringMerge = false;
+                }
+                int tupleValue = tuple.getIntegerByField(Constants.TUPLE);
                 String streamID = tuple.getSourceStreamId();
                 lookUpOperation(tupleValue, streamID);
             }
@@ -87,25 +123,25 @@ public class IEJoinBolt extends BaseRichBolt {
         /*
         This is for left permutation computation input tuple is added into this array
          */
-        if (tuple.getSourceStreamId().equals("LeftPermutation")) {
+        if (tuple.getSourceStreamId().equals(leftStreamPermutation)) {
             permutationComputation(tuple, true, listLeftPermutation);
         }
         /*
         This is for right stream permutation computation input stream tuple will add in this array
          */
-        if (tuple.getSourceStreamId().equals("RightPermutation")) {
+        if (tuple.getSourceStreamId().equals(rightSteamPermutation)) {
             permutationComputation(tuple, false, listRightPermutation);
         }
         /*
         This is for left stream offset computation input stream tuple will add in this array
          */
-        if (tuple.getSourceStreamId().equals("LeftOffset")) {
+        if (tuple.getSourceStreamId().equals(leftStreamOffset)) {
             offsetComputation(tuple, true, listLeftOffset);
         }
         /*
         This is for right stream offset computation input stream tuple will add in this array
          */
-        if (tuple.getSourceStreamId().equals("RightOffset")) {
+        if (tuple.getSourceStreamId().equals(rightSteamOffset)) {
             offsetComputation(tuple, false, listRightOffset);
         }
         /*
@@ -121,10 +157,10 @@ public class IEJoinBolt extends BaseRichBolt {
     private void lookUpOperation(int tuple, String streamID) {
         tupleRemovalCounter++;
         // If tuple is from left predicate then it perform operation for evaluation of tuples from right
-        if (streamID.equals("Left")) {
+        if (streamID.equals(leftStreamID)) {
             rightPredicateEvaluation(tuple);
         } else {
-            // If tuple is from left predicate then it perform operation for evaluation of tuples from right
+            // If tuple is from right predicate then it perform operation for evaluation of tuples from left
             leftPredicateEvaluation(tuple);
         }
         // bulk removal;
@@ -158,51 +194,54 @@ public class IEJoinBolt extends BaseRichBolt {
     }
 
     /**
-     *  holding permutation computation array items
-     *  flag parameter differentiate If true then left stream otherwise right
-     * @param tuple tuple input streaming tuple
-     * @param flag is sent from upstream processing stream to indicate it last tuple this is signature for its associated
-     *             isLeftStreamOrRightStreamPermutation to be true
+     * holding permutation computation array items
+     * flag parameter differentiate If true then left stream otherwise right
+     *
+     * @param tuple                tuple input streaming tuple
+     * @param flag                 is sent from upstream processing stream to indicate it last tuple this is signature for its associated
+     *                             isLeftStreamOrRightStreamPermutation to be true
      * @param permutationArrayList a immutable list that which needs to be fill
      */
     private void permutationComputation(Tuple tuple, boolean flag, ArrayList<Permutation> permutationArrayList) {
         if (flag) {
-            if (tuple.getValueByField("Flag").equals(true)) {
+            if (tuple.getValueByField(Constants.BATCH_COMPLETION_FLAG).equals(true)) {
                 isLeftStreamPermutation = true;
             } else {
-                permutationArrayList.add(new Permutation(tuple.getIntegerByField("Index")));
+                permutationArrayList.add(new Permutation(tuple.getIntegerByField(Constants.PERMUTATION_COMPUTATION_INDEX)));
             }
         } else {
-            if (tuple.getValueByField("Flag").equals(true)) {
+            if (tuple.getValueByField(Constants.BATCH_COMPLETION_FLAG).equals(true)) {
                 isRightStreamPermutation = true;
             } else {
-                permutationArrayList.add(new Permutation(tuple.getIntegerByField("Index")));
+                permutationArrayList.add(new Permutation(tuple.getIntegerByField(Constants.PERMUTATION_COMPUTATION_INDEX)));
             }
         }
     }
+
     /**
-     *  holding offset computation array items
-     *  flag parameter differentiate If true then left stream otherwise right
-     * @param tuple tuple input streaming tuple
-     * @param flag is sent from upstream processing stream to indicate it last tuple this is signature for its associated
-     *             isLeftStreamOrRightStreamPermutation to be true
+     * holding offset computation array items
+     * flag parameter differentiate If true then left stream otherwise right
+     *
+     * @param tuple           tuple input streaming tuple
+     * @param flag            is sent from upstream processing stream to indicate it last tuple this is signature for its associated
+     *                        isLeftStreamOrRightStreamPermutation to be true
      * @param offsetArrayList a immutable list that which needs to be fill
      */
 
     private void offsetComputation(Tuple tuple, boolean flag, ArrayList<Offset> offsetArrayList) {
         if (flag) {
-            if (tuple.getValueByField("Flag").equals(true)) {
+            if (tuple.getValueByField(Constants.BATCH_COMPLETION_FLAG).equals(true)) {
                 isLeftStreamOffset = true;
             } else {
-                offsetArrayList.add(new Offset(tuple.getIntegerByField("Tuple"), tuple.getIntegerByField("Index"),
-                        (BitSet) tuple.getValueByField("Bit"), tuple.getIntegerByField("Size")));
+                offsetArrayList.add(new Offset(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField( Constants.OFFSET_TUPLE_INDEX),
+                        (BitSet) tuple.getValueByField(Constants.BYTE_ARRAY), tuple.getIntegerByField(Constants.OFFSET_SIZE_OF_TUPLE)));
             }
         } else {
-            if (tuple.getValueByField("Flag").equals(true)) {
+            if (tuple.getValueByField(Constants.BATCH_COMPLETION_FLAG).equals(true)) {
                 isRightStreamOffset = true;
             } else {
-                offsetArrayList.add(new Offset(tuple.getIntegerByField("Tuple"), tuple.getIntegerByField("Index"),
-                        (BitSet) tuple.getValueByField("Bit"), tuple.getIntegerByField("Size")));
+                offsetArrayList.add(new Offset(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField( Constants.OFFSET_TUPLE_INDEX),
+                        (BitSet) tuple.getValueByField(Constants.BYTE_ARRAY), tuple.getIntegerByField(Constants.OFFSET_SIZE_OF_TUPLE)));
             }
         }
     }
@@ -212,8 +251,9 @@ public class IEJoinBolt extends BaseRichBolt {
      * It performs binary search
      * Search the key if found then return original otherwise greatest;
      * It has also flag that indicate if original data item present or not:
+     *
      * @param offsetArrayList offset array of right stream or stream
-     * @param key that is new key to probe
+     * @param key             that is new key to probe
      * @return SearchModel that has a key and a bit for actual presence check
      */
     private SearchModel searchKeyForRightStream(ArrayList<Offset> offsetArrayList, int key) {
@@ -311,16 +351,18 @@ public class IEJoinBolt extends BaseRichBolt {
 
 
     }
+
     /**
      * This method is used for finding the key and its index, rightStream because it searches in right Stream
      * For left stream we donot need because this search performs binary operation and return first great key index in the offset array
+     *
      * @param offsetArrayList offset array of right stream or stream
-     * @param key that is new key to probe
+     * @param key             that is new key to probe
      * @return integer index of searched key
      */
 
     private int searchKeyForLeftStream(ArrayList<Offset> offsetArrayList, int key) {
-        Offset offset = new Offset(20);
+        Offset offset = new Offset(key);
         Comparator<Offset> comparator = new Comparator<Offset>() {
             public int compare(Offset u1, Offset u2) {
                 return Integer.compare(u1.getKeyForSearch(), u2.getKeyForSearch());
@@ -349,6 +391,7 @@ public class IEJoinBolt extends BaseRichBolt {
             return offsetArrayList.size();
         }
     }
+
     /*
        For evaluation according to the query mentioned in the original paper It start scanning the it switch on the all the bits from start to the
        offset position of identified location -1.
@@ -379,6 +422,24 @@ public class IEJoinBolt extends BaseRichBolt {
         for (int i = offsetSearchKeyFirst; i < -1; i--) {
             if (bitSet.get(i)) {
                 count++;
+            }
+        }
+
+    }
+
+    private void mergeOperationTupleProbing(Queue<Integer> leftStreamQueue, Queue<Integer> rightStreamQueue) {
+
+        if (!leftStreamQueue.isEmpty()) {
+            for (int key : leftStreamQueue) {
+                tupleRemovalCounter++;
+                rightPredicateEvaluation(key);
+            }
+        }
+        if (!rightStreamQueue.isEmpty()) {
+            // If tuple is from left predicate then it perform operation for evaluation of tuples from right
+            for (int key : leftStreamQueue) {
+                tupleRemovalCounter++;
+                leftPredicateEvaluation(key);
             }
         }
 

@@ -15,6 +15,9 @@ public class Configuration {
       mapJoinerBoltConstant.put("RightPredicateTuple","Right");
       mapJoinerBoltConstant.put("LeftBatchPermutation", "PermutationLeft");
       mapJoinerBoltConstant.put("RightBatchPermutation","PermutationRight");
+      mapJoinerBoltConstant.put("LeftBatchOffset", "OffsetLeft");
+      mapJoinerBoltConstant.put("RightBatchOffset","OffsetRight");
+      mapJoinerBoltConstant.put("MergingFlag","mergeOperationInitiator");
       return mapJoinerBoltConstant;
     }
 
