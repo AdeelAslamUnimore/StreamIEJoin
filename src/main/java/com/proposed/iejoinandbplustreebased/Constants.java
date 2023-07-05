@@ -21,7 +21,7 @@ public class Constants {
     public static final String RIGHT_PREDICATE_BOLT = "right_stream";
     public static final String BIT_SET_EVALUATION_BOLT ="bitset_evaluation";
     public static final int  mutableWindowSize=1000;
-    public static final int immutableWindowSize=5000;
+    public static final int immutableWindowSize=10000;
 
     //
 

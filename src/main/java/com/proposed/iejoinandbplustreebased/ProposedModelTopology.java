@@ -18,7 +18,7 @@ public class ProposedModelTopology {
         config.registerSerialization(java.util.BitSet.class);
         config.registerSerialization(java.util.HashSet.class);
         TopologyBuilder builder= new TopologyBuilder();
-        builder.setSpout("testSpout", new Spout(500));
+        builder.setSpout("testSpout", new Spout(1000));
         builder.setBolt("testBolt", new SplitBolt())
                 .fieldsGrouping("testSpout", "LeftStreamTuples", new Fields("ID")).fieldsGrouping("testSpout", "RightStream", new Fields("ID"));
         builder.setBolt(Constants.LEFT_PREDICATE_BOLT, new MutableBPlusTreeBolt("<",(String)map.get("LeftBatchPermutation"),(String)map.get("LeftBatchOffset")))

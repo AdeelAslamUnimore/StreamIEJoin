@@ -101,7 +101,7 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
             downStreamTaskIdsForPermutation = topologyContext.getComponentTasks(Constants.PERMUTATION_COMPUTATION_BOLT_ID);
             downStreamTasksForOffset = topologyContext.getComponentTasks(Constants.OFFSET_AND_IE_JOIN_BOLT_ID);
             this.idForDownStreamTasksOffset = 0;
-            this.componentID= topologyContext.getThisComponentId();
+            this.componentID = topologyContext.getThisComponentId();
             this.outputCollector = outputCollector;
 
         } catch (Exception e) {
@@ -300,7 +300,7 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
         globalCount = globalCount + calculatePreviousNode(node.getPrev());
         for (int j = 0; j < values.size(); j++) {
             // Add logic for Emit the tuples
-              outputCollector.emitDirect(taskIndex, offsetComputationStreamID, new Values(key, (globalCount + 1), convertToByteArray(bitset1), sizeOfvalues, false));
+            outputCollector.emitDirect(taskIndex, offsetComputationStreamID, new Values(key, (globalCount + 1), convertToByteArray(bitset1), sizeOfvalues, false));
             //////// offsetArrayList.add(new Offset(key,(globalCount + 1),bitset1,sizeOfvalues));
         }
         // Add to the Offset Array with key
@@ -402,9 +402,7 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
 
     //It include all merge operation require for creating IEJoin structure.
     public void mergingOfMutableStructureForImmutableDataStructure(Tuple tuple) {
-//Case pending
-        System.out.println(idForDownStreamTasksOffset + "===========================");
-        System.out.println(downStreamTasksForOffset.get(idForDownStreamTasksOffset) + ".....ID For DownStream"+downStreamTasksForOffset.size());
+        // Collector for merge operation.
 
         this.outputCollector.emitDirect(downStreamTasksForOffset.get(idForDownStreamTasksOffset), mergeOperationStreamID, new Values(true));
 

@@ -43,8 +43,6 @@ public class IEJoinBolt extends BaseRichBolt {
         This counter is used for flush out the data structures that holds the keys.
      */
     private int tupleRemovalCounter = 0;
-    private int tupleRemovalCounterByUser = 0;
-
     /*
             This is the constructor used for tuple  taking  removing tuples by users
      */
@@ -62,16 +60,17 @@ public class IEJoinBolt extends BaseRichBolt {
         All initilizations either for data structures or booleans are defined
 
      */
-    public IEJoinBolt(){
-        Map<String,Object> map=Configuration.configurationConstantForStreamIDs();
+    public IEJoinBolt() {
+        Map<String, Object> map = Configuration.configurationConstantForStreamIDs();
         this.mergeOperationStreamID = (String) map.get("MergingFlag");
         this.leftStreamID = (String) map.get("LeftPredicateTuple");
         this.rightStreamID = (String) map.get("RightPredicateTuple");
         this.leftStreamOffset = (String) map.get("LeftBatchOffset");
         this.rightSteamOffset = (String) map.get("RightBatchOffset");
-        this.leftStreamPermutation= (String) map.get("LeftBatchPermutation");
-        this.rightSteamPermutation= (String) map.get("RightBatchPermutation");
+        this.leftStreamPermutation = (String) map.get("LeftBatchPermutation");
+        this.rightSteamPermutation = (String) map.get("RightBatchPermutation");
     }
+
     @Override
     public void prepare(Map<String, Object> map, TopologyContext topologyContext, OutputCollector outputCollector) {
         this.isLeftStreamOffset = false;
@@ -85,7 +84,7 @@ public class IEJoinBolt extends BaseRichBolt {
         this.leftStreamQueue = new LinkedList<>();
         this.rightStreamQueue = new LinkedList<>();
         this.flagDuringMerge = false;
-        this.tupleRemovalCounterByUser=Constants.mutableWindowSize;
+        this.tupleRemovalCounter = Constants.mutableWindowSize;
 
     }
 
@@ -118,7 +117,6 @@ public class IEJoinBolt extends BaseRichBolt {
                     mergeOperationTupleProbing(leftStreamQueue, rightStreamQueue);
                     flagDuringMerge = false;
                 }
-                //int tupleValue = tuple.getIntegerByField(Constants.TUPLE);
                 String streamID = tuple.getSourceStreamId();
                 lookUpOperation(tuple, streamID);
             }
@@ -161,8 +159,10 @@ public class IEJoinBolt extends BaseRichBolt {
         tupleRemovalCounter++;
         // If tuple is from left predicate then it perform operation for evaluation of tuples from right
         if (streamID.equals(leftStreamID)) {
+
             rightPredicateEvaluation(tuple.getIntegerByField("Duration"), tuple.getIntegerByField("Revenue"));
         } else {
+
             // If tuple is from right predicate then it perform operation for evaluation of tuples from left
             leftPredicateEvaluation(tuple.getIntegerByField("Time"), tuple.getIntegerByField("Cost"));
         }
@@ -178,7 +178,7 @@ public class IEJoinBolt extends BaseRichBolt {
             this.listRightPermutation = new ArrayList<>();
             this.listLeftOffset = new ArrayList<>();
             this.listRightOffset = new ArrayList<>();
-            tupleRemovalCounter=Constants.mutableWindowSize;
+            tupleRemovalCounter = Constants.mutableWindowSize;
         }
         // Do the job
 
@@ -237,18 +237,18 @@ public class IEJoinBolt extends BaseRichBolt {
             if (tuple.getValueByField(Constants.BATCH_COMPLETION_FLAG).equals(true)) {
                 isLeftStreamOffset = true;
             } else {
-                byte[] presenceBit=tuple.getBinaryByField(Constants.BYTE_ARRAY);
-                BitSet presenceBitSetConversion=convertToObject(presenceBit);
-                offsetArrayList.add(new Offset(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField( Constants.OFFSET_TUPLE_INDEX),
+                byte[] presenceBit = tuple.getBinaryByField(Constants.BYTE_ARRAY);
+                BitSet presenceBitSetConversion = convertToObject(presenceBit);
+                offsetArrayList.add(new Offset(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.OFFSET_TUPLE_INDEX),
                         presenceBitSetConversion, tuple.getIntegerByField(Constants.OFFSET_SIZE_OF_TUPLE)));
             }
         } else {
             if (tuple.getValueByField(Constants.BATCH_COMPLETION_FLAG).equals(true)) {
                 isRightStreamOffset = true;
             } else {
-               byte[] presenceBit=tuple.getBinaryByField(Constants.BYTE_ARRAY);
-               BitSet presenceBitSetConversion=convertToObject(presenceBit);
-                offsetArrayList.add(new Offset(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField( Constants.OFFSET_TUPLE_INDEX),
+                byte[] presenceBit = tuple.getBinaryByField(Constants.BYTE_ARRAY);
+                BitSet presenceBitSetConversion = convertToObject(presenceBit);
+                offsetArrayList.add(new Offset(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.OFFSET_TUPLE_INDEX),
                         presenceBitSetConversion, tuple.getIntegerByField(Constants.OFFSET_SIZE_OF_TUPLE)));
             }
         }
@@ -323,9 +323,10 @@ public class IEJoinBolt extends BaseRichBolt {
 
     private void rightPredicateEvaluation(int tuple1, int tuple2) {
         SearchModel offsetSearchKeySecond = searchKeyForRightStream(listRightOffset, tuple2);
-        int count = 0;
         BitSet bitSet = new BitSet();
+        int count=0;
         int offset = listRightOffset.get(offsetSearchKeySecond.getIndexPosition()).getIndex() - 1;
+
         offset = offset - 1;
         // System.exit(-1);
         if (offset >= 0) {
@@ -333,7 +334,7 @@ public class IEJoinBolt extends BaseRichBolt {
                 try {
                     bitSet.set(listRightPermutation.get(j).getIndex() - 1, true);
                 } catch (IndexOutOfBoundsException e) {
-                    System.out.println(listRightPermutation.size() + "..." + offset);
+                    e.printStackTrace();
                 }
             }
             SearchModel offsetSearchKeyFirst = searchKeyForRightStream(listLeftOffset, tuple1);
@@ -437,7 +438,8 @@ public class IEJoinBolt extends BaseRichBolt {
 
     /**
      * probing
-     * @param leftStreamQueue left Queue during merge operation
+     *
+     * @param leftStreamQueue  left Queue during merge operation
      * @param rightStreamQueue Right Queue during merge operation
      */
     private void mergeOperationTupleProbing(Queue<Tuple> leftStreamQueue, Queue<Tuple> rightStreamQueue) {
@@ -451,11 +453,12 @@ public class IEJoinBolt extends BaseRichBolt {
             // If tuple is from left predicate then it perform operation for evaluation of tuples from right
             for (Tuple tuple : rightStreamQueue) {
                 tupleRemovalCounter++;
-                leftPredicateEvaluation(tuple.getIntegerByField("Time"),tuple.getIntegerByField("Cost"));
+                leftPredicateEvaluation(tuple.getIntegerByField("Time"), tuple.getIntegerByField("Cost"));
             }
         }
 
     }
+
     private BitSet convertToObject(byte[] byteData) {
         try (ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(byteData);
              ObjectInputStream objectInputStream = new ObjectInputStream(byteArrayInputStream)) {
