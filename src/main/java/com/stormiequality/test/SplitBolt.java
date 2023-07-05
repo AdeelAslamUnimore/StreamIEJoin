@@ -1,5 +1,6 @@
 package com.stormiequality.test;
 
+import com.proposed.iejoinandbplustreebased.Configuration;
 import com.proposed.iejoinandbplustreebased.Constants;
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
@@ -17,18 +18,21 @@ public class SplitBolt extends BaseRichBolt {
     private String rightStreamSmaller;
     private String leftStreamGreater;
     private String rightStreamGreater;
-    @Override
-    public void prepare(Map<String, Object> map, TopologyContext topologyContext, OutputCollector outputCollector) {
-        this.outputCollector= outputCollector;
+    public SplitBolt(){
+        Map<String, Object> map= Configuration.configurationConstantForStreamIDs();
         this.leftStreamSmaller = (String) map.get("LeftSmallerPredicateTuple");
         this.rightStreamSmaller = (String) map.get("RightSmallerPredicateTuple");
         this.leftStreamGreater=(String) map.get("LeftGreaterPredicateTuple");
         this.rightStreamGreater= (String) map.get("RightGreaterPredicateTuple");
     }
+    @Override
+    public void prepare(Map<String, Object> map, TopologyContext topologyContext, OutputCollector outputCollector) {
+        this.outputCollector= outputCollector;
+
+    }
 
     @Override
     public void execute(Tuple tuple) {
-
         if(tuple.getSourceStreamId().equals("LeftStreamTuples")){
 
             Values valuesLeft= new Values(tuple.getIntegerByField("Duration"),tuple.getIntegerByField("ID"), "LeftStream",tuple.getValueByField("TupleID"));

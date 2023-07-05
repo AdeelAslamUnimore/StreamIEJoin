@@ -1,5 +1,6 @@
 package com.proposed.iejoinandbplustreebased;
 
+import clojure.lang.Obj;
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.OutputFieldsDeclarer;
@@ -17,11 +18,17 @@ public class JoinerBoltForBitSetOperation extends BaseRichBolt {
     private BitSet predicate2BitSet=null;
     private String leftPredicateSourceStreamID=null;
     private String rightPredicateSourceStreamID=null;
+    public JoinerBoltForBitSetOperation(){
+        Map<String, Object> map=Configuration.configurationConstantForStreamIDs();
+        this.leftPredicateSourceStreamID= (String) map.get("LeftPredicateSourceStreamIDBitSet");
+        this.rightPredicateSourceStreamID= (String) map.get("RightPredicateSourceStreamIDBitSet");
+
+    }
 
     @Override
     public void prepare(Map<String, Object> map, TopologyContext topologyContext, OutputCollector outputCollector) {
-            this.leftPredicateSourceStreamID= (String) map.get("LeftPredicateSourceStreamIDBitSet");
-            this.rightPredicateSourceStreamID= (String) map.get("RightPredicateSourceStreamIDBitSet");
+//            this.leftPredicateSourceStreamID= (String) map.get("LeftPredicateSourceStreamIDBitSet");
+//            this.rightPredicateSourceStreamID= (String) map.get("RightPredicateSourceStreamIDBitSet");
 
     }
 
@@ -33,6 +40,7 @@ public class JoinerBoltForBitSetOperation extends BaseRichBolt {
      */
     @Override
     public void execute(Tuple tuple) {
+
         if(tuple.getSourceStreamId().equals(leftPredicateSourceStreamID)){
             byte[] byteArrayPredicateLeftBitSet = tuple.getBinaryByField(Constants.BYTE_ARRAY);
             predicate1BitSet= convertToObject(byteArrayPredicateLeftBitSet);
@@ -46,6 +54,9 @@ public class JoinerBoltForBitSetOperation extends BaseRichBolt {
         }
         if ((predicate1BitSet!=null) && (predicate2BitSet!=null)) {
             predicate2BitSet.and(predicate1BitSet);
+           // System.out.println(predicate2BitSet);
+           predicate1BitSet=null;
+           predicate2BitSet=null;
         }
     }
 

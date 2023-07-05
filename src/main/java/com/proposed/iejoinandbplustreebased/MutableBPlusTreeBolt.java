@@ -59,11 +59,13 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
     private List<Integer> downStreamTasksForOffset;
     // Merge operation Initiator
     private String mergeOperationStreamID;
+    //  Component ID
+    private String componentID;
 
     /**
      * constructor that holds the variables
      *
-     * @param operator                   <, >  define the operator for operation
+     * @param operator <, >  define the operator for operation
      * @PermtuationStreamID is the stream id provided by parameters however, it exists in configuration file
      * @OffsetStreamID is the streamID is also provided by parameter from configuration file.
      */
@@ -72,6 +74,15 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
         this.mergeIntervalDefinedByUser = Constants.mutableWindowSize;
         this.permutationComputationStreamID = permutationStreamID;
         this.offsetComputationStreamID = offsetStreamID;
+        Map<String, Object> map = Configuration.configurationConstantForStreamIDs();
+        this.leftStreamSmaller = (String) map.get("LeftSmallerPredicateTuple");
+        this.rightStreamSmaller = (String) map.get("RightSmallerPredicateTuple");
+        this.leftStreamGreater = (String) map.get("LeftGreaterPredicateTuple");
+        this.rightStreamGreater = (String) map.get("RightGreaterPredicateTuple");
+        this.leftPredicateBitSetStreamID = (String) map.get("LeftPredicateSourceStreamIDBitSet");
+        this.mergeOperationStreamID = (String) map.get("MergingFlag");
+        this.rightPredicateBitSetStreamID = (String) map.get("RightPredicateSourceStreamIDBitSet");
+
 
     }
 
@@ -85,18 +96,12 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
     @Override
     public void prepare(Map<String, Object> map, TopologyContext topologyContext, OutputCollector outputCollector) {
         try {
-            this.leftStreamSmaller = (String) map.get("LeftSmallerPredicateTuple");
-            this.rightStreamSmaller = (String) map.get("RightSmallerPredicateTuple");
-            this.leftStreamGreater = (String) map.get("LeftGreaterPredicateTuple");
-            this.rightStreamGreater = (String) map.get("RightGreaterPredicateTuple");
-            this.leftPredicateBitSetStreamID = (String) map.get("LeftBitSetEvaluation");
-            this.rightPredicateBitSetStreamID = (String) map.get("RightBitSetEvaluation");
             leftStreamBPlusTree = new BPlusTree(Constants.ORDER_OF_B_PLUS_TREE);
             rightStreamBPlusTree = new BPlusTree(Constants.ORDER_OF_B_PLUS_TREE);
             downStreamTaskIdsForPermutation = topologyContext.getComponentTasks(Constants.PERMUTATION_COMPUTATION_BOLT_ID);
             downStreamTasksForOffset = topologyContext.getComponentTasks(Constants.OFFSET_AND_IE_JOIN_BOLT_ID);
             this.idForDownStreamTasksOffset = 0;
-            this.mergeOperationStreamID = (String) map.get("MergingFlag");
+            this.componentID= topologyContext.getThisComponentId();
             this.outputCollector = outputCollector;
 
         } catch (Exception e) {
@@ -111,9 +116,11 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
         try {
             // Right and left predicate evaluation It can be optimized depending on the condition it can be customized
             if (operator.equals("<")) {
+
                 lessPredicateEvaluation(tuple);
             }
             if (operator.equals(">")) {
+
                 greaterPredicateEvaluation(tuple);
             }
         } catch (Exception e) {
@@ -121,52 +128,8 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
         }
         // Check condition for window limit
         if (mergeIntervalCounter >= mergeIntervalDefinedByUser) {
-             /*
-            to do emit a tuple with a flag in a direct manner to for maintaining a queue that accommodate those tuples.
-             */
-            this.outputCollector.emitDirect(downStreamTasksForOffset.get(idForDownStreamTasksOffset), mergeOperationStreamID, new Values(true));
+            mergingOfMutableStructureForImmutableDataStructure(tuple);
 
-            // Left most node for stream R
-            Node leftBatch = leftStreamBPlusTree.leftMostNode();
-            // Left Most Node for Stream S
-            Node rightBatch = rightStreamBPlusTree.leftMostNode();
-            // 3 thread that can work in parallel manner
-            Thread t1 = new Thread(() -> {
-                // Write emit method, stream id, down stream task
-                emitTuple(leftBatch, tuple, permutationComputationStreamID, downStreamTaskIdsForPermutation.get(0));
-                // execute any other code related to BM here
-            });
-
-            Thread t2 = new Thread(() -> {
-                emitTuple(rightBatch, tuple, permutationComputationStreamID, downStreamTaskIdsForPermutation.get(1));
-                //  emitTuple(rightBatch, tuple,downstreamTaskIdsForIEJoinPermutationRight.get(0),  collector, localAddress.getHostName());
-            });
-            Thread t3 = new Thread(() -> {
-                try {
-                    offsetComputation(leftBatch, rightStreamBPlusTree, tuple, downStreamTasksForOffset.get(idForDownStreamTasksOffset));
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            });
-
-
-            t1.start();
-            t2.start();
-            t3.start();
-
-            try {
-                t1.join();
-                t2.join();
-                t3.join();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            idForDownStreamTasksOffset++;
-            leftStreamBPlusTree = new BPlusTree(Constants.ORDER_OF_B_PLUS_TREE);
-            rightStreamBPlusTree = new BPlusTree(Constants.ORDER_OF_B_PLUS_TREE);
-            if (idForDownStreamTasksOffset == downStreamTasksForOffset.size()) {
-                idForDownStreamTasksOffset = 0;
-            }
         }
 
     }
@@ -174,9 +137,9 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
     @Override
     public void declareOutputFields(OutputFieldsDeclarer outputFieldsDeclarer) {
         //Left part of predicate
-        outputFieldsDeclarer.declareStream(leftPredicateBitSetStreamID, new Fields(Constants.BYTE_ARRAY,Constants.TUPLE_ID));
+        outputFieldsDeclarer.declareStream(leftPredicateBitSetStreamID, new Fields(Constants.BYTE_ARRAY, Constants.TUPLE_ID));
         //Right part of predicate
-        outputFieldsDeclarer.declareStream(rightPredicateBitSetStreamID, new Fields(Constants.BYTE_ARRAY,Constants.TUPLE_ID));
+        outputFieldsDeclarer.declareStream(rightPredicateBitSetStreamID, new Fields(Constants.BYTE_ARRAY, Constants.TUPLE_ID));
         //Permutation Array
         outputFieldsDeclarer.declareStream(permutationComputationStreamID, new Fields(Constants.TUPLE, Constants.PERMUTATION_TUPLE_IDS, Constants.BATCH_COMPLETION_FLAG));
         //Offset Array
@@ -284,7 +247,7 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
     }
 
     // Emitting tuple for Permutation Computation:
-    public void emitTuple(Node node, Tuple tuple, String streamID, int downStreamTaskID) {
+    public void emitTuplePermutation(Node node, Tuple tuple, String streamID, int downStreamTaskID) {
         while (node != null) {
             for (int i = 0; i < node.getKeys().size(); i++) {
                 // Emitting tuples to downStream Task for tuple
@@ -337,7 +300,7 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
         globalCount = globalCount + calculatePreviousNode(node.getPrev());
         for (int j = 0; j < values.size(); j++) {
             // Add logic for Emit the tuples
-            outputCollector.emitDirect(taskIndex, offsetComputationStreamID, new Values(key, (globalCount + 1), convertToByteArray(bitset1), sizeOfvalues, false));
+              outputCollector.emitDirect(taskIndex, offsetComputationStreamID, new Values(key, (globalCount + 1), convertToByteArray(bitset1), sizeOfvalues, false));
             //////// offsetArrayList.add(new Offset(key,(globalCount + 1),bitset1,sizeOfvalues));
         }
         // Add to the Offset Array with key
@@ -434,6 +397,59 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
             }
             nodeForLeft = nodeForLeft.getNext();
             startIndexForNodeForLeft = 0;
+        }
+    }
+
+    //It include all merge operation require for creating IEJoin structure.
+    public void mergingOfMutableStructureForImmutableDataStructure(Tuple tuple) {
+//Case pending
+        System.out.println(idForDownStreamTasksOffset + "===========================");
+        System.out.println(downStreamTasksForOffset.get(idForDownStreamTasksOffset) + ".....ID For DownStream"+downStreamTasksForOffset.size());
+
+        this.outputCollector.emitDirect(downStreamTasksForOffset.get(idForDownStreamTasksOffset), mergeOperationStreamID, new Values(true));
+
+        // Left most node for stream R
+        Node leftBatch = leftStreamBPlusTree.leftMostNode();
+        // Left Most Node for Stream S
+        Node rightBatch = rightStreamBPlusTree.leftMostNode();
+        // 3 thread that can work in parallel manner
+        Thread t1 = new Thread(() -> {
+            // Write emit method, stream id, down stream task
+            emitTuplePermutation(leftBatch, tuple, permutationComputationStreamID, downStreamTaskIdsForPermutation.get(0));
+            // execute any other code related to BM here
+        });
+
+        Thread t2 = new Thread(() -> {
+            emitTuplePermutation(rightBatch, tuple, permutationComputationStreamID, downStreamTaskIdsForPermutation.get(1));
+            //  emitTuple(rightBatch, tuple,downstreamTaskIdsForIEJoinPermutationRight.get(0),  collector, localAddress.getHostName());
+        });
+        Thread t3 = new Thread(() -> {
+            try {
+                offsetComputation(leftBatch, rightStreamBPlusTree, tuple, downStreamTasksForOffset.get(idForDownStreamTasksOffset));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
+
+
+        t1.start();
+        t2.start();
+        t3.start();
+
+        try {
+            t1.join();
+            t2.join();
+            t3.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        idForDownStreamTasksOffset++; // DownStream Task ID updation
+        // Flushing the mutable data structure
+        leftStreamBPlusTree = new BPlusTree(Constants.ORDER_OF_B_PLUS_TREE);
+        rightStreamBPlusTree = new BPlusTree(Constants.ORDER_OF_B_PLUS_TREE);
+        mergeIntervalCounter = 0; // Merge interval to 0 if not zero than B tree will be null for next
+        if (idForDownStreamTasksOffset == downStreamTasksForOffset.size()) {
+            idForDownStreamTasksOffset = 0;
         }
     }
 }

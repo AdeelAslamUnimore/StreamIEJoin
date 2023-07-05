@@ -11,6 +11,7 @@ import org.apache.storm.tuple.Values;
 
 import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -34,6 +35,12 @@ public class PermutationBolt extends BaseRichBolt {
     private int currentTaskIndex;
     private int downStreamTasks;
 
+
+    public PermutationBolt(){
+        Map<String, Object> map= Configuration.configurationConstantForStreamIDs();
+        this.permutationLeft = (String) map.get("LeftBatchPermutation");
+        this.permutationRight = (String) map.get("RightBatchPermutation");
+    }
     /**
      * all initialization is performed both flags and and data structure is performed at here
      *
@@ -47,8 +54,8 @@ public class PermutationBolt extends BaseRichBolt {
         this.rightFlag = false;
         this.leftStreamPermutation = new ArrayList<>();
         this.rightStreamPermutation = new ArrayList<>();
-        this.permutationLeft = (String) map.get("LeftBatchPermutation");
-        this.permutationRight = (String) map.get("RightBatchPermutation");
+//        this.permutationLeft = (String) map.get("LeftBatchPermutation");
+//        this.permutationRight = (String) map.get("RightBatchPermutation");
         this.currentTaskIndex= topologyContext.getThisTaskIndex();
         this.listOfDownStreamTasks= topologyContext.getComponentTasks(Constants.OFFSET_AND_IE_JOIN_BOLT_ID);
         this.downStreamTasks=0;
@@ -102,7 +109,7 @@ public class PermutationBolt extends BaseRichBolt {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer outputFieldsDeclarer) {
-        outputFieldsDeclarer.declareStream(permutationLeft,new Fields(Constants.TUPLE_ID,Constants.BATCH_COMPLETION_FLAG));
+        outputFieldsDeclarer.declareStream(permutationLeft,new Fields(Constants.TUPLE_ID,Constants.PERMUTATION_COMPUTATION_INDEX,Constants.BATCH_COMPLETION_FLAG));
         outputFieldsDeclarer.declareStream(permutationRight, new Fields(Constants.TUPLE_ID,Constants.PERMUTATION_COMPUTATION_INDEX,Constants.BATCH_COMPLETION_FLAG));
     }
 

@@ -9,9 +9,9 @@ public class Configuration {
     /*
     These constants for JoinerBoltForBitSetOperation
      */
-  public static Config configurationConstantForStreamIDs(){
-      Config mapJoinerBoltConstant= new Config();
-    //  Map<String, Object> mapJoinerBoltConstant= new HashMap<>();
+  public static Map<String, Object> configurationConstantForStreamIDs(){
+    //  Config mapJoinerBoltConstant= new Config();
+     Map<String, Object> mapJoinerBoltConstant= new HashMap<>();
       mapJoinerBoltConstant.put("LeftPredicateSourceStreamIDBitSet","PredicateLeft");
       mapJoinerBoltConstant.put("RightPredicateSourceStreamIDBitSet","PredicateRight");
       mapJoinerBoltConstant.put("LeftPredicateTuple","LeftStreamTuples");
