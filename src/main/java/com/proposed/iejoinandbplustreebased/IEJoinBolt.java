@@ -278,7 +278,6 @@ public class IEJoinBolt extends BaseRichBolt {
 
         while (low <= high) {
             int mid = low + (high - low) / 2;
-
             if (comparator.compare(offsetArrayList.get(mid), offset) >= 0) {
                 result = mid;
                 high = mid - 1;
@@ -288,7 +287,13 @@ public class IEJoinBolt extends BaseRichBolt {
         }
 
         if (result != -1) {
-            if (listLeftOffset.get(result).getKeyForSearch() == key) {
+            int id=0;
+           try{
+                id=listLeftOffset.get(result).getKeyForSearch();
+            }catch (IndexOutOfBoundsException e){
+                id=listLeftOffset.get(listLeftOffset.size()-1).getKeyForSearch();
+            }
+            if (id == key) {
                 searchModel.setIndexPosition(result);
                 BitSet bitSet = new BitSet();
                 bitSet.set(0, true);
@@ -301,14 +306,12 @@ public class IEJoinBolt extends BaseRichBolt {
                 searchModel.setBitSet(bitSet);
                 return searchModel;
             }
-            //System.out.println("First greater or equal object index: " + result);
         } else {
             searchModel.setIndexPosition(offsetArrayList.size() - 1);
             BitSet bitSet = new BitSet();
             bitSet.set(0, false);
             searchModel.setBitSet(bitSet);
             return searchModel;
-            // System.out.println("No greater or equal object found.");
         }
 
     }
