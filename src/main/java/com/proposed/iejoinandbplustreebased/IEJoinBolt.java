@@ -435,6 +435,11 @@ public class IEJoinBolt extends BaseRichBolt {
 
     }
 
+    /**
+     * probing
+     * @param leftStreamQueue left Queue during merge operation
+     * @param rightStreamQueue Right Queue during merge operation
+     */
     private void mergeOperationTupleProbing(Queue<Tuple> leftStreamQueue, Queue<Tuple> rightStreamQueue) {
         if (!leftStreamQueue.isEmpty()) {
             for (Tuple tuple : leftStreamQueue) {
