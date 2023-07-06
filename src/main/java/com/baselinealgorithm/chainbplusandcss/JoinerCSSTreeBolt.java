@@ -8,7 +8,7 @@ import org.apache.storm.tuple.Tuple;
 
 import java.util.Map;
 
-public class JoinerBoltCSSTree extends BaseRichBolt {
+public class JoinerCSSTreeBolt extends BaseRichBolt {
     @Override
     public void prepare(Map<String, Object> map, TopologyContext topologyContext, OutputCollector outputCollector) {
 

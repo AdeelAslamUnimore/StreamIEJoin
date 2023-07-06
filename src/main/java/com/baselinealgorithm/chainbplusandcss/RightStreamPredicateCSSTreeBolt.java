@@ -13,7 +13,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Map;
 
-public class RightStreamPredicateCSSTree extends BaseRichBolt {
+public class RightStreamPredicateCSSTreeBolt extends BaseRichBolt {
     private LinkedList<CSSTree> revenueLinkedListCSSTree=null;
     private LinkedList<CSSTree> costLinkedListCSSTree=null;
     private BPlusTree revenueBPlusTree=null;
@@ -25,7 +25,7 @@ public class RightStreamPredicateCSSTree extends BaseRichBolt {
     private int tupleRemovalCountForLocal;
     private int orderOfTreeBothBPlusTreeAndCSSTree;
     private OutputCollector outputCollector;
-    public RightStreamPredicateCSSTree(int archiveCount, int tupleRemovalCount, int orderOfTreeBothBPlusTreeAndCSSTree){
+    public RightStreamPredicateCSSTreeBolt(int archiveCount, int tupleRemovalCount, int orderOfTreeBothBPlusTreeAndCSSTree){
         this.archiveCount=archiveCount;
         this.tupleRemovalCount=tupleRemovalCount;
         this.orderOfTreeBothBPlusTreeAndCSSTree=orderOfTreeBothBPlusTreeAndCSSTree;

@@ -377,7 +377,7 @@ public class BPlusTree implements Serializable {
      * @param key the key to be searched
      * @return the list of values for the key
      */
-    public List<Integer> search(int key) {
+    public Node search(int key) {
         List<Integer> searchValues = null;
         Node curr = this.root;
         // Traverse to the corresponding external node that would 'should'
@@ -386,7 +386,7 @@ public class BPlusTree implements Serializable {
             curr = curr.getChildren().get(binarySearchWithinInternalNode(key, curr.getKeys()));
         }
 
-        return searchValues;
+        return curr;
     }
 
     /**
@@ -593,6 +593,7 @@ public class BPlusTree implements Serializable {
         if (node != null) {
             for (Key k : node.getKeys()) {
                 if (k.getKey() == key) {
+
                     node.getKeys().remove(k);
                     break;
                 }

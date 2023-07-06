@@ -1,116 +1,71 @@
 package com.baselinealgorithm;
 
 import com.baselinealgorithm.chainbplusandcss.CSSTree;
+import com.stormiequality.BTree.BPlusTree;
 
 import java.util.*;
 
 public class Test {
     public static void main(String[] args) {
+        BPlusTree my_object= new BPlusTree(4);
+        my_object.insert(7,12);
+        my_object.insert(8,11);
+        my_object.insert(9,12);
+        my_object.insert(17,12);
+        my_object.insert(12,11);
+        my_object.insert(13,12);
+        my_object.insert(14,12);
+        my_object.insert(15,11);
+        my_object.insert(16,12);
 
-        CSSTree cssTree = new CSSTree(4);
-        Random random = new Random();
-        List<Integer>list= new ArrayList<>();
-      //  list.add(0);
-        list.add(180050);
-        list.add(1800);
-        //    for(int i=0;i<20;i++){
-        //cssTree.insertBulkUpdate(64, list);
-        cssTree.insert(11, 2);
-        cssTree.insert(8, 3);
-        cssTree.insert(8, 4);
-        cssTree.insert(16, 5);
-        cssTree.insert(1, 6);
-        cssTree.insert(1, 7);
-        cssTree.insert(8, 8);
-        cssTree.insert(1, 9);
-        cssTree.insert(1, 10);
-        cssTree.insert(6, 11);
-        cssTree.insert(6, 12);
-        cssTree.insert(18, 13);
-        cssTree.insert(15, 14);
-        cssTree.insert(14, 15);
-        cssTree.insert(14, 16);
-        cssTree.insert(15, 17);
-        cssTree.insert(15, 18);
-        cssTree.insert(10, 19);
-        cssTree.insert(10, 20);
-        cssTree.insert(10, 20);
-        cssTree.insert(25, 17);
-        cssTree.insert(100, 18);
-        cssTree.insert(167, 19);
-        cssTree.insert(161, 20);
-        cssTree.insert(170, 23);
-        cssTree.insert(172, 24);
-        cssTree.insert(173, 25);
-        cssTree.insert(190, 30);
-        cssTree.insert(200, 40);
-        cssTree.insert(300, 60);
-        cssTree.insert(312, 24);
-        cssTree.insert(145, 25);
-        cssTree.insert(309, 30);
-        cssTree.insert(155, 40);
-        cssTree.insert(189, 60);
-//
-        cssTree.insert(350, 25);
-        cssTree.insert(134, 30);
-        cssTree.insert(343, 40);
-        cssTree.insert(320, 60);
-        cssTree.insert(432, 24);
-        cssTree.insert(410, 25);
-        cssTree.insert(399, 30);
-        cssTree.insert(299, 40);
-        cssTree.insert(1199, 60);
-        cssTree.insert(550, 25);
-        cssTree.insert(534, 30);
-        cssTree.insert(1600, 40);
-        cssTree.insert(1200, 60);
-        cssTree.insert(4320, 24);
-        cssTree.insert(4100, 25);
-        cssTree.insert(2009, 30);
-        cssTree.insert(2912, 40);
-        cssTree.insert(2600, 60);
-//
-        cssTree.insert(770, 25);
-        cssTree.insert(785, 30);
-        cssTree.insert(1670, 40);
-        cssTree.insert(1284, 60);
-        cssTree.insert(4389, 24);
-        cssTree.insert(4188, 25);
-        cssTree.insert(9000, 30);
-        cssTree.insert(4500, 40);
-        cssTree.insert(4600, 60);
-        cssTree.insert(14, 100);
-        cssTree.insertBulkUpdate(64, list);
-        cssTree.insert(11, 2);
-//        cssTree.insert(11, 2);
-//        cssTree.insert(8, 3);
-//        cssTree.insert(8,4);
-//        cssTree.insert(16, 5);
-//        cssTree.insert(1, 6);
-//        cssTree.insert(1, 7);
-//        cssTree.insert(8,8);
-//        cssTree.insert(1, 9);
-//        cssTree.insert(1, 10);
-//        cssTree.insert(6, 11);
-//        cssTree.insert(6,12);
-//        cssTree.insert(18, 13);
-//        cssTree.insert(15, 14);
-//        cssTree.insert(14, 15);
-//        cssTree.insert(14,16);
-//        cssTree.insert(15, 17);
-//        cssTree.insert(15, 18);
-//        cssTree.insert(10, 19);
-//        cssTree.insert(10,20);
-//        cssTree.insert(10,20);
-//        cssTree.insert(25, 17);
-//        cssTree.insert(100, 18);
+        my_object.insert(144,12);
+        my_object.insert(153,11);
+        my_object.insert(162,12);
+        my_object.insert(173,12);
+        my_object.insert(14,13);
+        my_object.insert(15,16);
+        my_object.insert(29,19);
+        my_object.insert(30,20);
+        my_object.insert(40, 60);
+        my_object.insert(50, 80);
+        my_object.insert(60, 100);
+        my_object.insert(80, 150);
+        my_object.insert(90,169);
+        my_object.insert(100,170);
+        my_object.insert(400, 60);
+        my_object.insert(500, 80);
+        my_object.insert(600, 100);
+        my_object.insert(700,170);
+        my_object.insert(800, 60);
+        my_object.insert(1000, 80);
+        my_object.insert(1200, 100);
+        my_object.insert(1600, 100);;
+        my_object.insert(1700,170);
+        my_object.insert(1800, 60);
+        my_object.insert(19000, 80);;;
+        my_object.insert(2200, 100);
+//        bPlusTree.insert(2,2);;;
+//        bPlusTree.insert(3,5);
+//        bPlusTree.insert(4,6);
+//        bPlusTree.insert(5,7);
+//        bPlusTree.insert(6,2);
+//        bPlusTree.insert(7,5);
+//        bPlusTree.insert(8,6);
+//        bPlusTree.insert(9,7);
+//        bPlusTree.insert(21,2);
+//        bPlusTree.insert(33,5);
+//        bPlusTree.insert(43,6);
+//        bPlusTree.insert(53,7);
+//        bPlusTree.insert(64,2);
+//        bPlusTree.insert(72,5);
+//        bPlusTree.insert(82,6);
+//        bPlusTree.insert(92,7);
 
-        Random random1 = new Random();
-        for (int i = 1; i < 20000; i++) {
-            cssTree.insert(random.nextInt(1000), i);
-        }
-       HashSet<Integer> hashSet=cssTree.searchGreater(100);
-       // System.out.println(hashSet);
+
+      //  System.out.println(bPlusTree.leftMostNode());
+        my_object.remove(400);
+        System.out.println(my_object.search(400));
+
     }
 
 }

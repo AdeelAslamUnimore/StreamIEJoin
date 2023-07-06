@@ -13,7 +13,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Map;
 
-public class LeftStreamPredicateCSSTree extends BaseRichBolt {
+public class LeftStreamPredicateCSSTreeBolt extends BaseRichBolt {
     private LinkedList<CSSTree> durationLinkedListCSSTree=null;
     private LinkedList<CSSTree> timeLinkedListCSSTree=null;
     private BPlusTree durationBPlusTree=null;
@@ -25,7 +25,7 @@ public class LeftStreamPredicateCSSTree extends BaseRichBolt {
     private int orderOfTreeBothBPlusTreeAndCSSTree;
     private int tupleRemovalCountForLocal;
     private OutputCollector outputCollector;
-    public LeftStreamPredicateCSSTree(int archiveCount, int tupleRemovalCount, int orderOfTreeBothBPlusTreeAndCSSTree){
+    public LeftStreamPredicateCSSTreeBolt(int archiveCount, int tupleRemovalCount, int orderOfTreeBothBPlusTreeAndCSSTree){
         this.archiveCount=archiveCount;
         this.tupleRemovalCount=tupleRemovalCount;
         this.orderOfTreeBothBPlusTreeAndCSSTree=orderOfTreeBothBPlusTreeAndCSSTree;
