@@ -1,6 +1,7 @@
 package com.proposed.iejoinandbplustreebased;
 
-import com.stormiequality.join.IEJoinComputationBolt;
+import com.configurationsandconstants.iejoinandbaseworks.Configuration;
+import com.configurationsandconstants.iejoinandbaseworks.Constants;
 import com.stormiequality.test.SplitBolt;
 import com.stormiequality.test.Spout;
 import org.apache.storm.Config;
@@ -28,7 +29,7 @@ public class ProposedModelTopology {
         builder.setBolt(Constants.BIT_SET_EVALUATION_BOLT, new JoinerBoltForBitSetOperation()).fieldsGrouping(Constants.LEFT_PREDICATE_BOLT, (String)map.get("LeftPredicateSourceStreamIDBitSet"),new Fields(Constants.TUPLE_ID)).
                 fieldsGrouping(Constants.RIGHT_PREDICATE_BOLT,(String)map.get("RightPredicateSourceStreamIDBitSet"),new Fields(Constants.TUPLE_ID)).setNumTasks(1);
         builder.setBolt(Constants.PERMUTATION_COMPUTATION_BOLT_ID, new PermutationBolt()).directGrouping(Constants.LEFT_PREDICATE_BOLT, (String) map.get("LeftBatchPermutation")).  directGrouping(Constants.RIGHT_PREDICATE_BOLT, (String) map.get("RightBatchPermutation")).setNumTasks(2);
-        builder.setBolt(Constants.OFFSET_AND_IE_JOIN_BOLT_ID, new IEJoinBolt())
+        builder.setBolt(Constants.OFFSET_AND_IE_JOIN_BOLT_ID, new IEJoinWithLinkedList())
                 .directGrouping(Constants.PERMUTATION_COMPUTATION_BOLT_ID, (String) map.get("LeftBatchPermutation"))
                  .directGrouping(Constants.PERMUTATION_COMPUTATION_BOLT_ID, (String) map.get("RightBatchPermutation"))
                 .directGrouping(Constants.LEFT_PREDICATE_BOLT,(String) map.get("LeftBatchOffset"))

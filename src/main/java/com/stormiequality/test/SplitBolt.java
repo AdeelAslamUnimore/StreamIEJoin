@@ -1,7 +1,7 @@
 package com.stormiequality.test;
 
-import com.proposed.iejoinandbplustreebased.Configuration;
-import com.proposed.iejoinandbplustreebased.Constants;
+import com.configurationsandconstants.iejoinandbaseworks.Configuration;
+import com.configurationsandconstants.iejoinandbaseworks.Constants;
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.OutputFieldsDeclarer;

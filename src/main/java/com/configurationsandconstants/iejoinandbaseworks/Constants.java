@@ -1,4 +1,4 @@
-package com.proposed.iejoinandbplustreebased;
+package com.configurationsandconstants.iejoinandbaseworks;
 
 public class Constants {
     /*
@@ -20,8 +20,10 @@ public class Constants {
     public static final String LEFT_PREDICATE_BOLT = "left_stream";
     public static final String RIGHT_PREDICATE_BOLT = "right_stream";
     public static final String BIT_SET_EVALUATION_BOLT ="bitset_evaluation";
-    public static final int  mutableWindowSize=1000;
-    public static final int immutableWindowSize=10000;
+    public static final int MUTABLE_WINDOW_SIZE =1000;
+    public static final int IMMUTABLE_WINDOW_SIZE =10000;
+    public static final int ORDER_OF_CSS_TREE = 4;
+
 
     //
 

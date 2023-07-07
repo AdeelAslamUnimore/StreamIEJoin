@@ -1,5 +1,7 @@
 package com.proposed.iejoinandbplustreebased;
 
+import com.configurationsandconstants.iejoinandbaseworks.Configuration;
+import com.configurationsandconstants.iejoinandbaseworks.Constants;
 import com.stormiequality.BTree.BPlusTree;
 import com.stormiequality.BTree.Node;
 import org.apache.storm.task.OutputCollector;
@@ -59,8 +61,6 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
     private List<Integer> downStreamTasksForOffset;
     // Merge operation Initiator
     private String mergeOperationStreamID;
-    //  Component ID
-    private String componentID;
 
     /**
      * constructor that holds the variables
@@ -71,7 +71,7 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
      */
     public MutableBPlusTreeBolt(String operator, String permutationStreamID, String offsetStreamID) {
         this.operator = operator;
-        this.mergeIntervalDefinedByUser = Constants.mutableWindowSize;
+        this.mergeIntervalDefinedByUser = Constants.MUTABLE_WINDOW_SIZE;
         this.permutationComputationStreamID = permutationStreamID;
         this.offsetComputationStreamID = offsetStreamID;
         Map<String, Object> map = Configuration.configurationConstantForStreamIDs();
@@ -101,7 +101,6 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
             downStreamTaskIdsForPermutation = topologyContext.getComponentTasks(Constants.PERMUTATION_COMPUTATION_BOLT_ID);
             downStreamTasksForOffset = topologyContext.getComponentTasks(Constants.OFFSET_AND_IE_JOIN_BOLT_ID);
             this.idForDownStreamTasksOffset = 0;
-            this.componentID = topologyContext.getThisComponentId();
             this.outputCollector = outputCollector;
 
         } catch (Exception e) {

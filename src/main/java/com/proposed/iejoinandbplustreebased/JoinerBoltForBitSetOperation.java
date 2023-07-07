@@ -1,6 +1,7 @@
 package com.proposed.iejoinandbplustreebased;
 
-import clojure.lang.Obj;
+import com.configurationsandconstants.iejoinandbaseworks.Configuration;
+import com.configurationsandconstants.iejoinandbaseworks.Constants;
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.OutputFieldsDeclarer;
@@ -19,7 +20,7 @@ public class JoinerBoltForBitSetOperation extends BaseRichBolt {
     private String leftPredicateSourceStreamID=null;
     private String rightPredicateSourceStreamID=null;
     public JoinerBoltForBitSetOperation(){
-        Map<String, Object> map=Configuration.configurationConstantForStreamIDs();
+        Map<String, Object> map= Configuration.configurationConstantForStreamIDs();
         this.leftPredicateSourceStreamID= (String) map.get("LeftPredicateSourceStreamIDBitSet");
         this.rightPredicateSourceStreamID= (String) map.get("RightPredicateSourceStreamIDBitSet");
 
