@@ -13,25 +13,25 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.Queue;
 
-public class LeftPredicateImmutableCSSBolt extends BaseRichBolt {
+public class RightPredicateImmutableCSSBolt extends BaseRichBolt {
     private LinkedList<CSSTree> leftStreamLinkedListCSSTree = null;
     private LinkedList<CSSTree> rightStreamLinkedListCSSTree = null;
-    private String leftStreamSmaller;
-    private String rightStreamSmaller;
+    private String leftStreamGreater;
+    private String rightStreamGreater;
     private HashSet<Integer> leftStreamTuplesHashSet = null;
     private HashSet<Integer> rightStreamTuplesHashSet = null;
     private CSSTree leftStreamCSSTree = null;
     private CSSTree rightStreamCSSTree = null;
-    private boolean leftStreamMergeSmaller = false;
-    private boolean rightStreamMergeSmaller = false;
-    private Queue<Tuple> leftStreamSmallerQueueMerge = null;
-    private Queue<Tuple> rightStreamSmallerQueueMerge = null;
+    private boolean leftStreamMergeGreater = false;
+    private boolean rightStreamMergeGreater = false;
+    private Queue<Tuple> leftStreamGreaterQueueMerge = null;
+    private Queue<Tuple> rightStreamGreaterQueueMerge = null;
     private static int tupleRemovalCount = 0;
 
-    public LeftPredicateImmutableCSSBolt() {
+    public RightPredicateImmutableCSSBolt() {
         Map<String, Object> map = Configuration.configurationConstantForStreamIDs();
-        this.leftStreamSmaller = (String) map.get("LeftSmallerPredicateTuple");
-        this.rightStreamSmaller = (String) map.get("RightSmallerPredicateTuple");
+        this.leftStreamGreater = (String) map.get("LeftGreaterPredicateTuple");
+        this.rightStreamGreater = (String) map.get("RightGreaterPredicateTuple");
     }
 
     @Override
@@ -40,8 +40,8 @@ public class LeftPredicateImmutableCSSBolt extends BaseRichBolt {
         rightStreamLinkedListCSSTree = new LinkedList<>();
         leftStreamCSSTree = new CSSTree(Constants.ORDER_OF_CSS_TREE);
         rightStreamCSSTree = new CSSTree(Constants.ORDER_OF_CSS_TREE);
-        this.leftStreamSmallerQueueMerge = new LinkedList<>();
-        this.rightStreamSmallerQueueMerge = new LinkedList<>();
+        this.leftStreamGreaterQueueMerge = new LinkedList<>();
+        this.rightStreamGreaterQueueMerge = new LinkedList<>();
 
     }
 
@@ -50,31 +50,31 @@ public class LeftPredicateImmutableCSSBolt extends BaseRichBolt {
         if (tuple.getSourceStreamId().equals("this.leftStreamSmaller")) {
             tupleRemovalCount++;
             leftStreamTuplesHashSet = probingResultsSmaller(tuple, rightStreamLinkedListCSSTree);
-            if (leftStreamMergeSmaller) {
-                this.leftStreamSmallerQueueMerge.offer(tuple);
+            if(leftStreamMergeGreater){
+                leftStreamGreaterQueueMerge.offer(tuple);
             }
         }
         if (tuple.getSourceStreamId().equals("this.rightStreamSmaller")) {
             tupleRemovalCount++;
             rightStreamTuplesHashSet = probingResultsGreater(tuple, leftStreamLinkedListCSSTree);
-            if (rightStreamMergeSmaller) {
-                this.rightStreamSmallerQueueMerge.offer(tuple);
+            if(rightStreamMergeGreater){
+                rightStreamGreaterQueueMerge.offer(tuple);
             }
         }
 
-        if (tuple.getSourceStreamId().equals(leftStreamSmaller)) {
-            insertionTuplesSmaller(tuple, leftStreamLinkedListCSSTree, leftStreamCSSTree, leftStreamMergeSmaller, leftStreamSmallerQueueMerge);
+        if (tuple.getSourceStreamId().equals(leftStreamGreater)) {
+            insertionTuplesSmaller(tuple, leftStreamLinkedListCSSTree, leftStreamCSSTree, leftStreamMergeGreater, leftStreamGreaterQueueMerge);
         }
-        if (tuple.getSourceStreamId().equals(rightStreamSmaller)) {
-            insertionTuplesGreater(tuple, rightStreamLinkedListCSSTree, rightStreamCSSTree, rightStreamMergeSmaller, rightStreamSmallerQueueMerge);
+        if (tuple.getSourceStreamId().equals(rightStreamGreater)) {
+            insertionTuplesGreater(tuple, rightStreamLinkedListCSSTree, rightStreamCSSTree, rightStreamMergeGreater, rightStreamGreaterQueueMerge);
         }
         if (tuple.getSourceStreamId().equals("LeftCheckForMerge")) {
-            //this.leftStreamSmallerQueueMerge.offer(tuple);
-            leftStreamMergeSmaller = true;
+
+            leftStreamMergeGreater = true;
         }
         if (tuple.getSourceStreamId().equals("RightCheckForMerge")) {
-            // this.rightStreamSmallerQueueMerge.offer(tuple);
-            rightStreamMergeSmaller = true;
+
+            rightStreamMergeGreater = true;
         }
         /// Change For Both Right Stream and Left Stream depend upon which sliding window you are using
         if (tupleRemovalCount > Constants.IMMUTABLE_WINDOW_SIZE) {
@@ -122,8 +122,8 @@ public class LeftPredicateImmutableCSSBolt extends BaseRichBolt {
 
                     leftHashSet.addAll(cssTree.searchGreater(tuples.getIntegerByField("Duration")));
                 }
-                leftStreamSmallerQueueMerge = new LinkedList<>();
-                leftStreamMergeSmaller = false;
+                leftStreamGreaterQueueMerge = new LinkedList<>();
+                leftStreamMergeGreater = false;
             }
             leftStreamCSSTree = new CSSTree(Constants.ORDER_OF_CSS_TREE);
         } else {
@@ -140,8 +140,8 @@ public class LeftPredicateImmutableCSSBolt extends BaseRichBolt {
 
                     leftHashSet.addAll(cssTree.searchSmaller(tuples.getIntegerByField("Time")));
                 }
-                rightStreamSmallerQueueMerge = new LinkedList<>();
-                rightStreamMergeSmaller = false;
+                rightStreamGreaterQueueMerge = new LinkedList<>();
+                rightStreamMergeGreater = false;
             }
             rightStreamCSSTree = new CSSTree(Constants.ORDER_OF_CSS_TREE);
         } else {

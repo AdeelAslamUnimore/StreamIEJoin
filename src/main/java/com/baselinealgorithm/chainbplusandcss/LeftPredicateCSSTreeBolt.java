@@ -11,6 +11,9 @@ import org.apache.storm.topology.OutputFieldsDeclarer;
 import org.apache.storm.topology.base.BaseRichBolt;
 import org.apache.storm.tuple.Tuple;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Map;
@@ -127,6 +130,17 @@ public class LeftPredicateCSSTreeBolt extends BaseRichBolt {
           leftStreamLinkedListCSSTree.add(cssTree);
         }
 
+    }
+    public static byte[] convertHashSetToByteArray(HashSet<Integer> hashSet) {
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        try {
+            ObjectOutputStream oos = new ObjectOutputStream(bos);
+            oos.writeObject(hashSet);
+            oos.flush();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return bos.toByteArray();
     }
 
 }

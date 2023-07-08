@@ -60,8 +60,6 @@ public class IEJoinWithLinkedList extends BaseRichBolt {
     //
     private IEJoinModel ieJoinModel;
 
-    private boolean booleanForMaintainingLinkedList = false;
-
     /*
         All initilizations either for data structures or booleans are defined
 
@@ -119,24 +117,6 @@ public class IEJoinWithLinkedList extends BaseRichBolt {
                         .offer(tuple);
             }
             // Probing is performed over here
-            if (checkConditionForAllPermutationAndOffsetArrays(isLeftStreamPermutation, isRightStreamPermutation, isLeftStreamOffset, isRightStreamOffset)) {
-
-                ieJoinModel.setTupleRemovalCounter(this.listLeftPermutation.size() + this.listRightPermutation.size());
-                this.linkedListIEJoinModel.add(0, ieJoinModel);
-                ieJoinModel = new IEJoinModel();
-                this.isLeftStreamOffset = false;
-                this.isRightStreamOffset = false;
-                this.isRightStreamPermutation = false;
-                this.isLeftStreamPermutation = false;
-                this.listLeftPermutation = new ArrayList<>();
-                this.listRightPermutation = new ArrayList<>();
-                this.listLeftOffset = new ArrayList<>();
-                this.listRightOffset = new ArrayList<>();
-               if(linkedListIEJoinModel.getLast().getTupleRemovalCounter()>=Constants.IMMUTABLE_WINDOW_SIZE){
-                   linkedListIEJoinModel.remove(linkedListIEJoinModel.getLast());
-               }
-
-            }
 
             if (!this.linkedListIEJoinModel.isEmpty()) {
                 // Probing of results of batch during merge operation;
@@ -171,6 +151,25 @@ public class IEJoinWithLinkedList extends BaseRichBolt {
          */
         if (tuple.getSourceStreamId().equals(rightSteamOffset)) {
             offsetComputation(tuple, false, listRightOffset);
+        }
+        if (checkConditionForAllPermutationAndOffsetArrays(isLeftStreamPermutation, isRightStreamPermutation, isLeftStreamOffset, isRightStreamOffset)) {
+
+            ieJoinModel.setTupleRemovalCounter(this.listLeftPermutation.size() + this.listRightPermutation.size());
+            this.linkedListIEJoinModel.add(0, ieJoinModel);
+            ieJoinModel = new IEJoinModel();
+            this.isLeftStreamOffset = false;
+            this.isRightStreamOffset = false;
+            this.isRightStreamPermutation = false;
+            this.isLeftStreamPermutation = false;
+            this.listLeftPermutation = new ArrayList<>();
+            this.listRightPermutation = new ArrayList<>();
+            this.listLeftOffset = new ArrayList<>();
+            this.listRightOffset = new ArrayList<>();
+            if(linkedListIEJoinModel.getLast().getTupleRemovalCounter()>=Constants.IMMUTABLE_WINDOW_SIZE){
+                linkedListIEJoinModel.remove(linkedListIEJoinModel.getLast());
+            }
+
+
         }
         /*
         To Do Use queues for holding incoming tuples for completeness;
