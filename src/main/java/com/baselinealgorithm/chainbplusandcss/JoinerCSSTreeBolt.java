@@ -1,5 +1,6 @@
 package com.baselinealgorithm.chainbplusandcss;
 
+import com.configurationsandconstants.iejoinandbaseworks.Constants;
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.OutputFieldsDeclarer;
@@ -15,6 +16,13 @@ import java.util.Map;
 public class JoinerCSSTreeBolt extends BaseRichBolt {
     private HashSet<Integer> leftHashSet;
     private HashSet<Integer> rightHashSet;
+    private String leftStreamID;
+    private String rightStreamID;
+    public JoinerCSSTreeBolt(String leftStreamID, String rightStreamID){
+        this.leftStreamID=leftStreamID;
+        this.rightStreamID=rightStreamID;
+    }
+
     @Override
     public void prepare(Map<String, Object> map, TopologyContext topologyContext, OutputCollector outputCollector) {
 
@@ -22,14 +30,15 @@ public class JoinerCSSTreeBolt extends BaseRichBolt {
 
     @Override
     public void execute(Tuple tuple) {
-        if(tuple.getSourceStreamId().equals("")) {
-            leftHashSet = convertByteArrayToHashSet(tuple.getBinaryByField(""));
+        if(tuple.getSourceStreamId().equals(leftStreamID)) {
+            leftHashSet = convertByteArrayToHashSet(tuple.getBinaryByField(Constants.LEFT_HASH_SET));
         }
-        if(tuple.getSourceStreamId().equals("")){
-            rightHashSet=convertByteArrayToHashSet(tuple.getBinaryByField(""));
+        if(tuple.getSourceStreamId().equals(rightStreamID)){
+            rightHashSet=convertByteArrayToHashSet(tuple.getBinaryByField(Constants.RIGHT_HASH_SET));
         }
         if(leftHashSet!=null&&rightHashSet!=null){
             leftHashSet.retainAll(rightHashSet);
+            System.out.println(leftHashSet);
             leftHashSet=null;
             rightHashSet=null;
         }

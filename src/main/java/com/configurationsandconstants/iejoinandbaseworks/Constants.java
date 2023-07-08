@@ -22,7 +22,14 @@ public class Constants {
     public static final String BIT_SET_EVALUATION_BOLT ="bitset_evaluation";
     public static final int MUTABLE_WINDOW_SIZE =1000;
     public static final int IMMUTABLE_WINDOW_SIZE =10000;
+
+    //// Constant for benchMarks///
     public static final int ORDER_OF_CSS_TREE = 4;
+    public static final String LEFT_HASH_SET="left_hash_set";
+    public static final String RIGHT_HASH_SET="right_hash_set";
+    public static final String LEFT_PREDICATE_CSS_TREE_BOLT="leftPredicateCSSTreeBolt";
+    public static final String RIGHT_PREDICATE_CSS_TREE_BOLT="rightPredicateCSSTreeBolt";
+    public static final String MUTABLE_PART_EVALUATION_BOLT="mutablePartEvaluationBolt";
 
 
     //

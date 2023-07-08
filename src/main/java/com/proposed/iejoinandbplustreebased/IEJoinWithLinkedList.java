@@ -58,6 +58,7 @@ public class IEJoinWithLinkedList extends BaseRichBolt {
     private Queue<Tuple> rightStreamQueue;
     private LinkedList<IEJoinModel> linkedListIEJoinModel;
     //
+    private int taskIndexTest=0;
     private IEJoinModel ieJoinModel;
 
     /*
@@ -89,6 +90,7 @@ public class IEJoinWithLinkedList extends BaseRichBolt {
         this.rightStreamQueue = new LinkedList<>();
         this.flagDuringMerge = false;
         linkedListIEJoinModel = new LinkedList<>();
+        this.taskIndexTest= topologyContext.getThisTaskIndex();
         this.ieJoinModel = new IEJoinModel();
         this.tupleRemovalCounter = Constants.MUTABLE_WINDOW_SIZE;
 
@@ -344,8 +346,8 @@ public class IEJoinWithLinkedList extends BaseRichBolt {
         */
 
     private void rightPredicateEvaluation(int tuple1, int tuple2) {
-
         for (IEJoinModel ieJoinModel : this.linkedListIEJoinModel) {
+
             ieJoinModel.setTupleRemovalCounter(ieJoinModel.getTupleRemovalCounter() + 1);
             SearchModel offsetSearchKeySecond = searchKeyForRightStream(ieJoinModel.getRightStreamOffset(), tuple2);
             BitSet bitSet = new BitSet();
@@ -355,8 +357,11 @@ public class IEJoinWithLinkedList extends BaseRichBolt {
             offset = offset - 1;
             // System.exit(-1);
             if (offset >= 0) {
+
                 for (int j = 0; j <= offset; j++) {
+
                     try {
+
                         bitSet.set(ieJoinModel.getRightStreamPermutation().get(j).getIndex() - 1, true);
                     } catch (IndexOutOfBoundsException e) {
                         e.printStackTrace();
@@ -367,15 +372,21 @@ public class IEJoinWithLinkedList extends BaseRichBolt {
                 int off = offset1.getIndex() - 1;
                 int size = ieJoinModel.getLeftStreamPermutation().size();
                 if (offset1.getBitSet().get(0) && offsetSearchKeyFirst.getBitSet().get(0)) {
+
                     for (int k = off + offset1.getSize(); k < size; k++) {
+
                         if (bitSet.get(k)) {
+
                             count++;
                             // System.out.println("I am here" + k);
                         }
                     }
                 } else {
+
                     for (int k = off; k < size; k++) {
+
                         if (bitSet.get(k)) {
+
                             count++;
                             // System.out.println("I am here" + k);
                         }
@@ -437,12 +448,13 @@ public class IEJoinWithLinkedList extends BaseRichBolt {
     private void leftPredicateEvaluation(int tuple1, int tuple2) {
 // Linked List
         for (IEJoinModel ieJoinModel : this.linkedListIEJoinModel) {
-            ieJoinModel.setTupleRemovalCounter(ieJoinModel.getTupleRemovalCounter() + 1);
 
+            ieJoinModel.setTupleRemovalCounter(ieJoinModel.getTupleRemovalCounter() + 1);
             int offsetSearchKeySecond = searchKeyForLeftStream(ieJoinModel.getRightStreamOffset(), tuple2);
             int count = 0;
             BitSet bitSet = new BitSet();
             for (int i = offsetSearchKeySecond; i < ieJoinModel.getLeftStreamPermutation().size(); i++) {
+
                 try {
                     bitSet.set(ieJoinModel.getLeftStreamPermutation().get(i).getIndex() - 1, true);
                 } catch (IndexOutOfBoundsException e) {
@@ -452,9 +464,11 @@ public class IEJoinWithLinkedList extends BaseRichBolt {
             int offsetSearchKeyFirst = searchKeyForLeftStream(ieJoinModel.getLeftStreamOffset(), tuple1) - 1;
             // Checking the equalities
             for (int i = offsetSearchKeyFirst; i < -1; i--) {
+                // Check the equality to find first not equal element while back tracing.
                 if (ieJoinModel.getLeftStreamOffset().get(i).getKey() != offsetSearchKeyFirst) {
                     offsetSearchKeyFirst = i;
                     break;
+
                 }
             }
             for (int i = offsetSearchKeyFirst; i < -1; i--) {
