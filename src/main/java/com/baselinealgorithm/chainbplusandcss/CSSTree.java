@@ -29,7 +29,11 @@ public class CSSTree {
     private Block rootBlock;
     private List<Block> listBlocks;
     int orderOfTree;
-    
+
+
+
+    /// tuple removal counter
+    private int tupleRemovalCounter=0;
     /**
      * This is the constructor of the CSSTree.
      *
@@ -758,4 +762,11 @@ public class CSSTree {
     }
 
 
+    public int getTupleRemovalCounter() {
+        return tupleRemovalCounter;
+    }
+
+    public void setTupleRemovalCounter(int tupleRemovalCounter) {
+        this.tupleRemovalCounter = tupleRemovalCounter;
+    }
 }

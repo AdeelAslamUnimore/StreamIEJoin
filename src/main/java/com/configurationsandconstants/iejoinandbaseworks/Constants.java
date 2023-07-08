@@ -30,6 +30,10 @@ public class Constants {
     public static final String LEFT_PREDICATE_CSS_TREE_BOLT="leftPredicateCSSTreeBolt";
     public static final String RIGHT_PREDICATE_CSS_TREE_BOLT="rightPredicateCSSTreeBolt";
     public static final String MUTABLE_PART_EVALUATION_BOLT="mutablePartEvaluationBolt";
+    public static final int IMMUTABLE_CSS_PART_REMOVAL=10000;
+    public static final String BATCH_CSS_TREE_KEY="batchCSSTreeKey";
+    public static final String BATCH_CSS_TREE_VALUES="batchCSSTreeValues";
+    public static final String BATCH_CSS_FLAG="flag";
 
 
     //

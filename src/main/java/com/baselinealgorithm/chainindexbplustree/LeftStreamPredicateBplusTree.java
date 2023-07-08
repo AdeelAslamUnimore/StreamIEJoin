@@ -1,7 +1,5 @@
 package com.baselinealgorithm.chainindexbplustree;
 
-import com.baselinealgorithm.chainindexrbst.Node;
-import com.baselinealgorithm.chainindexrbst.RedBlackBST;
 import com.stormiequality.BTree.BPlusTree;
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
@@ -110,7 +108,7 @@ public class LeftStreamPredicateBplusTree extends BaseRichBolt {
             time.add(bPlusTree);
         }
         for (BPlusTree bPlusTree : duration) {
-            hashSet.addAll(bPlusTree.lessThenSpecificValueHash(tuple.getIntegerByField("Tuple")));
+            hashSet.addAll(bPlusTree.smallerThenSpecificValueHashSet(tuple.getIntegerByField("Tuple")));
             //EmitLogic tomorrow
         }
 

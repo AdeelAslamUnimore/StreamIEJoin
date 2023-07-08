@@ -76,7 +76,7 @@ public class RightStreamPredicateBplusTree extends BaseRichBolt {
                 cost.add(bPlusTree);
             }
             for (BPlusTree bPlusTree : revenue) {
-                HashSet<Integer> hashSetsLess=bPlusTree.lessThenSpecificValueHash(tuple.getIntegerByField("Tuple"));
+                HashSet<Integer> hashSetsLess=bPlusTree.smallerThenSpecificValueHashSet(tuple.getIntegerByField("Tuple"));
                 //EmitLogic tomorrow
             }
 

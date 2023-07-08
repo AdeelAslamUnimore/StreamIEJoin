@@ -545,7 +545,7 @@ public class BPlusTree implements Serializable {
         return hashSet;
     }
 
-    public HashSet lessThenSpecificValueHash(int key) {
+    public HashSet smallerThenSpecificValueHashSet(int key) {
         HashSet hashSet = new HashSet();
         if (this.root == null) {
             //throw new IllegalArgumentException("Root is NULL");
