@@ -13,7 +13,8 @@ public class Key implements Serializable {
 
     /** The list of values for the key. Set only for external nodes*/
     List<Integer> values;
-
+    // This is the tmpID during permutation array
+    List<Integer> tmpIDs;
     /**
      * Instantiates a new key and its value.
      *
@@ -28,6 +29,17 @@ public class Key implements Serializable {
             values = new ArrayList<Integer>();
         }
         this.values.add(value);
+    }
+    public Key(int key, int value, int tmp) {
+        this.key = key;
+        if (null == this.values) {
+            values = new ArrayList<Integer>();
+        }
+        this.values.add(value);
+        if (null == this.tmpIDs) {
+            tmpIDs = new ArrayList<Integer>();
+        }
+        this.tmpIDs.add(value);
     }
 
     /**
@@ -79,6 +91,14 @@ public class Key implements Serializable {
         this.values = values;
        // this.values.sort(Comparator.naturalOrder());
         //Collections.sort(this.values);
+    }
+
+    public List<Integer> getTmpIDs() {
+        return tmpIDs;
+    }
+
+    public void setTmpIDs(List<Integer> tmpIDs) {
+        this.tmpIDs = tmpIDs;
     }
 
     public String toString() {

@@ -34,7 +34,10 @@ public class Constants {
     public static final String BATCH_CSS_TREE_KEY="batchCSSTreeKey";
     public static final String BATCH_CSS_TREE_VALUES="batchCSSTreeValues";
     public static final String BATCH_CSS_FLAG="flag";
-
+    public static final String LEFT_PREDICATE_IMMUTABLE_CSS= "leftPredicateImmutableCSS";
+    public static final String RIGHT_PREDICATE_IMMUTABLE_CSS="rightPredicateImmutableCSS";
+    public static final String IMMUTABLE_HASH_SET_EVALUATION="immutableHashSetEvaluation";
+    public static final String MERGE_BOLT_EVALUATION_CSS="mergeBoltEvaluationCSS";
 
     //
 

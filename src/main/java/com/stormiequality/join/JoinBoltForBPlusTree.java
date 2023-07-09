@@ -14,8 +14,6 @@ import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.List;
 import java.util.Map;
-import java.util.zip.DeflaterOutputStream;
-import java.util.zip.GZIPOutputStream;
 
 public class JoinBoltForBPlusTree extends WindowBoltForBPlusTree implements Serializable {
     // Let consider the two stream R an S the R.r> S.s then in this case two stream of tuples can arrive at here

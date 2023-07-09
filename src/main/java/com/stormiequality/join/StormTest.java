@@ -9,7 +9,6 @@ import org.apache.storm.LocalCluster;
 import org.apache.storm.topology.TopologyBuilder;
 
 import java.util.ArrayList;
-import java.util.BitSet;
 
 public class StormTest {
     public static void main(String[] args) throws Exception {

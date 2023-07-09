@@ -134,6 +134,7 @@ public class RightPredicateCSSTreeBolt extends BaseRichBolt {
                 outputCollector.emit(streamID, tuple, new Values(key.getKey(), convertToByteArray(key.getValues()), false));
                 outputCollector.ack(tuple);
             }
+            node=node.getNext();
         }
 
         outputCollector.emit(streamID, tuple, new Values(0, 0, true));

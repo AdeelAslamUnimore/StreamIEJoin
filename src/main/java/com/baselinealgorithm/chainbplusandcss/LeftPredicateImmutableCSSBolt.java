@@ -58,26 +58,34 @@ public class LeftPredicateImmutableCSSBolt extends BaseRichBolt {
     @Override
     public void execute(Tuple tuple) {
         if (tuple.getSourceStreamId().equals("LeftStreamTuples")) {
-
-            probingResultsSmaller(tuple, rightStreamLinkedListCSSTree);
-
             if (leftStreamMergeSmaller) {
                 this.leftStreamSmallerQueueMerge.offer(tuple);
             }
+            HashSet<Integer> leftHashSet = probingResultsSmaller(tuple, rightStreamLinkedListCSSTree);
+           if(leftHashSet!=null) {
+
+               outputCollector.emit("LeftPredicate", tuple, new Values(convertHashSetToByteArray(leftHashSet), tuple.getIntegerByField("ID")));
+               outputCollector.ack(tuple);
+           }
+
         }
         if (tuple.getSourceStreamId().equals("RightStream")) {
-
-            probingResultsGreater(tuple, leftStreamLinkedListCSSTree);
             if (rightStreamMergeSmaller) {
                 this.rightStreamSmallerQueueMerge.offer(tuple);
+            }
+            HashSet<Integer> rightHashSet = probingResultsGreater(tuple, leftStreamLinkedListCSSTree);
+            if(rightHashSet!=null) {
+
+                outputCollector.emit("LeftPredicate", tuple, new Values(convertHashSetToByteArray(rightHashSet), tuple.getIntegerByField("ID")));
+                outputCollector.ack(tuple);
             }
         }
 
         if (tuple.getSourceStreamId().equals(leftStreamSmaller)) {
-            leftInsertionTuplesSmaller(tuple, leftStreamLinkedListCSSTree, leftStreamCSSTree, leftStreamMergeSmaller, leftStreamSmallerQueueMerge);
+            leftInsertionTuplesSmaller(tuple, leftStreamLinkedListCSSTree, leftStreamMergeSmaller, leftStreamSmallerQueueMerge);
         }
         if (tuple.getSourceStreamId().equals(rightStreamSmaller)) {
-            rightInsertionTupleSmaller(tuple, rightStreamLinkedListCSSTree, rightStreamCSSTree, rightStreamMergeSmaller, rightStreamSmallerQueueMerge);
+            rightInsertionTupleSmaller(tuple, rightStreamLinkedListCSSTree,  rightStreamMergeSmaller, rightStreamSmallerQueueMerge);
         }
         if (tuple.getSourceStreamId().equals("LeftCheckForMerge")) {
             //this.leftStreamSmallerQueueMerge.offer(tuple);
@@ -101,52 +109,53 @@ public class LeftPredicateImmutableCSSBolt extends BaseRichBolt {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer outputFieldsDeclarer) {
-        outputFieldsDeclarer.declareStream("LeftPredicate", new Fields(Constants.BYTE_ARRAY, Constants.TUPLE_ID));
-        outputFieldsDeclarer.declareStream("LeftMergeBitSet", new Fields(Constants.BYTE_ARRAY, Constants.TUPLE_ID));
+        outputFieldsDeclarer.declareStream("LeftPredicate", new Fields(Constants.LEFT_HASH_SET, Constants.TUPLE_ID));
+        outputFieldsDeclarer.declareStream("LeftMergeBitSet", new Fields(Constants.LEFT_HASH_SET, Constants.TUPLE_ID));
 
     }
 
-    public void probingResultsSmaller(Tuple tuple, LinkedList<CSSTree> linkedListCSSTree) {
-
+    public HashSet<Integer> probingResultsSmaller(Tuple tuple, LinkedList<CSSTree> linkedListCSSTree) {
+        HashSet<Integer> leftHashSet = new HashSet<>();
         if (!linkedListCSSTree.isEmpty()) {
             tupleRemovalCount++;
             for (CSSTree cssTree : linkedListCSSTree) {
 
-                HashSet<Integer> hashSet = cssTree.searchGreater(tuple.getIntegerByField("Duration"));
-                outputCollector.emit("LeftPredicate", tuple, new Values(convertHashSetToByteArray(hashSet), tuple.getIntegerByField("ID")));
-                outputCollector.ack(tuple);
+                leftHashSet.addAll(cssTree.searchGreater(tuple.getIntegerByField("Duration")));
 
 
             }
+            return leftHashSet;
 
         }
+        return null;
 
     }
 
-    public void probingResultsGreater(Tuple tuple, LinkedList<CSSTree> linkedListCSSTree) {
+    public HashSet<Integer> probingResultsGreater(Tuple tuple, LinkedList<CSSTree> linkedListCSSTree) {
 
         HashSet<Integer> rightHashSet = new HashSet<>();
         if (!linkedListCSSTree.isEmpty()) {
             tupleRemovalCount++;
             for (CSSTree cssTree : linkedListCSSTree) {
 
-                HashSet<Integer> hashSet = cssTree.searchSmaller(tuple.getIntegerByField("Time"));
-                outputCollector.emit("LeftPredicate", tuple, new Values(convertHashSetToByteArray(hashSet), tuple.getIntegerByField("ID")));
-                outputCollector.ack(tuple);
+                rightHashSet.addAll(cssTree.searchSmaller(tuple.getIntegerByField("Time")));
+
             }
+            return rightHashSet;
 
         }
-
+        return null;
     }
 
-    public void leftInsertionTuplesSmaller(Tuple tuple, LinkedList<CSSTree> linkedListCSSTree, CSSTree cssTree, boolean flagOfMerge, Queue<Tuple> queuesOfTuplesDuringMerge) {
+    public void leftInsertionTuplesSmaller(Tuple tuple, LinkedList<CSSTree> linkedListCSSTree,  boolean flagOfMerge, Queue<Tuple> queuesOfTuplesDuringMerge) {
         if (tuple.getBooleanByField(Constants.BATCH_CSS_FLAG)) {
-            linkedListCSSTree.add(cssTree);
+            linkedListCSSTree.add(leftStreamCSSTree);
+
             if (flagOfMerge) {
                 int i = 0;
                 for (Tuple tuples : queuesOfTuplesDuringMerge) {
                     i = i + 1;
-                    HashSet hashSet = cssTree.searchGreater(tuples.getIntegerByField("Duration"));
+                    HashSet hashSet = leftStreamCSSTree.searchGreater(tuples.getIntegerByField("Duration"));
                     outputCollector.emit("LeftMergeBitSet", new Values(convertHashSetToByteArray(hashSet), i));
 
                 }
@@ -160,20 +169,21 @@ public class LeftPredicateImmutableCSSBolt extends BaseRichBolt {
                 //  leftStreamLinkedListCSSTree.remove(leftStreamLinkedListCSSTree.getLast());
             }
         } else {
-            cssTree.insertBulkUpdate(tuple.getIntegerByField(Constants.BATCH_CSS_TREE_KEY),
+
+            leftStreamCSSTree.insertBulkUpdate(tuple.getIntegerByField(Constants.BATCH_CSS_TREE_KEY),
                     convertToIntegerList(tuple.getBinaryByField(Constants.BATCH_CSS_TREE_VALUES)));
         }
     }
 
-    public void rightInsertionTupleSmaller(Tuple tuple, LinkedList<CSSTree> linkedListCSSTree, CSSTree cssTree, boolean flagOfMerge, Queue<Tuple> queuesOfTuplesDuringMerge) {
+    public void rightInsertionTupleSmaller(Tuple tuple, LinkedList<CSSTree> linkedListCSSTree, boolean flagOfMerge, Queue<Tuple> queuesOfTuplesDuringMerge) {
         HashSet<Integer> leftHashSet = new HashSet<>();
         if (tuple.getBooleanByField(Constants.BATCH_CSS_FLAG)) {
-            linkedListCSSTree.add(cssTree);
+            linkedListCSSTree.add(rightStreamCSSTree);
             if (flagOfMerge) {
                 int i = 0;
                 for (Tuple tuples : queuesOfTuplesDuringMerge) {
                     i = i + 1;
-                    HashSet hashSet = cssTree.searchSmaller(tuples.getIntegerByField("Time"));
+                    HashSet hashSet = rightStreamCSSTree.searchSmaller(tuples.getIntegerByField("Time"));
                     outputCollector.emit("LeftMergeBitSet", new Values(convertHashSetToByteArray(hashSet), i));
 
                 }
@@ -186,7 +196,8 @@ public class LeftPredicateImmutableCSSBolt extends BaseRichBolt {
                 this.rightBooleanTupleRemovalCounter = true;
             }
         } else {
-            cssTree.insertBulkUpdate(tuple.getIntegerByField(Constants.BATCH_CSS_TREE_KEY),
+
+            rightStreamCSSTree.insertBulkUpdate(tuple.getIntegerByField(Constants.BATCH_CSS_TREE_KEY),
                     convertToIntegerList(tuple.getBinaryByField(Constants.BATCH_CSS_TREE_VALUES)));
 
         }

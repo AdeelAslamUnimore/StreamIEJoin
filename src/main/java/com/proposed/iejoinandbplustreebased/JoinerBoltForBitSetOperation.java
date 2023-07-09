@@ -55,7 +55,7 @@ public class JoinerBoltForBitSetOperation extends BaseRichBolt {
         }
         if ((predicate1BitSet!=null) && (predicate2BitSet!=null)) {
             predicate2BitSet.and(predicate1BitSet);
-           // System.out.println(predicate2BitSet);
+//           System.out.println(predicate2BitSet);
            predicate1BitSet=null;
            predicate2BitSet=null;
         }

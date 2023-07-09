@@ -73,6 +73,7 @@ public class PermutationBolt extends BaseRichBolt {
                 leftFlag = true;
             } else {
                 List<Integer> ids = convertToIntegerList((byte[]) tuple.getValueByField(Constants.PERMUTATION_TUPLE_IDS));
+
                 leftStreamPermutation.add(new Permutation(tuple.getIntegerByField(Constants.TUPLE), ids));
             }
         }
@@ -82,6 +83,7 @@ public class PermutationBolt extends BaseRichBolt {
                 rightFlag = true;
             } else {
                 List<Integer> ids = convertToIntegerList((byte[]) tuple.getValueByField(Constants.PERMUTATION_TUPLE_IDS));
+
                 rightStreamPermutation.add(new Permutation(tuple.getIntegerByField(Constants.TUPLE), ids));
             }
         }
