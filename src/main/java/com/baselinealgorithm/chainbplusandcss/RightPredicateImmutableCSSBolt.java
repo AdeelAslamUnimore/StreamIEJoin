@@ -79,10 +79,10 @@ public class RightPredicateImmutableCSSBolt extends BaseRichBolt {
         }
 
         if (tuple.getSourceStreamId().equals(leftStreamGreater)) {
-            leftInsertionTupleGreater(tuple, leftStreamLinkedListCSSTree, leftStreamMergeGreater, leftStreamGreaterQueueMerge);
+            leftInsertionTupleGreater(tuple);
         }
         if (tuple.getSourceStreamId().equals(rightStreamGreater)) {
-            rightInsertionTupleGreater(tuple, rightStreamLinkedListCSSTree, rightStreamMergeGreater, rightStreamGreaterQueueMerge);
+            rightInsertionTupleGreater(tuple);
         }
         if (tuple.getSourceStreamId().equals("LeftCheckForMerge")) {
 
@@ -140,13 +140,13 @@ public class RightPredicateImmutableCSSBolt extends BaseRichBolt {
         return null;
     }
 
-    public void leftInsertionTupleGreater(Tuple tuple, LinkedList<CSSTree> linkedListCSSTree, boolean flagOfMerge, Queue<Tuple> queuesOfTuplesDuringMerge) {
+    public void leftInsertionTupleGreater(Tuple tuple) {
 
         if (tuple.getBooleanByField(Constants.BATCH_CSS_FLAG)) {
-            linkedListCSSTree.add(leftStreamCSSTree);
-            if (flagOfMerge) {
+            leftStreamLinkedListCSSTree.add(leftStreamCSSTree);
+            if (leftStreamMergeGreater) {
                 int i = 0;
-                for (Tuple tuples : queuesOfTuplesDuringMerge) {
+                for (Tuple tuples : leftStreamGreaterQueueMerge) {
                     HashSet hashSet = leftStreamCSSTree.searchSmaller(tuples.getIntegerByField("Revenue"));
                     i = i + 1;
                     outputCollector.emit("RightMergeBitSet", new Values(convertHashSetToByteArray(hashSet), i));
@@ -166,13 +166,13 @@ public class RightPredicateImmutableCSSBolt extends BaseRichBolt {
         }
     }
 
-    public void rightInsertionTupleGreater(Tuple tuple, LinkedList<CSSTree> linkedListCSSTree, boolean flagOfMerge, Queue<Tuple> queuesOfTuplesDuringMerge) {
+    public void rightInsertionTupleGreater(Tuple tuple) {
 
         if (tuple.getBooleanByField(Constants.BATCH_CSS_FLAG)) {
-            linkedListCSSTree.add(rightStreamCSSTree);
-            if (flagOfMerge) {
+            rightStreamLinkedListCSSTree.add(rightStreamCSSTree);
+            if (rightStreamMergeGreater) {
                 int i = 0;
-                for (Tuple tuples : queuesOfTuplesDuringMerge) {
+                for (Tuple tuples : rightStreamGreaterQueueMerge) {
                     i = i + 1;
                     HashSet hashSet = rightStreamCSSTree.searchGreater(tuples.getIntegerByField("Cost"));
                     outputCollector.emit("RightMergeBitSet", new Values(convertHashSetToByteArray(hashSet), i));

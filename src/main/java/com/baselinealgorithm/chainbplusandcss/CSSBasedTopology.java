@@ -28,7 +28,8 @@ public class CSSBasedTopology {
                 fieldsGrouping("testBolt", (String) map.get("RightGreaterPredicateTuple"),new Fields(Constants.TUPLE_ID));
         builder.setBolt(Constants.MUTABLE_PART_EVALUATION_BOLT,new JoinerCSSTreeBolt((String)map.get("LeftPredicateSourceStreamIDHashSet"), (String)map.get("RightPredicateSourceStreamIDHashSet"))).fieldsGrouping(Constants.LEFT_PREDICATE_CSS_TREE_BOLT,(String)map.get("LeftPredicateSourceStreamIDHashSet"), new Fields(Constants.TUPLE_ID)).
                 fieldsGrouping(Constants.RIGHT_PREDICATE_CSS_TREE_BOLT,(String)map.get("RightPredicateSourceStreamIDHashSet"), new Fields(Constants.TUPLE_ID));
-               builder.setBolt(Constants.LEFT_PREDICATE_IMMUTABLE_CSS,new LeftPredicateImmutableCSSBolt()).shuffleGrouping(Constants.LEFT_PREDICATE_CSS_TREE_BOLT, (String) map.get("LeftSmallerPredicateTuple")).
+
+        builder.setBolt(Constants.LEFT_PREDICATE_IMMUTABLE_CSS,new LeftPredicateImmutableCSSBolt()).shuffleGrouping(Constants.LEFT_PREDICATE_CSS_TREE_BOLT, (String) map.get("LeftSmallerPredicateTuple")).
                 shuffleGrouping(Constants.LEFT_PREDICATE_CSS_TREE_BOLT, (String) map.get("RightSmallerPredicateTuple")).
                 shuffleGrouping(Constants.LEFT_PREDICATE_CSS_TREE_BOLT,"LeftCheckForMerge").
                 shuffleGrouping(Constants.LEFT_PREDICATE_CSS_TREE_BOLT,"RightCheckForMerge").shuffleGrouping("testSpout","LeftStreamTuples" ).shuffleGrouping("testSpout","RightStream");
