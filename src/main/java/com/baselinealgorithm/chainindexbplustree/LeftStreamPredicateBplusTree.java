@@ -30,16 +30,16 @@ public class LeftStreamPredicateBplusTree extends BaseRichBolt {
     private int tupleRemovalCountForLocal;
     private OutputCollector outputCollector;
     private Map<String, Object> map;
-    private boolean leftArchivePeriodBoolean=false;
-    private boolean rightArchivePeriodBoolean=false;
+    private boolean leftArchivePeriodBoolean = false;
+    private boolean rightArchivePeriodBoolean = false;
     private String leftStreamSmaller;
     private String rightStreamSmaller;
 
     // Constructor parameter for tuples
     public LeftStreamPredicateBplusTree() {
         map = Configuration.configurationConstantForStreamIDs();
-        treeRemovalThresholdUserDefined=Constants.TUPLE_REMOVAL_THRESHOLD;
-        treeArchiveUserDefined=Constants.TUPLE_ARCHIVE_THRESHOLD;
+        treeRemovalThresholdUserDefined = Constants.TUPLE_REMOVAL_THRESHOLD;
+        treeArchiveUserDefined = Constants.TUPLE_ARCHIVE_THRESHOLD;
         this.leftStreamSmaller = (String) map.get("LeftSmallerPredicateTuple");
         this.rightStreamSmaller = (String) map.get("RightSmallerPredicateTuple");
     }
@@ -63,14 +63,16 @@ public class LeftStreamPredicateBplusTree extends BaseRichBolt {
             rightPredicateEvaluation(tuple);
         }
         if (tupleRemovalCountForLocal >= treeRemovalThresholdUserDefined) {
+            System.out.println("Tuple removing");
             time.remove(time.getLast());
             duration.remove(duration.getLast());
+            tupleRemovalCountForLocal=0;
         }
     }
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer outputFieldsDeclarer) {
-        outputFieldsDeclarer.declareStream(Constants.LEFT_PREDICATE_BOLT, new Fields(Constants.LEFT_HASH_SET,Constants.TUPLE_ID));
+        outputFieldsDeclarer.declareStream(Constants.LEFT_PREDICATE_BOLT, new Fields(Constants.LEFT_HASH_SET, Constants.TUPLE_ID));
     }
 
     public void leftPredicateEvaluation(Tuple tuple) {
@@ -82,7 +84,7 @@ public class LeftStreamPredicateBplusTree extends BaseRichBolt {
             treeArchiveThresholdDuration++;
             //Archive period achieve
             if (treeArchiveThresholdDuration >= treeArchiveUserDefined) {
-                leftArchivePeriodBoolean=true;
+                leftArchivePeriodBoolean = true;
                 treeArchiveThresholdDuration = 0;
                 // New Object of BPlus
                 BPlusTree bPlusTree = new BPlusTree(Constants.ORDER_OF_B_PLUS_TREE);
@@ -96,11 +98,14 @@ public class LeftStreamPredicateBplusTree extends BaseRichBolt {
             duration.add(bPlusTree);
         }
         //Search of inequality condition and insertion into the hashset
-        HashSet hashSet= new HashSet();
+
         for (BPlusTree bPlusTree : time) {
-            hashSet.addAll(bPlusTree.greaterThenSpecificValueHashSet(tuple.getIntegerByField(Constants.TUPLE_ID)));
-            outputCollector.emit(Constants.LEFT_PREDICATE_BOLT, new Values(convertHashSetToByteArray(hashSet),tuple.getIntegerByField(Constants.TUPLE_ID)));
-            outputCollector.ack(tuple);
+            HashSet<Integer> integerHashSet = bPlusTree.greaterThenSpecificValueHashSet(tuple.getIntegerByField(Constants.TUPLE_ID));
+            if (integerHashSet != null) {
+
+                outputCollector.emit(Constants.LEFT_PREDICATE_BOLT, new Values(convertHashSetToByteArray(integerHashSet), tuple.getIntegerByField(Constants.TUPLE_ID)));
+                outputCollector.ack(tuple);
+            }
             //EmitLogic tomorrow
         }
 
@@ -124,11 +129,12 @@ public class LeftStreamPredicateBplusTree extends BaseRichBolt {
             bPlusTree.insert(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.TUPLE_ID));
             time.add(bPlusTree);
         }
-        HashSet<Integer> hashSet= new HashSet<>();
-        for (BPlusTree bPlusTree : duration) {
-            hashSet.addAll(bPlusTree.smallerThenSpecificValueHashSet(tuple.getIntegerByField(Constants.TUPLE)));
 
-            outputCollector.emit(Constants.LEFT_PREDICATE_BOLT, new Values(convertHashSetToByteArray(hashSet),tuple.getIntegerByField(Constants.TUPLE_ID)));
+        for (BPlusTree bPlusTree : duration) {
+            HashSet<Integer> integerHashSet = bPlusTree.smallerThenSpecificValueHashSet(tuple.getIntegerByField(Constants.TUPLE));
+            if (integerHashSet != null)
+              //  hashSet.addAll(integerHashSet);
+            outputCollector.emit(Constants.LEFT_PREDICATE_BOLT, new Values(convertHashSetToByteArray(integerHashSet), tuple.getIntegerByField(Constants.TUPLE_ID)));
             outputCollector.ack(tuple);
         }
 

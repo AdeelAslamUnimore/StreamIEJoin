@@ -62,7 +62,7 @@ public class LeftPredicateBoltBST extends BaseRichBolt {
         if(tuple.getSourceStreamId().equals("Right")){
 
             if (!time.isEmpty()) {
-                RedBlackBST treeForTupleInsertion = time.getLast();
+                RedBlackBST treeForTupleInsertion = time.getFirst();
                 treeForTupleInsertion.put(tuple.getIntegerByField("Tuple"), tuple.getIntegerByField("ID"));
                 if (treeForTupleInsertion.size() >= tupleCountForArchive) {
                     RedBlackBST newRedBlackBST = new RedBlackBST();

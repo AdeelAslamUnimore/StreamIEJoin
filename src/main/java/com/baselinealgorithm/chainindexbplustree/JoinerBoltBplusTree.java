@@ -38,7 +38,7 @@ public class JoinerBoltBplusTree extends BaseRichBolt {
         }
         if(leftHashSet!=null&&rightHashSet!=null){
             leftHashSet.retainAll(rightHashSet);
-              System.out.println(leftHashSet);
+
             leftHashSet=null;
             rightHashSet=null;
         }

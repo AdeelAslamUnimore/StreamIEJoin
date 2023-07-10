@@ -51,7 +51,7 @@ public class RightStreamPredicateBplusTree extends BaseRichBolt {
         tupleRemovalCountForLocal++;
         if (tuple.getSourceStreamId().equals(leftStreamGreater)) {
             if (!leftBPlusTreeLinkedList.isEmpty()) {
-                BPlusTree currentBplusTreeDuration = leftBPlusTreeLinkedList.getLast();
+                BPlusTree currentBplusTreeDuration = leftBPlusTreeLinkedList.getFirst();
                 currentBplusTreeDuration.insert(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.TUPLE_ID));
                 treeArchiveThresholdRevenue++;
                 if (treeArchiveThresholdRevenue >= treeArchiveUserDefined) {
@@ -67,15 +67,17 @@ public class RightStreamPredicateBplusTree extends BaseRichBolt {
             for (BPlusTree bPlusTree : rightBPlusTreeLinkedList) {
                 HashSet<Integer> hashSetGreater = bPlusTree.greaterThenSpecificValueHashSet(tuple.getIntegerByField(Constants.TUPLE));
                 //EmitLogic tomorrow
-                outputCollector.emit(Constants.RIGHT_PREDICATE_BOLT, new Values(convertHashSetToByteArray(hashSetGreater),tuple.getIntegerByField(Constants.TUPLE_ID)));
-                outputCollector.ack(tuple);
+                if(hashSetGreater!=null) {
+                    outputCollector.emit(Constants.RIGHT_PREDICATE_BOLT, new Values(convertHashSetToByteArray(hashSetGreater), tuple.getIntegerByField(Constants.TUPLE_ID)));
+                    outputCollector.ack(tuple);
+                }
             }
 
 
         }
         if (tuple.getSourceStreamId().equals(rightStreamGreater)) {
             if (!rightBPlusTreeLinkedList.isEmpty()) {
-                BPlusTree currentBplusTreeDuration = rightBPlusTreeLinkedList.getLast();
+                BPlusTree currentBplusTreeDuration = rightBPlusTreeLinkedList.getFirst();
                 currentBplusTreeDuration.insert(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.TUPLE_ID));
                 treeArchiveThresholdCost++;
                 if (treeArchiveThresholdCost >= treeArchiveUserDefined) {
@@ -88,17 +90,21 @@ public class RightStreamPredicateBplusTree extends BaseRichBolt {
                 bPlusTree.insert(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.TUPLE_ID));
                 rightBPlusTreeLinkedList.add(bPlusTree);
             }
+
             for (BPlusTree bPlusTree : leftBPlusTreeLinkedList) {
                 HashSet<Integer> hashSetsLess = bPlusTree.smallerThenSpecificValueHashSet(tuple.getIntegerByField(Constants.TUPLE));
-                //EmitLogic tomorrow
-                outputCollector.emit(Constants.RIGHT_PREDICATE_BOLT, new Values(convertHashSetToByteArray(hashSetsLess),tuple.getIntegerByField(Constants.TUPLE_ID)));
-                outputCollector.ack(tuple);
+                if(hashSetsLess!=null) {
+                    outputCollector.emit(Constants.RIGHT_PREDICATE_BOLT, new Values(convertHashSetToByteArray(hashSetsLess), tuple.getIntegerByField(Constants.TUPLE_ID)));
+                    outputCollector.ack(tuple);
+                }
             }
 
         }
         if (tupleRemovalCountForLocal >= treeRemovalThresholdUserDefined) {
-            rightBPlusTreeLinkedList.remove(rightBPlusTreeLinkedList.getFirst());
-            leftBPlusTreeLinkedList.remove(leftBPlusTreeLinkedList.getFirst());
+            rightBPlusTreeLinkedList.remove(rightBPlusTreeLinkedList.getLast());
+            leftBPlusTreeLinkedList.remove(leftBPlusTreeLinkedList.getLast());
+            tupleRemovalCountForLocal= 0;
+
         }
     }
 

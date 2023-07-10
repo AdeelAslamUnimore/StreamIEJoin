@@ -22,13 +22,13 @@ public class ChainIndexBPlusTree {
         builder.setSpout("testSpout", new Spout(1000));
         builder.setBolt("testBolt", new SplitBolt())
                 .fieldsGrouping("testSpout", "LeftStreamTuples", new Fields("ID")).fieldsGrouping("testSpout", "RightStream", new Fields("ID"));
-        builder.setBolt(Constants.LEFT_PREDICATE_BPLUS_TREE_BOLT, new LeftStreamPredicateBplusTree()).fieldsGrouping("testBolt",(String) map.get("LeftSmallerPredicateTuple"), new Fields(Constants.TUPLE_ID)).
+        builder.setBolt(Constants.LEFT_PREDICATE_BPLUS_TREE_AND_RBS_BOLT, new LeftStreamPredicateBplusTree()).fieldsGrouping("testBolt",(String) map.get("LeftSmallerPredicateTuple"), new Fields(Constants.TUPLE_ID)).
                 fieldsGrouping("testBolt",(String) map.get("RightSmallerPredicateTuple"), new Fields(Constants.TUPLE_ID));
 
-        builder.setBolt(Constants.RIGHT_PREDICATE_BPLUS_TREE_BOLT, new RightStreamPredicateBplusTree()).fieldsGrouping("testBolt",(String) map.get("LeftGreaterPredicateTuple"), new Fields(Constants.TUPLE_ID)).
+        builder.setBolt(Constants.RIGHT_PREDICATE_BPLUS_TREE_AND_RBST_BOLT, new RightStreamPredicateBplusTree()).fieldsGrouping("testBolt",(String) map.get("LeftGreaterPredicateTuple"), new Fields(Constants.TUPLE_ID)).
                 fieldsGrouping("testBolt",(String) map.get("RightGreaterPredicateTuple"), new Fields(Constants.TUPLE_ID));
-        builder.setBolt(Constants.HASH_SET_EVALUATION, new JoinerBoltBplusTree(Constants.LEFT_PREDICATE_BOLT, Constants.RIGHT_PREDICATE_BOLT)).fieldsGrouping(Constants.LEFT_PREDICATE_BPLUS_TREE_BOLT,Constants.LEFT_PREDICATE_BOLT, new Fields(Constants.TUPLE_ID)).
-                fieldsGrouping(Constants.RIGHT_PREDICATE_BPLUS_TREE_BOLT, Constants.RIGHT_PREDICATE_BOLT, new Fields(Constants.TUPLE_ID));
+        builder.setBolt(Constants.HASH_SET_EVALUATION, new JoinerBoltBplusTree(Constants.LEFT_PREDICATE_BOLT, Constants.RIGHT_PREDICATE_BOLT)).fieldsGrouping(Constants.LEFT_PREDICATE_BPLUS_TREE_AND_RBS_BOLT,Constants.LEFT_PREDICATE_BOLT, new Fields(Constants.TUPLE_ID)).
+                fieldsGrouping(Constants.RIGHT_PREDICATE_BPLUS_TREE_AND_RBST_BOLT, Constants.RIGHT_PREDICATE_BOLT, new Fields(Constants.TUPLE_ID));
 
         LocalCluster cluster = new LocalCluster();
         cluster.submitTopology("Storm", config, builder.createTopology());
