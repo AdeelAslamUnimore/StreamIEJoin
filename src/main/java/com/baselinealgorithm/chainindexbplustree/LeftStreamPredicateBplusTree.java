@@ -1,6 +1,5 @@
 package com.baselinealgorithm.chainindexbplustree;
 
-import clojure.lang.Cons;
 import com.configurationsandconstants.iejoinandbaseworks.Configuration;
 import com.configurationsandconstants.iejoinandbaseworks.Constants;
 import com.stormiequality.BTree.BPlusTree;
@@ -15,14 +14,13 @@ import org.apache.storm.tuple.Values;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
-import java.lang.reflect.Field;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Map;
 
 public class LeftStreamPredicateBplusTree extends BaseRichBolt {
-    private LinkedList<BPlusTree> duration = null;
-    private LinkedList<BPlusTree> time = null;
+    private LinkedList<BPlusTree> leftPredicateLinkedList = null;
+    private LinkedList<BPlusTree> rightPredicateLinkedList = null;
     private int treeRemovalThresholdUserDefined;
     private int treeArchiveThresholdDuration;
     private int treeArchiveThresholdTime;
@@ -30,8 +28,6 @@ public class LeftStreamPredicateBplusTree extends BaseRichBolt {
     private int tupleRemovalCountForLocal;
     private OutputCollector outputCollector;
     private Map<String, Object> map;
-    private boolean leftArchivePeriodBoolean = false;
-    private boolean rightArchivePeriodBoolean = false;
     private String leftStreamSmaller;
     private String rightStreamSmaller;
 
@@ -46,8 +42,8 @@ public class LeftStreamPredicateBplusTree extends BaseRichBolt {
 
     @Override
     public void prepare(Map<String, Object> map, TopologyContext topologyContext, OutputCollector outputCollector) {
-        duration = new LinkedList<>();
-        time = new LinkedList<>();
+        leftPredicateLinkedList = new LinkedList<>();
+        rightPredicateLinkedList = new LinkedList<>();
         this.outputCollector = outputCollector;
     }
 
@@ -64,8 +60,8 @@ public class LeftStreamPredicateBplusTree extends BaseRichBolt {
         }
         if (tupleRemovalCountForLocal >= treeRemovalThresholdUserDefined) {
             System.out.println("Tuple removing");
-            time.remove(time.getLast());
-            duration.remove(duration.getLast());
+            rightPredicateLinkedList.remove(rightPredicateLinkedList.getLast());
+            leftPredicateLinkedList.remove(leftPredicateLinkedList.getLast());
             tupleRemovalCountForLocal=0;
         }
     }
@@ -77,29 +73,28 @@ public class LeftStreamPredicateBplusTree extends BaseRichBolt {
 
     public void leftPredicateEvaluation(Tuple tuple) {
 
-        if (!duration.isEmpty()) {
+        if (!leftPredicateLinkedList.isEmpty()) {
             //New insertion only active sub index structure that always exist on the right that is last index of linkedList
-            BPlusTree currentBPlusTreeDuration = duration.getFirst();
+            BPlusTree currentBPlusTreeDuration = leftPredicateLinkedList.getFirst();
             currentBPlusTreeDuration.insert(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.TUPLE_ID));
             treeArchiveThresholdDuration++;
             //Archive period achieve
             if (treeArchiveThresholdDuration >= treeArchiveUserDefined) {
-                leftArchivePeriodBoolean = true;
                 treeArchiveThresholdDuration = 0;
                 // New Object of BPlus
                 BPlusTree bPlusTree = new BPlusTree(Constants.ORDER_OF_B_PLUS_TREE);
                 //Added to the linked list
-                duration.add(bPlusTree);
+                leftPredicateLinkedList.add(bPlusTree);
             }
         } else {
             // When the linkedlist is empty:
             BPlusTree bPlusTree = new BPlusTree(Constants.ORDER_OF_B_PLUS_TREE);
             bPlusTree.insert(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.TUPLE_ID));
-            duration.add(bPlusTree);
+            leftPredicateLinkedList.add(bPlusTree);
         }
         //Search of inequality condition and insertion into the hashset
 
-        for (BPlusTree bPlusTree : time) {
+        for (BPlusTree bPlusTree : rightPredicateLinkedList) {
             HashSet<Integer> integerHashSet = bPlusTree.greaterThenSpecificValueHashSet(tuple.getIntegerByField(Constants.TUPLE_ID));
             if (integerHashSet != null) {
 
@@ -113,24 +108,24 @@ public class LeftStreamPredicateBplusTree extends BaseRichBolt {
     }
 
     public void rightPredicateEvaluation(Tuple tuple) {
-        if (!time.isEmpty()) {
+        if (!rightPredicateLinkedList.isEmpty()) {
             //Only last index for insertion
-            BPlusTree currentBPlusTreeDuration = time.getFirst();
+            BPlusTree currentBPlusTreeDuration = rightPredicateLinkedList.getFirst();
             currentBPlusTreeDuration.insert(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.TUPLE_ID));
             treeArchiveThresholdTime++;
             //Checking Archive period
             if (treeArchiveThresholdTime >= treeArchiveUserDefined) {
                 treeArchiveThresholdTime = 0;
                 BPlusTree bPlusTree = new BPlusTree(Constants.ORDER_OF_B_PLUS_TREE);
-                time.add(bPlusTree);
+                rightPredicateLinkedList.add(bPlusTree);
             }
         } else {
             BPlusTree bPlusTree = new BPlusTree(Constants.ORDER_OF_B_PLUS_TREE);
             bPlusTree.insert(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.TUPLE_ID));
-            time.add(bPlusTree);
+            rightPredicateLinkedList.add(bPlusTree);
         }
 
-        for (BPlusTree bPlusTree : duration) {
+        for (BPlusTree bPlusTree : leftPredicateLinkedList) {
             HashSet<Integer> integerHashSet = bPlusTree.smallerThenSpecificValueHashSet(tuple.getIntegerByField(Constants.TUPLE));
             if (integerHashSet != null)
               //  hashSet.addAll(integerHashSet);
