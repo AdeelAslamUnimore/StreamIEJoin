@@ -38,8 +38,10 @@ public class Constants {
     public static final String RIGHT_PREDICATE_IMMUTABLE_CSS="rightPredicateImmutableCSS";
     public static final String IMMUTABLE_HASH_SET_EVALUATION="immutableHashSetEvaluation";
     public static final String MERGE_BOLT_EVALUATION_CSS="mergeBoltEvaluationCSS";
-
-    //
-
-
+    // For BPlusTree Linked Tree and RedBlack tree
+    public static final int TUPLE_ARCHIVE_THRESHOLD =5000;
+    public static final int TUPLE_REMOVAL_THRESHOLD =10000;
+    public static final String LEFT_PREDICATE_BPLUS_TREE_BOLT="leftPredicateBplusTreeBolt";
+    public static final String RIGHT_PREDICATE_BPLUS_TREE_BOLT="rightPredicateBPlusTreeBolt";
+    public static final String HASH_SET_EVALUATION="hashSetEvaluation";
 }
