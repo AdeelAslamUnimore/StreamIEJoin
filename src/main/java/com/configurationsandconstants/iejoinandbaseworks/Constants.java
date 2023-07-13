@@ -40,7 +40,7 @@ public class Constants {
     public static final String MERGE_BOLT_EVALUATION_CSS="mergeBoltEvaluationCSS";
     // For BPlusTree Linked Tree and RedBlack tree
     public static final int TUPLE_ARCHIVE_THRESHOLD =500;
-    public static final int TUPLE_REMOVAL_THRESHOLD =10000;
+    public static final int TUPLE_REMOVAL_THRESHOLD =1000;
     public static final String LEFT_PREDICATE_BPLUS_TREE_AND_RBS_BOLT ="leftPredicateBplusAndRedBlackTreeBolt";
     public static final String RIGHT_PREDICATE_BPLUS_TREE_AND_RBST_BOLT ="rightPredicateBPlusTreeBolt";
     public static final String HASH_SET_EVALUATION="hashSetEvaluation";

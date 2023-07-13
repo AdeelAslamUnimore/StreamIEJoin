@@ -71,14 +71,20 @@ public class BPlusTree implements Serializable {
             Node curr = this.root;
             // Since we insert the element only at the external node, we
             // traverse to the last level
+
             while (!curr.getChildren().isEmpty()) {
+
                 curr = curr.getChildren().get(binarySearchWithinInternalNode(key, curr.getKeys()));
+
             }
             insertWithinExternalNode(key, id, curr);
+
             if (curr.getKeys().size() == this.m) {
                 // If the external node becomes full, we split it
                 splitExternalNode(curr, this.m);
             }
+            //  System.out.println(root);
+
         }
 
     }
@@ -131,6 +137,7 @@ public class BPlusTree implements Serializable {
         // internal nodes of bplus tree do not contain values
         middle.getKeys().add(new Key(curr.getKeys().get(midIndex).getKey()));
         middle.getChildren().add(rightPart);
+        //  System.out.println(middle);
         // Curr holds the left part, so update the split node to contain just
         // the left part
         curr.getKeys().subList(midIndex, curr.getKeys().size()).clear();
@@ -138,6 +145,7 @@ public class BPlusTree implements Serializable {
         boolean firstSplit = true;
         // propogate the middle element up the tree and merge with parent of
         // previously overfull node
+
         splitInternalNode(curr.getParent(), curr, m, middle, firstSplit);
 
     }
@@ -169,6 +177,7 @@ public class BPlusTree implements Serializable {
                     toBeInserted.getChildren().get(0).setNext(toBeInserted.getChildren().get(1));
                     toBeInserted.getChildren().get(1).setPrev(toBeInserted.getChildren().get(0));
                 } else {
+
                     toBeInserted.getChildren().get(indexForPrev + 1)
                             .setPrev(toBeInserted.getChildren().get(indexForPrev));
                     toBeInserted.getChildren().get(indexForPrev - 1)
@@ -177,10 +186,12 @@ public class BPlusTree implements Serializable {
             }
         } else {
             // merge the internal node with the mid + right of previous split
+
             mergeInternalNodes(toBeInserted, curr);
             if (curr.getKeys().size() == m) {
                 // do a split again if the internal node becomes full
                 int midIndex = (int) Math.ceil(m / 2.0) - 1;
+                // Splitting at Math.ceil(m/2 - 1) ensures that the new node receiving the split keys has one fewer key than the original node.
                 Node middle = new Node();
                 Node rightPart = new Node();
 
@@ -188,12 +199,16 @@ public class BPlusTree implements Serializable {
                 // part contains elements right of the mid element, and the
                 // middle becomes parent of right part
                 rightPart.setKeys(curr.getKeys().subList(midIndex + 1, curr.getKeys().size()));
+
+
                 rightPart.setParent(middle);
 
                 middle.getKeys().add(curr.getKeys().get(midIndex));
                 middle.getChildren().add(rightPart);
 
                 List<Node> childrenOfCurr = curr.getChildren();
+
+
                 List<Node> childrenOfRight = new ArrayList();
 
                 int lastChildOfLeft = childrenOfCurr.size() - 1;
@@ -202,6 +217,7 @@ public class BPlusTree implements Serializable {
                 // from the split node
                 for (int i = childrenOfCurr.size() - 1; i >= 0; i--) {
                     List<Key> currKeysList = childrenOfCurr.get(i).getKeys();
+
                     if (middle.getKeys().get(0).getKey() <= currKeysList.get(0).getKey()) {
                         childrenOfCurr.get(i).setParent(rightPart);
                         childrenOfRight.add(0, childrenOfCurr.get(i));
@@ -232,14 +248,17 @@ public class BPlusTree implements Serializable {
      * @param mergeInto the internal node to be merged to
      */
     private void mergeInternalNodes(Node mergeFrom, Node mergeInto) {
+
         Key keyToBeInserted = mergeFrom.getKeys().get(0);
         Node childToBeInserted = mergeFrom.getChildren().get(0);
         // Find the index where the key has to be inserted to by doing a binary
         // search
+
         int indexToBeInsertedAt = binarySearchWithinInternalNode(keyToBeInserted.getKey(), mergeInto.getKeys());
         int childInsertPos = indexToBeInsertedAt;
         if (keyToBeInserted.getKey() <= childToBeInserted.getKeys().get(0).getKey()) {
             childInsertPos = indexToBeInsertedAt + 1;
+
         }
         childToBeInserted.setParent(mergeInto);
         mergeInto.getChildren().add(childInsertPos, childToBeInserted);
@@ -576,6 +595,7 @@ public class BPlusTree implements Serializable {
         }
         return hashSet;
     }
+
     public void remove(int key) {
         // Case 1: Empty tree
         if (root == null) {

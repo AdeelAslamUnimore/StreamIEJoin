@@ -49,6 +49,7 @@ public class LeftStreamPredicateBplusTree extends BaseRichBolt {
 
     @Override
     public void execute(Tuple tuple) {
+
         tupleRemovalCountForLocal++;
 
         //Left Stream Tuple means Insert in Duration and Search in Time
@@ -59,7 +60,6 @@ public class LeftStreamPredicateBplusTree extends BaseRichBolt {
             rightPredicateEvaluation(tuple);
         }
         if (tupleRemovalCountForLocal >= treeRemovalThresholdUserDefined) {
-            System.out.println("Tuple removing");
             rightPredicateLinkedList.remove(rightPredicateLinkedList.getLast());
             leftPredicateLinkedList.remove(leftPredicateLinkedList.getLast());
             tupleRemovalCountForLocal=0;
@@ -89,6 +89,7 @@ public class LeftStreamPredicateBplusTree extends BaseRichBolt {
         } else {
             // When the linkedlist is empty:
             BPlusTree bPlusTree = new BPlusTree(Constants.ORDER_OF_B_PLUS_TREE);
+            treeArchiveThresholdDuration++;
             bPlusTree.insert(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.TUPLE_ID));
             leftPredicateLinkedList.add(bPlusTree);
         }
@@ -121,6 +122,7 @@ public class LeftStreamPredicateBplusTree extends BaseRichBolt {
             }
         } else {
             BPlusTree bPlusTree = new BPlusTree(Constants.ORDER_OF_B_PLUS_TREE);
+            treeArchiveThresholdTime++;
             bPlusTree.insert(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.TUPLE_ID));
             rightPredicateLinkedList.add(bPlusTree);
         }

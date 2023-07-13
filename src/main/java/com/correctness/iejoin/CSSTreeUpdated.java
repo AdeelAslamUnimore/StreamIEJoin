@@ -1,4 +1,8 @@
-package com.baselinealgorithm.chainbplusandcss;
+package com.correctness.iejoin;
+
+import com.baselinealgorithm.chainbplusandcss.Block;
+import com.baselinealgorithm.chainbplusandcss.Key;
+import com.baselinealgorithm.chainbplusandcss.Node;
 
 import java.util.*;
 
@@ -17,7 +21,7 @@ import java.util.*;
  * <p>
  * For more advanced search techniques, refer to the original paper. This documentation focuses on the simplest approach.
  */
-public class CSSTree {
+public class CSSTreeUpdated {
     /**
      * This is the initialization of the tree.
      * <p>
@@ -43,7 +47,7 @@ public class CSSTree {
      *                    1. Validate and set the order of the tree.
      *                    2. Perform initialization tasks.
      */
-    public CSSTree(int orderOfTree) {
+    public CSSTreeUpdated(int orderOfTree) {
         this.rootBlock = null;
         this.listBlocks = new ArrayList<Block>();
         this.orderOfTree = orderOfTree;
@@ -156,13 +160,18 @@ public class CSSTree {
             }
 
 
-            if (currentNode.getKeys().size() > orderOfTree) {
+            if (currentNode.getKeys().size() >=orderOfTree) {
                 split(currentNode);
 
             }
-//            Node currentNode1 = this.rootBlock.getListOfNodes().get(0);
-//            currentNode1 = nodeWithBlockPointer(currentNode1.getBlockPointer(), key);
-//            System.out.println(currentNode1);
+            Node currentNode1 = this.rootBlock.getListOfNodes().get(0);
+            System.out.println(rootBlock+"========RootBlcok");
+            System.out.println("Child Block"+listBlocks.get(this.rootBlock.getListOfNodes().get(0).getChildBlockIndex()));
+            Block block=listBlocks.get(this.rootBlock.getListOfNodes().get(0).getChildBlockIndex());
+            System.out.println(listBlocks.get(block.getListOfNodes().get(0).getChildBlockIndex()));
+            System.out.println(listBlocks.get(block.getListOfNodes().get(1).getChildBlockIndex()));
+            currentNode1 = nodeWithBlockPointer(currentNode1.getBlockPointer(), key);
+            System.out.println(currentNode1);
 
         }
 
@@ -279,14 +288,14 @@ public class CSSTree {
         int midIndex = currentNode.getKeys().size() / 2;
         int middleKey = currentNode.getKeys().get(midIndex).getKey();
         Node splitNode = new Node();
-        List<Key> rightKeys = new ArrayList<>(currentNode.getKeys().subList(midIndex + 1, currentNode.getKeys().size()));
+        List<Key> rightKeys = new ArrayList<>(currentNode.getKeys().subList(midIndex, currentNode.getKeys().size()));
         splitNode.setKeys(rightKeys);
         splitNode.setBlockPointer(currentNode.getBlockPointer());
         splitNode.setIsleaf(currentNode.isIsleaf());
         Block block = currentNode.getBlockPointer();
         int index = block.getListOfNodes().indexOf(currentNode);
-        currentNode.getBlockPointer().getListOfNodes().add((index + 1), splitNode);
-        currentNode.getKeys().subList(midIndex + 1, currentNode.getKeys().size()).clear();
+        currentNode.getBlockPointer().getListOfNodes().add((index +1), splitNode);
+        currentNode.getKeys().subList(midIndex , currentNode.getKeys().size()).clear();
         Node nodeNext = currentNode.getNext();
         if (nodeNext != null) {
             currentNode.getNext().setPrev(splitNode);
@@ -368,7 +377,7 @@ public class CSSTree {
                         return Integer.compare(s1.getKey(), s2.getKey());
                     }
                 });
-                if (block.getParentNode().getKeys().size() > orderOfTree) {
+                if (block.getParentNode().getKeys().size() >= orderOfTree) {
                     int midIndex = block.getParentNode().getKeys().size() / 2;
                     int middleKey = block.getParentNode().getKeys().get(midIndex).getKey();
                     Node splitIntermediateNode = new Node();

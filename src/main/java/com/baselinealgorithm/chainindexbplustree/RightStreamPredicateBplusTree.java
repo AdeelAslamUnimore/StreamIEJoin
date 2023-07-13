@@ -61,6 +61,7 @@ public class RightStreamPredicateBplusTree extends BaseRichBolt {
                 }
             } else {
                 BPlusTree bPlusTree = new BPlusTree(Constants.ORDER_OF_B_PLUS_TREE);
+                treeArchiveThresholdRevenue++;
                 bPlusTree.insert(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.TUPLE_ID));
                 leftBPlusTreeLinkedList.add(bPlusTree);
             }
@@ -87,6 +88,7 @@ public class RightStreamPredicateBplusTree extends BaseRichBolt {
                 }
             } else {
                 BPlusTree bPlusTree = new BPlusTree(Constants.ORDER_OF_B_PLUS_TREE);
+                treeArchiveThresholdCost++;
                 bPlusTree.insert(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.TUPLE_ID));
                 rightBPlusTreeLinkedList.add(bPlusTree);
             }
