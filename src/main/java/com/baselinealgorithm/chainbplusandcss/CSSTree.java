@@ -509,6 +509,58 @@ public class CSSTree {
         }
         return smallestHashSetIds;
     }
+
+    public BitSet searchSmallerBitSet(int key) {
+       BitSet smallestBitSetIds= new BitSet();
+        Node node = nodeWithBlockPointer(this.rootBlock, key);
+        Node referentNode = findRelevantNode(node, key);
+        node = (referentNode == null) ? node : referentNode;
+        for(Key keys:node.getKeys()){
+            if(keys.getKey()<key){
+                for(int i: keys.getValue())
+                    smallestBitSetIds.set(i);
+            }
+            else{
+                break;
+            }
+        }
+        while (node != null) {
+            node = node.getPrev();
+            if(node!=null){
+                for(Key keys:node.getKeys()){
+                    for(int i: keys.getValue())
+                        smallestBitSetIds.set(i);
+                }
+            }
+        }
+        return smallestBitSetIds;
+    }
+
+    public BitSet searchGreaterBitSet(int key) {
+        //BitMatrixSpareseBit costHS;
+        BitSet bitSetForAllIdsGreaterThanAKey= new BitSet();
+        Node node = nodeWithBlockPointer(this.rootBlock, key);
+        Node referentNode = findRelevantNode(node, key);
+        node = (referentNode == null) ? node : referentNode;
+        for(Key keys:node.getKeys()){
+            if(keys.getKey()>key){
+                for(int i: keys.getValue())
+                    bitSetForAllIdsGreaterThanAKey.set(i);
+            }
+        }
+        while (node != null) {
+            node = node.getNext();
+            if(node!=null){
+                for(Key keys:node.getKeys()){
+                    for(int i: keys.getValue())
+                    bitSetForAllIdsGreaterThanAKey.set(i);
+                }
+            }
+        }
+        return bitSetForAllIdsGreaterThanAKey;
+    }
+
+
     /**
      * This method searches for the nearest key in a list of nodes based on a given key.
      * It iterates through the nodes and compares the last key in each node's list of keys with the given key.

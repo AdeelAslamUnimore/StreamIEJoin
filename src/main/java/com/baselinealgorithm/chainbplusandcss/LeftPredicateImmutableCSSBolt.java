@@ -18,14 +18,14 @@ import java.util.*;
 
 public class LeftPredicateImmutableCSSBolt extends BaseRichBolt {
     // Two linked that holds the linked list of two relation for example R.Duration and S.Time
-    private LinkedList<CSSTree> leftStreamLinkedListCSSTree = null;
-    private LinkedList<CSSTree> rightStreamLinkedListCSSTree = null;
+    private LinkedList<CSSTreeUpdated> leftStreamLinkedListCSSTree = null;
+    private LinkedList<CSSTreeUpdated> rightStreamLinkedListCSSTree = null;
     // The two stream ids from upstream processing elements
     private String leftStreamSmaller;
     private String rightStreamSmaller;
     // Signature for CSS tree that used as an object
-    private CSSTree leftStreamCSSTree = null;
-    private CSSTree rightStreamCSSTree = null;
+    private CSSTreeUpdated leftStreamCSSTree = null;
+    private CSSTreeUpdated rightStreamCSSTree = null;
     // Two boolean that are used as a flag for merge operation one for R other for S
     private boolean leftStreamMergeSmaller = false;
     private boolean rightStreamMergeSmaller = false;
@@ -52,8 +52,8 @@ public class LeftPredicateImmutableCSSBolt extends BaseRichBolt {
         // both linked list and CSS trees are initilized
         leftStreamLinkedListCSSTree = new LinkedList<>();
         rightStreamLinkedListCSSTree = new LinkedList<>();
-        leftStreamCSSTree = new CSSTree(Constants.ORDER_OF_CSS_TREE);
-        rightStreamCSSTree = new CSSTree(Constants.ORDER_OF_CSS_TREE);
+        leftStreamCSSTree = new CSSTreeUpdated(Constants.ORDER_OF_CSS_TREE);
+        rightStreamCSSTree = new CSSTreeUpdated(Constants.ORDER_OF_CSS_TREE);
         // Merge operation
         // Updated  queue during merge
         this.leftStreamSmallerQueueMerge = new LinkedList<>();
@@ -133,13 +133,13 @@ public class LeftPredicateImmutableCSSBolt extends BaseRichBolt {
 
     }
     // Probing results insert tuple R.Duration search Greater to all for every new tuple.
-    public HashSet<Integer> probingResultsSmaller(Tuple tuple, LinkedList<CSSTree> linkedListCSSTree) {
+    public HashSet<Integer> probingResultsSmaller(Tuple tuple, LinkedList<CSSTreeUpdated> linkedListCSSTree) {
         HashSet<Integer> leftHashSet = new HashSet<>();
         // Iterate all linked list
         if (!linkedListCSSTree.isEmpty()) {
             tupleRemovalCount++;
             // Probe to all linked list
-            for (CSSTree cssTree : linkedListCSSTree) {
+            for (CSSTreeUpdated cssTree : linkedListCSSTree) {
                 leftHashSet.addAll(cssTree.searchGreater(tuple.getIntegerByField("Duration")));
 
             }
@@ -150,12 +150,12 @@ public class LeftPredicateImmutableCSSBolt extends BaseRichBolt {
 
     }
     // Probing results insert tuple S.Time search Greater to all for every new tuple.
-    public HashSet<Integer> probingResultsGreater(Tuple tuple, LinkedList<CSSTree> linkedListCSSTree) {
+    public HashSet<Integer> probingResultsGreater(Tuple tuple, LinkedList<CSSTreeUpdated> linkedListCSSTree) {
 
         HashSet<Integer> rightHashSet = new HashSet<>();
         if (!linkedListCSSTree.isEmpty()) {
             tupleRemovalCount++;
-            for (CSSTree cssTree : linkedListCSSTree) {
+            for (CSSTreeUpdated cssTree : linkedListCSSTree) {
 
                 rightHashSet.addAll(cssTree.searchSmaller(tuple.getIntegerByField("Time")));
 
@@ -183,7 +183,7 @@ public class LeftPredicateImmutableCSSBolt extends BaseRichBolt {
                 leftStreamMergeSmaller = false; // set associated flag to false
             }
             // create new CSS tree object
-            leftStreamCSSTree = new CSSTree(Constants.ORDER_OF_CSS_TREE);
+            leftStreamCSSTree = new CSSTreeUpdated(Constants.ORDER_OF_CSS_TREE);
             // updated the tuple removal counter by newly added tuples from immutable part
             tupleRemovalCount = tupleRemovalCount + Constants.MUTABLE_WINDOW_SIZE;
             // If tuple removal counter approach to limit then its associated boolean is on the structure is removed only when both R.Duration and S.Duration or union of both tuples reaches to the limit
@@ -213,7 +213,7 @@ public class LeftPredicateImmutableCSSBolt extends BaseRichBolt {
                 rightStreamSmallerQueueMerge = new LinkedList<>();
                 rightStreamMergeSmaller = false;
             }
-            rightStreamCSSTree = new CSSTree(Constants.ORDER_OF_CSS_TREE);
+            rightStreamCSSTree = new CSSTreeUpdated(Constants.ORDER_OF_CSS_TREE);
             tupleRemovalCount = tupleRemovalCount + Constants.MUTABLE_WINDOW_SIZE;
             if (tupleRemovalCount >= Constants.IMMUTABLE_CSS_PART_REMOVAL) {
                 this.rightBooleanTupleRemovalCounter = true;

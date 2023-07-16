@@ -1,8 +1,4 @@
-package com.correctness.iejoin;
-
-import com.baselinealgorithm.chainbplusandcss.Block;
-import com.baselinealgorithm.chainbplusandcss.Key;
-import com.baselinealgorithm.chainbplusandcss.Node;
+package com.baselinealgorithm.chainbplusandcss;
 
 import java.util.*;
 
@@ -35,9 +31,9 @@ public class CSSTreeUpdated {
     int orderOfTree;
 
 
-
     /// tuple removal counter
-    private int tupleRemovalCounter=0;
+    private int tupleRemovalCounter = 0;
+
     /**
      * This is the constructor of the CSSTree.
      *
@@ -147,31 +143,26 @@ public class CSSTreeUpdated {
 
             if (!(currentNode.isIsleaf())) {
 
-                currentNode = nodeWithBlockPointer(currentNode.getBlockPointer(), key);
+                currentNode = leafNodeSearch(currentNode.getBlockPointer(), key);
+                //System.out.println(currentNode);
 
             }
+            insertionNodeKey(currentNode, key, value);
 
-            Node relevenetNode = findRelevantNode(currentNode, key);
-            if (relevenetNode == null) {
-                insertionNodeKey(currentNode, key, value);
-            } else {
-                insertionNodeKey(relevenetNode, key, value);
-                currentNode = relevenetNode;
-            }
+//            Node relevenetNode = findRelevantNode(currentNode, key);
+//            if (relevenetNode == null) {
+//                insertionNodeKey(currentNode, key, value);
+//            } else {
+//                insertionNodeKey(relevenetNode, key, value);
+//                currentNode = relevenetNode;
+//            }
 
 
-            if (currentNode.getKeys().size() >=orderOfTree) {
+            if (currentNode.getKeys().size() >= orderOfTree) {
                 split(currentNode);
 
             }
-            Node currentNode1 = this.rootBlock.getListOfNodes().get(0);
-            System.out.println(rootBlock+"========RootBlcok");
-            System.out.println("Child Block"+listBlocks.get(this.rootBlock.getListOfNodes().get(0).getChildBlockIndex()));
-            Block block=listBlocks.get(this.rootBlock.getListOfNodes().get(0).getChildBlockIndex());
-            System.out.println(listBlocks.get(block.getListOfNodes().get(0).getChildBlockIndex()));
-            System.out.println(listBlocks.get(block.getListOfNodes().get(1).getChildBlockIndex()));
-            currentNode1 = nodeWithBlockPointer(currentNode1.getBlockPointer(), key);
-            System.out.println(currentNode1);
+
 
         }
 
@@ -294,8 +285,8 @@ public class CSSTreeUpdated {
         splitNode.setIsleaf(currentNode.isIsleaf());
         Block block = currentNode.getBlockPointer();
         int index = block.getListOfNodes().indexOf(currentNode);
-        currentNode.getBlockPointer().getListOfNodes().add((index +1), splitNode);
-        currentNode.getKeys().subList(midIndex , currentNode.getKeys().size()).clear();
+        currentNode.getBlockPointer().getListOfNodes().add((index + 1), splitNode);
+        currentNode.getKeys().subList(midIndex, currentNode.getKeys().size()).clear();
         Node nodeNext = currentNode.getNext();
         if (nodeNext != null) {
             currentNode.getNext().setPrev(splitNode);
@@ -306,7 +297,9 @@ public class CSSTreeUpdated {
 //    System.out.println(currentNode.getNext()+"...CurrentNodeNext");
 //    System.out.println(splitNode.getPrev()+"...SplitNodeNPt");
 //    System.out.println(splitNode.getNext()+"...Preciow");
+
         insertKeyIntoIntermediate(currentNode.getBlockPointer(), middleKey);
+        //  System.out.println(this.rootBlock+"..."+currentNode.getBlockPointer()+"...."+splitNode);
         // insertKeyIntoIntermediate(currentNode.getBlockPointer(),  middleKey,splitNode);
     }
 
@@ -316,30 +309,30 @@ public class CSSTreeUpdated {
      * If a parent node exists, it searches for the key in the parent node's keys. If the key is already present, the method returns.
      * If the key is not found, it adds the key to the parent node's keys, sorts them, and checks if the parent node exceeds the order of the tree.
      * If the parent node exceeds the order of the tree, it performs a split operation to create a new intermediate node.
-     *
+     * <p>
      * Insert key into intermediate node steps:
      * 1. Check if the block has a parent node.
-     *    - If not, create a new parent block and set it as the root block.
+     * - If not, create a new parent block and set it as the root block.
      * 2. Search for the key in the parent node's keys.
-     *    - If the key is found, return.
+     * - If the key is found, return.
      * 3. Create a new key object and set its value.
      * 4. Add the key to the parent node's keys list.
      * 5. Sort the keys list in ascending order based on the key values.
      * 6. Check if the parent node exceeds the order of the tree.
-     *    - If yes, perform a split operation to create a new intermediate node.
-     *      - Determine the middle index of the keys in the parent node.
-     *      - Retrieve the middle key value.
-     *      - Create a new splitIntermediateNode and populate it with the keys from the right half of the parent node's keys list.
-     *      - Set the block pointer, leaf status, and connections for the splitIntermediateNode.
-     *      - Insert the splitIntermediateNode at the appropriate position in the block's list of nodes.
-     *      - Update the child block index for the splitIntermediateNode.
-     *      - Remove the keys from the parent node's keys list that were moved to the splitIntermediateNode.
-     *      - Recursively insert the middle key into the intermediate node.
-     *
+     * - If yes, perform a split operation to create a new intermediate node.
+     * - Determine the middle index of the keys in the parent node.
+     * - Retrieve the middle key value.
+     * - Create a new splitIntermediateNode and populate it with the keys from the right half of the parent node's keys list.
+     * - Set the block pointer, leaf status, and connections for the splitIntermediateNode.
+     * - Insert the splitIntermediateNode at the appropriate position in the block's list of nodes.
+     * - Update the child block index for the splitIntermediateNode.
+     * - Remove the keys from the parent node's keys list that were moved to the splitIntermediateNode.
+     * - Recursively insert the middle key into the intermediate node.
+     * <p>
      * Note: Uncomment and modify the required lines of code based on the specific implementation details.
      *
      * @param block The block where the key is to be inserted into the intermediate node.
-     * @param key The key value to be inserted.
+     * @param key   The key value to be inserted.
      */
 
     public void insertKeyIntoIntermediate(Block block, int key) {
@@ -369,37 +362,38 @@ public class CSSTreeUpdated {
                     return;
                 }
             }
-                key1.setKey(key);
-                block.getParentNode().getKeys().add(key1);
-                Collections.sort(block.getParentNode().getKeys(), new Comparator<Key>() {
-                    @Override
-                    public int compare(Key s1, Key s2) {
-                        return Integer.compare(s1.getKey(), s2.getKey());
-                    }
-                });
-                if (block.getParentNode().getKeys().size() >= orderOfTree) {
-                    int midIndex = block.getParentNode().getKeys().size() / 2;
-                    int middleKey = block.getParentNode().getKeys().get(midIndex).getKey();
-                    Node splitIntermediateNode = new Node();
-                    List<Key> rightKeys = new ArrayList(block.getParentNode().getKeys().subList(midIndex + 1, block.getParentNode().getKeys().size()));
-                    splitIntermediateNode.setKeys(rightKeys);
-                    splitIntermediateNode.setBlockPointer(block.getParentNode().getBlockPointer());
-                    splitIntermediateNode.setIsleaf(block.getParentNode().isIsleaf());
-                    Block blockForIndex = block.getParentNode().getBlockPointer();
-                    int index = blockForIndex.getListOfNodes().indexOf(block.getParentNode());
-                    block.getParentNode().getBlockPointer().getListOfNodes().add((index + 1), splitIntermediateNode);
-                    int childBlockIndexForSplitIntermediateNodeInBlockList = childBlockSplit(block, splitIntermediateNode);
-                    splitIntermediateNode.setChildBlockIndex(childBlockIndexForSplitIntermediateNodeInBlockList);
-                    block.getParentNode().getKeys().subList(midIndex, block.getParentNode().getKeys().size()).clear();
-                    insertKeyIntoIntermediate(block.getParentNode().getBlockPointer(), middleKey);
+            key1.setKey(key);
+            block.getParentNode().getKeys().add(key1);
+            Collections.sort(block.getParentNode().getKeys(), new Comparator<Key>() {
+                @Override
+                public int compare(Key s1, Key s2) {
+                    return Integer.compare(s1.getKey(), s2.getKey());
                 }
+            });
+            if (block.getParentNode().getKeys().size() >= orderOfTree) {
+                int midIndex = block.getParentNode().getKeys().size() / 2;
+                int middleKey = block.getParentNode().getKeys().get(midIndex).getKey();
+                Node splitIntermediateNode = new Node();
+                List<Key> rightKeys = new ArrayList(block.getParentNode().getKeys().subList(midIndex + 1, block.getParentNode().getKeys().size()));
+                splitIntermediateNode.setKeys(rightKeys);
+                splitIntermediateNode.setBlockPointer(block.getParentNode().getBlockPointer());
+                splitIntermediateNode.setIsleaf(block.getParentNode().isIsleaf());
+                Block blockForIndex = block.getParentNode().getBlockPointer();
+                int index = blockForIndex.getListOfNodes().indexOf(block.getParentNode());
+                block.getParentNode().getBlockPointer().getListOfNodes().add((index + 1), splitIntermediateNode);
+                int childBlockIndexForSplitIntermediateNodeInBlockList = childBlockSplit(block, splitIntermediateNode);
+                splitIntermediateNode.setChildBlockIndex(childBlockIndexForSplitIntermediateNodeInBlockList);
+                block.getParentNode().getKeys().subList(midIndex, block.getParentNode().getKeys().size()).clear();
+                insertKeyIntoIntermediate(block.getParentNode().getBlockPointer(), middleKey);
             }
+        }
     }
+
     /**
      * This method performs a child block split operation when the parent node of a block exceeds the order of the tree.
      * It splits the block's list of nodes into two parts, creates a new block, and assigns the right portion of nodes to the new block.
      * It also updates the necessary connections and returns the index of the new block in the listBlocks.
-     *
+     * <p>
      * Child block split operation steps:
      * 1. Get the key value from the first key in the parent node.
      * 2. Search for the nearest key in the block's list of nodes.
@@ -410,21 +404,21 @@ public class CSSTreeUpdated {
      * 7. Set the list of right nodes for the new block.
      * 8. Remove the right nodes from the block's list of nodes by clearing the sublist.
      * 9. If the block's list of nodes becomes empty:
-     *     - Create an emergency node and set its leaf status based on the first node in the new block's list of nodes.
-     *     - Set the block pointer as the original block.
-     *     - Create an empty list of keys for the emergency node.
-     *     - If the nearest key is not a leaf node, set the child block index for the emergency node.
-     *     - Add the emergency node to the block's list of nodes.
-     *     - If the first node in the new block's list of nodes is a leaf node:
-     *         - Update the previous and next pointers of the emergency node.
-     *         - Update the previous node's next pointer to the emergency node.
+     * - Create an emergency node and set its leaf status based on the first node in the new block's list of nodes.
+     * - Set the block pointer as the original block.
+     * - Create an empty list of keys for the emergency node.
+     * - If the nearest key is not a leaf node, set the child block index for the emergency node.
+     * - Add the emergency node to the block's list of nodes.
+     * - If the first node in the new block's list of nodes is a leaf node:
+     * - Update the previous and next pointers of the emergency node.
+     * - Update the previous node's next pointer to the emergency node.
      * 10. Update the block pointers of the nodes in the new block to point to the new block.
      * 11. Set the parent node of the new block as the provided parent node.
      * 12. Return the index of the new block in the listBlocks.
-     *
+     * <p>
      * Note: Uncomment and modify the required lines of code based on the specific implementation details.
      *
-     * @param block The block to be split.
+     * @param block      The block to be split.
      * @param parentNode The parent node of the block.
      * @return The index of the new block in the listBlocks.
      */
@@ -437,7 +431,8 @@ public class CSSTreeUpdated {
         }
         Block newBlock = new Block();
         listBlocks.add(newBlock);
-        int startIndex = block.getListOfNodes().indexOf(node);
+        int startIndex = block.getListOfNodes().indexOf(node) - 1;
+
         List<Node> rightNodes = new ArrayList(block.getListOfNodes().subList(startIndex, block.getListOfNodes().size()));
         //List<Node> rightNodes = new ArrayList(block.getListOfNodes().subList(block.getListOfNodes().size()-1, block.getListOfNodes().size()));
         newBlock.setListOfNodes(rightNodes);
@@ -478,19 +473,19 @@ public class CSSTreeUpdated {
 
     public HashSet<Integer> searchGreater(int key) {
         //BitMatrixSpareseBit costHS;
-        HashSet<Integer> hashSetForAllIdsGreaterThanAKey= new HashSet<>();
-        Node node = nodeWithBlockPointer(this.rootBlock, key);
-        Node referentNode = findRelevantNode(node, key);
-        node = (referentNode == null) ? node : referentNode;
-        for(Key keys:node.getKeys()){
-            if(keys.getKey()>key){
+        HashSet<Integer> hashSetForAllIdsGreaterThanAKey = new HashSet<>();
+
+        Node node = leafNodeSearch(this.rootBlock, key);
+        System.out.println(node + "=======" + key);
+        for (Key keys : node.getKeys()) {
+            if (keys.getKey() > key) {
                 hashSetForAllIdsGreaterThanAKey.addAll(keys.getValue());
             }
         }
         while (node != null) {
             node = node.getNext();
-            if(node!=null){
-                for(Key keys:node.getKeys()){
+            if (node != null) {
+                for (Key keys : node.getKeys()) {
                     hashSetForAllIdsGreaterThanAKey.addAll(keys.getValue());
                 }
             }
@@ -499,42 +494,43 @@ public class CSSTreeUpdated {
     }
 
     public HashSet<Integer> searchSmaller(int key) {
-        HashSet<Integer> smallestHashSetIds= new HashSet<>();
-        Node node = nodeWithBlockPointer(this.rootBlock, key);
+        HashSet<Integer> smallestHashSetIds = new HashSet<>();
+        Node node = leafNodeSearch(this.rootBlock, key);
         Node referentNode = findRelevantNode(node, key);
         node = (referentNode == null) ? node : referentNode;
-        for(Key keys:node.getKeys()){
-            if(keys.getKey()<key){
+        for (Key keys : node.getKeys()) {
+            if (keys.getKey() < key) {
                 smallestHashSetIds.addAll(keys.getValue());
             }
         }
         while (node != null) {
             node = node.getPrev();
-            if(node!=null){
-                for(Key keys:node.getKeys()){
-                        smallestHashSetIds.addAll(keys.getValue());
+            if (node != null) {
+                for (Key keys : node.getKeys()) {
+                    smallestHashSetIds.addAll(keys.getValue());
                 }
             }
         }
         return smallestHashSetIds;
     }
+
     /**
      * This method searches for the nearest key in a list of nodes based on a given key.
      * It iterates through the nodes and compares the last key in each node's list of keys with the given key.
      * It returns the node whose last key is greater than or equal to the given key, or the last node in the list if no such node is found.
-     *
+     * <p>
      * Nearest key search steps:
      * 1. If the list of nodes is null or empty, return null.
      * 2. If the first node's list of keys is empty, return the first node.
      * 3. Iterate through the list of nodes:
-     *     - Get the index of the last key in the current node's list of keys.
-     *     - If the last key is greater than or equal to the given key, return the current node.
+     * - Get the index of the last key in the current node's list of keys.
+     * - If the last key is greater than or equal to the given key, return the current node.
      * 4. If no node is found in the iteration, return the last node in the list.
-     *
+     * <p>
      * Note: Uncomment and modify the required lines of code based on the specific implementation details.
      *
      * @param nodes The list of nodes to search.
-     * @param key The key value to compare.
+     * @param key   The key value to compare.
      * @return The node with the nearest key greater than or equal to the given key, or the last node if no such node is found.
      */
 
@@ -570,39 +566,40 @@ public class CSSTreeUpdated {
 
         }
     }
+
     /**
      * This method finds the relevant node in a linked list of nodes based on a given key.
      * Starting from the provided node, it traverses the linked list backward and performs a binary search within each node's list of keys.
      * It returns the first node whose keys are less than or equal to the given key, or null if no such node is found.
-     *
+     * <p>
      * Relevant node search steps:
      * 1. Create a local variable "node1" and assign the provided node to it.
      * 2. Use a labeled loop to iterate while "node1" is not null.
-     *     - Perform a binary search within the current node's list of keys.
-     *     - If a key is found that is less than or equal to the given key, break the labeled loop.
-     *     - Otherwise, move to the previous node by updating "node1" to its previous node.
+     * - Perform a binary search within the current node's list of keys.
+     * - If a key is found that is less than or equal to the given key, break the labeled loop.
+     * - Otherwise, move to the previous node by updating "node1" to its previous node.
      * 3. Return the value of "node1".
-     *
+     * <p>
      * Note: Uncomment and modify the required lines of code based on the specific implementation details.
      *
      * @param node The starting node for the search.
-     * @param key The key value to compare.
+     * @param key  The key value to compare.
      * @return The first node whose keys are less than or equal to the given key, or null if no such node is found.
      */
 
     public Node findRelevantNode(Node node, int key) {
         Node node1 = node;
-       boolean check=false;
+        boolean check = false;
         while (node1 != null) {
             // binary search
-            label2: for (int i=0;i< node1.getKeys().size();i++) {
-                if(node1.getKeys().get(0).getKey()>key){
-                    break ;
-                }
-                else{
+            label2:
+            for (int i = 0; i < node1.getKeys().size(); i++) {
+                if (node1.getKeys().get(0).getKey() > key) {
+                    break;
+                } else {
 //                    System.out.println("Here"+key);
-                    check=true;
-                    break ;
+                    check = true;
+                    break;
                 }
 //                if (node1.getKeys().get(i).getKey() <= key) {
 //                    //  node = node;
@@ -610,7 +607,7 @@ public class CSSTreeUpdated {
 //                    break ;
 //                }
             }
-            if(check){
+            if (check) {
                 break;
             }
             node1 = node1.getPrev();
@@ -645,7 +642,7 @@ public class CSSTreeUpdated {
             Key key1 = new Key(); //Key object
             List<Integer> values = new ArrayList<Integer>(); // Set of Values
             key1.setKey(key);
-           // key1.setId(value);
+            // key1.setId(value);
             values.addAll(value);
             key1.setValue(values);
             List<Key> keys = new ArrayList<Key>();
@@ -700,20 +697,20 @@ public class CSSTreeUpdated {
 
             if (!(currentNode.isIsleaf())) {
 
-                currentNode = nodeWithBlockPointer(currentNode.getBlockPointer(), key);
+                currentNode = leafNodeSearch(currentNode.getBlockPointer(), key);
 
             }
+            insertionNodeKeyMerge(currentNode, key, value);
+//            Node relevenetNode = findRelevantNode(currentNode, key);
+//            if (relevenetNode == null) {
+//                insertionNodeKeyMerge(currentNode, key, value);
+//            } else {
+//                insertionNodeKeyMerge(relevenetNode, key, value);
+//                currentNode = relevenetNode;
+//            }
 
-            Node relevenetNode = findRelevantNode(currentNode, key);
-            if (relevenetNode == null) {
-                insertionNodeKeyMerge(currentNode, key, value);
-            } else {
-                insertionNodeKeyMerge(relevenetNode, key, value);
-                currentNode = relevenetNode;
-            }
 
-
-            if (currentNode.getKeys().size() > orderOfTree) {
+            if (currentNode.getKeys().size() >= orderOfTree) {
                 split(currentNode);
 
             }
@@ -721,10 +718,11 @@ public class CSSTreeUpdated {
         }
 
     }
+
     /**
      * This section of code creates a new Key object, sets its properties, adds it to the list of keys in the node,
      * and sorts the keys in ascending order based on their key values.
-     *
+     * <p>
      * Key creation and sorting steps:
      * 1. Create a new Key object.
      * 2. Create a list to store the values associated with the key.
@@ -733,7 +731,7 @@ public class CSSTreeUpdated {
      * 5. Set the values list in the Key object.
      * 6. Add the Key object to the list of keys in the node.
      * 7. Sort the keys in ascending order based on their key values using the Collections.sort() method with a custom Comparator.
-     *
+     * <p>
      * Note: Uncomment and modify the required lines of code based on the specific implementation details.
      */
 
@@ -771,15 +769,122 @@ public class CSSTreeUpdated {
         });
 
 
+    }
+
+    public int binarySearchWithinInternalNode(int key, List<Key> keyList) {
+        int st = 0;
+        int end = keyList.size() - 1;
+        int mid;
+        int index = -1;
+        // Return first index if key is less than the first element
+        if (key < keyList.get(st).getKey()) {
+            return 0;
+        }
+        // Return array size + 1 as the new positin of the key if greater than
+        // last element
+        if (key >= keyList.get(end).getKey()) {
+            return keyList.size();
+        }
+        while (st <= end) {
+            mid = (st + end) / 2;
+            // Following condition ensures that we find a location s.t. key is
+            // smaller than element at that index and is greater than or equal
+            // to the element at the previous index. This location is where the
+            // key would be inserted
+            if (key < keyList.get(mid).getKey() && key >= keyList.get(mid - 1).getKey()) {
+                index = mid;
+                break;
+            } // Following conditions follow normal Binary Search
+            else if (key >= keyList.get(mid).getKey()) {
+                st = mid + 1;
+            } else {
+                end = mid - 1;
+            }
+        }
+        return index;
 
     }
 
+    public Node leafNodeSearch(Block block, int key) {
+        Node node = block.getListOfNodes().get(0);
+        while (!node.isIsleaf()) {
+            int indexForKey = binarySearchWithinInternalNode(key, node.getKeys());
+            Block blockToSearch = listBlocks.get(node.getChildBlockIndex());
+            try {
+                node = blockToSearch.getListOfNodes().get(indexForKey);
+            } catch (Exception e) {
+                node = blockToSearch.getListOfNodes().get(indexForKey - 1);
+            }
+        }
 
-    public int getTupleRemovalCounter() {
-        return tupleRemovalCounter;
+        return node;
     }
 
-    public void setTupleRemovalCounter(int tupleRemovalCounter) {
-        this.tupleRemovalCounter = tupleRemovalCounter;
+    public void test(int id) {
+        Node node = new Node();
+        List<Key> keys = new ArrayList<>();
+        Key key = new Key();
+        key.setKey(7);
+        key.setValue(Collections.singletonList(22));
+        keys.add(key);
+        Key key1 = new Key();
+        key1.setKey(17);
+        key1.setValue(Collections.singletonList(22));
+        keys.add(key1);
+        Key key2 = new Key();
+        key2.setKey(28);
+        key2.setValue(Collections.singletonList(22));
+        keys.add(key2);
+        node.setKeys(keys);
+        int index = binarySearchWithinInternalNode(id, node.getKeys());
+        System.out.println(index);
     }
+
+    public BitSet searchSmallerBitSet(int key) {
+        BitSet smallestBitSetIds = new BitSet();
+        Node node = leafNodeSearch(this.rootBlock, key);
+        for (Key keys : node.getKeys()) {
+            if (keys.getKey() < key) {
+                for (int i : keys.getValue())
+                    smallestBitSetIds.set(i);
+            } else {
+                break;
+            }
+        }
+        while (node != null) {
+            node = node.getPrev();
+
+            if (node != null) {
+                for (Key keys : node.getKeys()) {
+                    for (int i : keys.getValue())
+                        smallestBitSetIds.set(i);
+                }
+            }
+        }
+        return smallestBitSetIds;
+    }
+
+    public BitSet searchGreaterBitSet(int key) {
+        //BitMatrixSpareseBit costHS;
+        BitSet bitSetForAllIdsGreaterThanAKey = new BitSet();
+        Node node = leafNodeSearch(this.rootBlock, key);
+        System.out.println(node);
+        for (Key keys : node.getKeys()) {
+            if (keys.getKey() > key) {
+                for (int i : keys.getValue())
+                    bitSetForAllIdsGreaterThanAKey.set(i);
+            }
+        }
+        while (node != null) {
+            node = node.getNext();
+            if (node != null) {
+                for (Key keys : node.getKeys()) {
+                    for (int i : keys.getValue())
+                        bitSetForAllIdsGreaterThanAKey.set(i);
+                }
+            }
+        }
+        return bitSetForAllIdsGreaterThanAKey;
+    }
+
 }

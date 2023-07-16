@@ -1,5 +1,7 @@
 package com.correctness.iejoin;
 
+import java.util.Random;
+
 public class TestCSSTree {
     public static void main(String[] args) {
         CSSTreeUpdated cssTreeUpdated= new CSSTreeUpdated(4);
@@ -15,6 +17,13 @@ public class TestCSSTree {
         cssTreeUpdated.insert(35,21);
         cssTreeUpdated.insert(39,21);
         cssTreeUpdated.insert(40,21);
+        Random random = new Random();
+        for(int i=0;i< 100000;i++){
+           int index= random.nextInt(100000);
+           cssTreeUpdated.insert(index, i);
+        }
+
+        cssTreeUpdated.searchGreaterBitSet(90009);
 
     }
 }

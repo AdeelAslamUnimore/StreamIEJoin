@@ -618,8 +618,10 @@ public class BPlusTree implements Serializable {
                     break;
                 }
             }
+
             // If the node becomes underflow after removing the key, perform redistribution or merging
             if (node.getKeys().size() < (m - 1) / 2) {
+             
                 handleUnderflow(node);
             }
             return;
@@ -729,6 +731,30 @@ public class BPlusTree implements Serializable {
         }
 
         return low;
+    }
+    public List<Key> rangeSmaller(int key){
+        List<Key> searchKeys = new ArrayList<>();
+        Node currNode = this.root;
+        // Traverse to the corresponding external node that would 'should'
+        // contain starting key (key1)
+        while (currNode.getChildren().size() != 0) {
+            currNode = currNode.getChildren().get(binarySearchWithinInternalNode(key, currNode.getKeys()));
+        }
+        System.out.println(currNode);
+        // Start from current node and add keys whose value lies between key1 and key2 with their corresponding pairs
+        // Stop if end of list is encountered or if value encountered in list is greater than key2
+
+        boolean endSearch = false;
+        while (currNode!=null ) {
+            searchKeys.addAll(currNode.getKeys());
+
+            currNode = currNode.getPrev();
+            System.out.println(currNode);
+        }
+
+
+
+        return searchKeys;
     }
 
 }
