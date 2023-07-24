@@ -143,8 +143,8 @@ public class PermutationBolt extends BaseRichBolt {
         for (int i = 0; i < permutationsArrayLeft.size(); i++) {
             for (int ids : permutationsArrayLeft.get(i).getListOfIDs()) {
 
-                    holdingList[ids] = counter;
-                    counter++;
+                holdingList[ids] = counter;
+                counter++;
 
 
             }
@@ -157,7 +157,7 @@ public class PermutationBolt extends BaseRichBolt {
                     outputCollector.ack(tuple);
                 }
                 catch (ArrayIndexOutOfBoundsException e){
-                  //  outputCollector.emitDirect(downStreamTaskIDs, streamID, tuple, new Values(0, permutationsArrayRight.size(), false));
+                    //  outputCollector.emitDirect(downStreamTaskIDs, streamID, tuple, new Values(0, permutationsArrayRight.size(), false));
                     outputCollector.ack(tuple);
                 }
                 //  permutationArray.add(new Permutation(holdingList[ids],permutationsArrayRight.get(i).getIndex()));

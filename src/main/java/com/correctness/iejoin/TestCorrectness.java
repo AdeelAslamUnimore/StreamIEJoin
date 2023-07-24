@@ -6,9 +6,14 @@ import com.stormiequality.BTree.Key;
 import com.stormiequality.BTree.Node;
 import com.stormiequality.BTree.Offset;
 import com.stormiequality.join.Permutation;
+import com.testcomparatorclasses.ieJoin.Cost;
+import com.testcomparatorclasses.ieJoin.Duration;
+import com.testcomparatorclasses.ieJoin.Rev;
+import com.testcomparatorclasses.ieJoin.Time;
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.tuple.Tuple;
 
+import java.io.IOException;
 import java.sql.*;
 import java.util.*;
 import java.util.concurrent.Callable;
@@ -23,6 +28,10 @@ public class TestCorrectness {
     private BPlusTree costBPlusTree = null;
     static BitSet bitSet = null;
     private Connection conn;
+    private int[] permutationArrayEast = null;
+    private int[] permutationArrayWest = null;
+    private int[] offsetArrayOfDurationWithRespectToTime;
+    private int[] offsetArrayOfRevenueWithRespectToCost;
 
     public static void main(String[] args) throws Exception {
 
@@ -38,8 +47,8 @@ public class TestCorrectness {
 //        new TestCorrectness().insertEast(100000);
 //        new TestCorrectness().insertWest(100000);
 
- //new TestCorrectness().test();
-    new TestCorrectness().computeComputationForCSSTree();
+    //    new TestCorrectness().test();
+        new TestCorrectness().permutationAndComputationArray();
 
 
     }
@@ -119,23 +128,6 @@ public class TestCorrectness {
             east.setRevenue(rs.getInt("revenue"));
             eastList.add(east);
         }
-
-
-//        East east = new East();
-//        east.setId_East(0);
-//        east.setDuration(140);
-//        east.setRevenue(9);
-//        eastList.add(east);
-//        East east1 = new East();
-//        east1.setId_East(1);
-//        east1.setDuration(100);
-//        east1.setRevenue(12);
-//        eastList.add(east1);
-//        East east2 = new East();
-//        east2.setId_East(2);
-//        east2.setDuration(90);
-//        east2.setRevenue(5);
-//        eastList.add(east2);
         return eastList;
     }
 
@@ -280,7 +272,7 @@ public class TestCorrectness {
             for (int ids : permutationsArrayRight.get(i).getListOfIDs()) {
                 //Emit these tuples at once
 //                System.out.println(holdingList[ids]);
-                arrayAListPermutation.add(new Permutation(holdingList[ids], permutationsArrayRight.get(i).getIndex(), ids));
+                arrayAListPermutation.add(new Permutation(holdingList[ids], permutationsArrayRight.get(i).getValue(), ids));
                 // System.out.println(holdingList[ids]+"....."+permutationsArrayRight.get(i).getIndex());
                 //collector.emitDirect(taskID,streamID,tuple, new Values(holdingList[ids],permutationsArrayRight.get(i).getIndex(),false,System.currentTimeMillis()));
                 //  permutationArray.add(new Permutation(holdingList[ids],permutationsArrayRight.get(i).getIndex()));
@@ -499,12 +491,6 @@ public class TestCorrectness {
             preparedStatement.setInt(5, id);
             preparedStatement.executeUpdate();
         }
-//        rs = stmt.executeQuery("SELECT * FROM east");
-//        while (rs.next()){
-//            System.out.println(rs.getInt("duration"));
-//        }
-//        System.out.println(rs+".......");
-//        rs.close();
         preparedStatement.close();
         conn.close();
         return conn;
@@ -541,12 +527,6 @@ public class TestCorrectness {
             preparedStatement.setInt(5, id);
             preparedStatement.executeUpdate();
         }
-//        rs = stmt.executeQuery("SELECT * FROM east");
-//        while (rs.next()){
-//            System.out.println(rs.getInt("duration"));
-//        }
-//        System.out.println(rs+".......");
-//        rs.close();
         preparedStatement.close();
         conn.close();
         return conn;
@@ -702,46 +682,321 @@ public class TestCorrectness {
         // than K
         return n;
     }
-    public void computeComputationForBPlusTree() throws Exception{
+
+    public void computeComputationForBPlusTree() throws Exception {
         ArrayList<East> eastArrayList = new TestCorrectness().eastArrayList();
         ArrayList<West> westArrayList = new TestCorrectness().westArrayList();
         BPlusTree bPlusTreeWestTime = new BPlusTree(4);
         BPlusTree bPlusTreeWestCost = new BPlusTree(4);
+        BPlusTree bPlusTreeEastDuration = new BPlusTree(4);
+        BPlusTree bPlusTreeEastRevenue = new BPlusTree(4);
+        long time1 = System.currentTimeMillis();
+
+        for (int k = 0; k < 50000; k++) {
+            bPlusTreeWestTime.insert(westArrayList.get(k).getTime(), westArrayList.get(k).getId_West());
+            bPlusTreeWestCost.insert(westArrayList.get(k).getCost(), westArrayList.get(k).getId_West());
+
+
+        }
+        for (int k = 0; k < 50000; k++) {
+            bPlusTreeEastDuration.insert(eastArrayList.get(k).getDuration(), eastArrayList.get(k).getId_East());
+            bPlusTreeEastRevenue.insert(eastArrayList.get(k).getRevenue(), eastArrayList.get(k).getId_East());
+        }
+        System.out.println("Time" + (System.currentTimeMillis() - time1));
+        System.exit(-1);
+        long time = System.currentTimeMillis();
+
+        for (East east : eastArrayList) {
+            BitSet duration = bPlusTreeWestTime.greaterThenSpecificValue(east.getDuration());
+            BitSet revenue = bPlusTreeWestCost.lessThenSpecificValue(east.getRevenue());
+            revenue.and(duration);
+
+
+        }
+        System.out.println(System.currentTimeMillis() - time);
+    }
+
+    public void computeComputationForCSSTree() throws Exception {
+        ArrayList<East> eastArrayList = new TestCorrectness().eastArrayList();
+        ArrayList<West> westArrayList = new TestCorrectness().westArrayList();
+        CSSTreeUpdated CSSTreeWestTime = new CSSTreeUpdated(10);
+        CSSTreeUpdated CSSTreeWestCost = new CSSTreeUpdated(10);
+        //Auxialiarly
+        CSSTreeUpdated CSSTreeEastDuration = new CSSTreeUpdated(4);
+        CSSTreeUpdated CSSTreeEastRevenue = new CSSTreeUpdated(4);
+        long time1 = System.currentTimeMillis();
+        for (int i = 0; i < 50000; i++) {
+            CSSTreeWestTime.insert(westArrayList.get(i).getTime(), westArrayList.get(i).getId_West());
+            CSSTreeWestCost.insert(westArrayList.get(i).getCost(), westArrayList.get(i).getId_West());
+        }
+        for (int i = 0; i < 50000; i++) {
+            CSSTreeEastDuration.insert(eastArrayList.get(i).getDuration(), eastArrayList.get(i).getId_East());
+            CSSTreeEastRevenue.insert(eastArrayList.get(i).getRevenue(), eastArrayList.get(i).getId_East());
+        }
+        System.out.println("Time" + (System.currentTimeMillis() - time1));
+        System.exit(-1);
+        long time = System.currentTimeMillis();
+        int i = 0;
+        for (East east : eastArrayList) {
+            BitSet duration = CSSTreeWestTime.searchGreaterBitSet(east.getDuration());
+            BitSet revenue = CSSTreeWestCost.searchSmallerBitSet(east.getRevenue());
+            revenue.and(duration);
+            i++;
+
+        }
+        System.out.println(System.currentTimeMillis() - time);
+
+    }
+
+    public void permutationAndComputationArray() throws Exception {
+        ArrayList<East> eastArrayList = new TestCorrectness().eastArrayList();
+        ArrayList<West> westArrayList = new TestCorrectness().westArrayList();
+        ArrayList<East> duration = new ArrayList<>(eastArrayList);
+        ArrayList<East> revenue = new ArrayList<>(eastArrayList);
+        ArrayList<West> time = new ArrayList<>(westArrayList);
+        ArrayList<West> cost = new ArrayList<>(westArrayList);
+        Collections.sort(duration, new Duration());
+        Collections.sort(revenue, new Rev());
+        Collections.sort(time, new Time());
+        Collections.sort(cost, new Cost());
+        Long time1 = System.currentTimeMillis();
+        Thread t1 = new Thread(() -> {
+            // Write emit method, stream id, down stream task
+            permutationArrayEast(duration, revenue);
+        });
+
+        Thread t2 = new Thread(() -> {
+            permutationArrayWest(time, cost);
+        });
+        Thread t3 = new Thread(() -> {
+            try {
+                offsetArrayOfDurationWithRespectToTime(duration, time);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
+        Thread t4 = new Thread(() -> {
+            try {
+                offsetArrayOfRevenueWithRespectToCost(revenue, cost);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
+
+        t1.start();
+        t2.start();
+        t3.start();
+        t4.start();
+
+        try {
+            t1.join();
+            t2.join();
+            t3.join();
+            t4.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        System.out.print(("Time=" + (System.currentTimeMillis() - time1)));
+
+
+//        Long time1=System.currentTimeMillis();
+//        permutationArrayEast(duration, revenue);
+//        permutationArrayWest(time, cost);
+//        System.out.print(("Time="+(System.currentTimeMillis()-time1)));
+//        long time2= System.currentTimeMillis();
+//        offsetArrayOfDurationWithRespectToTime(duration, time);
+//        offsetArrayOfRevenueWithRespectToCost(revenue, cost);
+//        System.out.print(("Time="+(System.currentTimeMillis()-time2)));
+    }
+
+    public void permutationArrayEast(ArrayList<East> duration, ArrayList<East> revenue) {
+        permutationArrayEast = new int[revenue.size()];
+        revenue:
+        for (int i = 0; i < revenue.size(); i++) {
+            duration:
+            for (int j = 0; j < duration.size(); j++) {
+                if ((revenue.get(i).getId_East()) == (duration.get(j).getId_East())) {
+                    permutationArrayEast[i] = j;
+                    //     System.out.println(permutationArray[i]);
+                    break duration;
+                }
+
+            }
+            continue revenue;
+        }
+        // return permutationArrayEast;
+    }
+
+    public void permutationArrayWest(ArrayList<West> time, ArrayList<West> cost) {
+        permutationArrayWest = new int[cost.size()];
+        cost:
+        for (int i = 0; i < cost.size(); i++) {
+            time:
+            for (int j = 0; j < time.size(); j++) {
+                if ((cost.get(i).getId_West()) == (time.get(j).getId_West())) {
+                    permutationArrayWest[i] = j;
+                    //     System.out.println(permutationArray[i]);
+                    break time;
+                }
+
+            }
+            continue cost;
+        }
+
+    }
+
+    public void offsetArrayOfDurationWithRespectToTime(ArrayList<East> durationList, ArrayList<West> timeList) {
+        offsetArrayOfDurationWithRespectToTime = new int[durationList.size()];
+        for (int i = 0; i < durationList.size(); i++) {
+            offsetArrayOfDurationWithRespectToTime[i] = find_indexWestTime(timeList, durationList.get(i).getDuration());
+        }
+        // return offsetArrayOfDurationWithRespectToTime;
+    }
+
+    public void offsetArrayOfRevenueWithRespectToCost(ArrayList<East> reveuneList, ArrayList<West> costList) {
+        offsetArrayOfRevenueWithRespectToCost = new int[reveuneList.size()];
+        for (int i = 0; i < reveuneList.size(); i++) {
+            offsetArrayOfRevenueWithRespectToCost[i] = find_indexWestCost(costList, reveuneList.get(i).getRevenue());
+        }
+        //  return offsetArrayOfRevenueWithRespectToCost;
+    }
+
+    public int find_indexWestCost(ArrayList<West> arr, int K) {
+        int n = arr.size();
+        // Traverse the array
+        for (int i = 0; i < n; i++)
+
+            // If K is found
+            if (arr.get(i).getCost() == K)
+                return i;
+
+                // If current array element
+                // exceeds K
+            else if (arr.get(i).getCost() > K)
+                return i;
+
+        // If all elements are smaller
+        // than K
+        return n;
+    }
+
+    public void permutationAndComputationArrayWithBplusTree() throws Exception {
+        ArrayList<East> eastArrayList = new TestCorrectness().eastArrayList();
+        ArrayList<West> westArrayList = new TestCorrectness().westArrayList();
+//        for(int i=0;i<eastArrayList.size();i++){
+//            int index= find_indexWestTime(westArrayList, eastArrayList.get(i).getRevenue());
+//            System.out.println((index+1));
+//        }
+
+
+        BPlusTree bPlusTreeEastDuration = new BPlusTree(4);
+        BPlusTree bPlusTreeEastRevenue = new BPlusTree(4);
+        BPlusTree bPlusTreeWestTime = new BPlusTree(4);
+        BPlusTree bPlusTreeWestCost = new BPlusTree(4);
+        for (East east : eastArrayList) {
+            bPlusTreeEastDuration.insert(east.getDuration(), east.getId_East());
+            bPlusTreeEastRevenue.insert(east.getRevenue(), east.getId_East());
+        }
         for (West west : westArrayList) {
             bPlusTreeWestTime.insert(west.getTime(), west.getId_West());
             bPlusTreeWestCost.insert(west.getCost(), west.getId_West());
         }
-        long time=System.currentTimeMillis();
-        int i=0;
-        for(East east: eastArrayList){
-            BitSet duration= bPlusTreeWestTime.greaterThenSpecificValue(east.getDuration());
-            BitSet revenue= bPlusTreeWestCost.lessThenSpecificValue(east.getRevenue());
-            revenue.and(duration);
-            i++;
+        ArrayList<Permutation> permutationsArrayLeftDuration = new ArrayList<>();
+        ArrayList<Permutation> permutationArrayListRevenue = new ArrayList<>();
+        ArrayList<Permutation> permutationArrayListTime = new ArrayList<>();
+        ArrayList<Permutation> permutationArrayListCost = new ArrayList<>();
+        Node nodeLeftDuration = bPlusTreeEastDuration.leftMostNode();
+        while (nodeLeftDuration != null) {
+            //   System.out.println(nodeLeftDuration);
+            for (int i = 0; i < nodeLeftDuration.getKeys().size(); i++) {
+                permutationsArrayLeftDuration.add(new Permutation(nodeLeftDuration.getKeys().get(i).getKey(), nodeLeftDuration.getKeys().get(i).getValues()));
 
+            }
+            nodeLeftDuration = nodeLeftDuration.getNext();
         }
-        System.out.println(System.currentTimeMillis()-time);
+        Node nodeLeftRevenue = bPlusTreeEastRevenue.leftMostNode();
+        while (nodeLeftRevenue != null) {
+
+            for (int i = 0; i < nodeLeftRevenue.getKeys().size(); i++) {
+                permutationArrayListRevenue.add(new Permutation(nodeLeftRevenue.getKeys().get(i).getKey(), nodeLeftRevenue.getKeys().get(i).getValues()));
+
+            }
+            nodeLeftRevenue = nodeLeftRevenue.getNext();
+        }
+
+        Node nodeRightTime = bPlusTreeWestTime.leftMostNode();
+        while (nodeRightTime != null) {
+
+            for (int i = 0; i < nodeRightTime.getKeys().size(); i++) {
+                permutationArrayListTime.add(new Permutation(nodeRightTime.getKeys().get(i).getKey(), nodeRightTime.getKeys().get(i).getValues()));
+            }
+            nodeRightTime = nodeRightTime.getNext();
+        }
+
+        Node nodeRightCost = bPlusTreeWestCost.leftMostNode();
+        while (nodeRightCost != null) {
+            for (int i = 0; i < nodeRightCost.getKeys().size(); i++) {
+                permutationArrayListCost.add(new Permutation(nodeRightCost.getKeys().get(i).getKey(), nodeRightCost.getKeys().get(i).getValues()));
+            }
+            nodeRightCost = nodeRightCost.getNext();
+            //  System.out.println("Here");
+        }
+        Node nodeLeftDuration1 = bPlusTreeEastDuration.leftMostNode();
+        Node nodeLeftRevenue1 = bPlusTreeEastRevenue.leftMostNode();
+        // Node nodeRightTime1 = bPlusTreeWestTime.leftMostNode();
+        // Node nodeRightCost1 = bPlusTreeWestCost.leftMostNode();
+
+        Long time2 = System.currentTimeMillis();
+        new TestCorrectness().permutationComputation(permutationsArrayLeftDuration, permutationArrayListRevenue, 200004, 0, null, null);
+        new TestCorrectness().permutationComputation(permutationArrayListTime, permutationArrayListCost, 200004, 0, null, null);
+        new TestCorrectness().offsetComputationExtremeCase(nodeLeftDuration1, bPlusTreeWestTime);
+        new TestCorrectness().offsetComputationExtremeCase(nodeLeftRevenue1, bPlusTreeWestCost);
+        System.out.print(("Time=" + (System.currentTimeMillis() - time2)));
+
+        Long time1 = System.currentTimeMillis();
+        Thread t1 = new Thread(() -> {
+            // Write emit method, stream id, down stream task
+            new TestCorrectness().permutationComputation(permutationsArrayLeftDuration, permutationArrayListRevenue, 200004, 0, null, null);
+
+        });
+
+        Thread t2 = new Thread(() -> {
+            new TestCorrectness().permutationComputation(permutationArrayListTime, permutationArrayListCost, 200004, 0, null, null);
+
+        });
+        Thread t3 = new Thread(() -> {
+            try {
+                new TestCorrectness().offsetComputationExtremeCase(nodeLeftDuration1, bPlusTreeWestTime);
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
+        Thread t4 = new Thread(() -> {
+            try {
+                new TestCorrectness().offsetComputationExtremeCase(nodeLeftRevenue1, bPlusTreeWestCost);
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
+
+        t1.start();
+        t2.start();
+        t3.start();
+        t4.start();
+
+        try {
+            t1.join();
+            t2.join();
+            t3.join();
+            t4.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        System.out.print(("Time=" + (System.currentTimeMillis() - time1)));
     }
-    public void computeComputationForCSSTree() throws Exception{
-        ArrayList<East> eastArrayList = new TestCorrectness().eastArrayList();
-        ArrayList<West> westArrayList = new TestCorrectness().westArrayList();
-        CSSTreeUpdated CSSTreeWestTime = new CSSTreeUpdated(4);
-        CSSTreeUpdated CSSTreeWestCost = new CSSTreeUpdated(4);
-        for (West west : westArrayList) {
-            CSSTreeWestTime.insert(west.getTime(), west.getId_West());
-            CSSTreeWestCost.insert(west.getCost(), west.getId_West());
-        }
-        long time=System.currentTimeMillis();
-        int i=0;
-        for(East east: eastArrayList){
-            BitSet duration= CSSTreeWestTime.searchGreaterBitSet(east.getDuration());
-            BitSet  revenue= CSSTreeWestCost.searchSmallerBitSet(east.getRevenue());
-            revenue.and(duration);
-            i++;
 
-        }
-        System.out.println(System.currentTimeMillis()-time);
 
-    }
 
 }

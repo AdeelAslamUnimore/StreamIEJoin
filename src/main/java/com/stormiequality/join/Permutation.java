@@ -16,12 +16,12 @@ public class Permutation {
         this.index = index;
         this.value = value;
     }
-    public Permutation(int Key, List<Integer> listOfIds){
-        this.index=Key;
+    public Permutation(int index, List<Integer> listOfIds){
+        this.index=index;
         this.listOfIDs=listOfIds;
     }
-    public Permutation(int Key, int value, int idsForTest){
-        this.index=Key;
+    public Permutation(int index, int value, int idsForTest){
+        this.index=index;
         this.value=value;
         this.idsForTest=idsForTest;
     }

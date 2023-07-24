@@ -18,12 +18,12 @@ public class TestCSSTree {
         cssTreeUpdated.insert(39,21);
         cssTreeUpdated.insert(40,21);
         Random random = new Random();
-        for(int i=0;i< 100000;i++){
-           int index= random.nextInt(100000);
+        for(int i=0;i< 300000;i++){
+           int index= random.nextInt(25000);
            cssTreeUpdated.insert(index, i);
         }
 
-        cssTreeUpdated.searchGreaterBitSet(90009);
+        cssTreeUpdated.searchGreaterBitSet(257);
 
     }
 }

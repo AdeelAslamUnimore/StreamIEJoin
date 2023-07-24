@@ -15,14 +15,15 @@ import java.util.BitSet;
 import java.util.Map;
 
 public class JoinerBoltForBitSetOperation extends BaseRichBolt {
-    private BitSet predicate1BitSet=null;
-    private BitSet predicate2BitSet=null;
-    private String leftPredicateSourceStreamID=null;
-    private String rightPredicateSourceStreamID=null;
-    public JoinerBoltForBitSetOperation(){
-        Map<String, Object> map= Configuration.configurationConstantForStreamIDs();
-        this.leftPredicateSourceStreamID= (String) map.get("LeftPredicateSourceStreamIDBitSet");
-        this.rightPredicateSourceStreamID= (String) map.get("RightPredicateSourceStreamIDBitSet");
+    private BitSet predicate1BitSet = null;
+    private BitSet predicate2BitSet = null;
+    private String leftPredicateSourceStreamID = null;
+    private String rightPredicateSourceStreamID = null;
+
+    public JoinerBoltForBitSetOperation() {
+        Map<String, Object> map = Configuration.configurationConstantForStreamIDs();
+        this.leftPredicateSourceStreamID = (String) map.get("LeftPredicateSourceStreamIDBitSet");
+        this.rightPredicateSourceStreamID = (String) map.get("RightPredicateSourceStreamIDBitSet");
 
     }
 
@@ -37,27 +38,27 @@ public class JoinerBoltForBitSetOperation extends BaseRichBolt {
      * Takes two input stream as byte array convert them back to bit array and perform AND, OR, other operation for
      * Completion of results
      * This operation is performed for every new tuple from upstream processing task.
+     *
      * @param tuple is a byte array;
      */
     @Override
     public void execute(Tuple tuple) {
 
-        if(tuple.getSourceStreamId().equals(leftPredicateSourceStreamID)){
+        if (tuple.getSourceStreamId().equals(leftPredicateSourceStreamID)) {
             byte[] byteArrayPredicateLeftBitSet = tuple.getBinaryByField(Constants.BYTE_ARRAY);
-            predicate1BitSet= convertToObject(byteArrayPredicateLeftBitSet);
+            predicate1BitSet = convertToObject(byteArrayPredicateLeftBitSet);
 
         }
-        if(tuple.getSourceStreamId().equals(rightPredicateSourceStreamID)){
+        if (tuple.getSourceStreamId().equals(rightPredicateSourceStreamID)) {
 
             byte[] byteArrayPredicateRightArray = tuple.getBinaryByField(Constants.BYTE_ARRAY);
-            predicate2BitSet= convertToObject(byteArrayPredicateRightArray);
+            predicate2BitSet = convertToObject(byteArrayPredicateRightArray);
 
         }
-        if ((predicate1BitSet!=null) && (predicate2BitSet!=null)) {
+        if ((predicate1BitSet != null) && (predicate2BitSet != null)) {
             predicate2BitSet.and(predicate1BitSet);
-//           System.out.println(predicate2BitSet);
-           predicate1BitSet=null;
-           predicate2BitSet=null;
+            predicate1BitSet = null;
+            predicate2BitSet = null;
         }
     }
 
@@ -65,6 +66,7 @@ public class JoinerBoltForBitSetOperation extends BaseRichBolt {
     public void declareOutputFields(OutputFieldsDeclarer outputFieldsDeclarer) {
 
     }
+
     // Convert the byte array from source stream to original array
     private BitSet convertToObject(byte[] byteData) {
         try (ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(byteData);

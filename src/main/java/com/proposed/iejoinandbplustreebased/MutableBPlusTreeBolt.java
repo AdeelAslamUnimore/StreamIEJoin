@@ -259,6 +259,7 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
         while (node != null) {
             for (int i = 0; i < node.getKeys().size(); i++) {
                 // Emitting tuples to downStream Task for tuple
+                for(int j:node.getKeys().get(i).getValues())
                 this.outputCollector.emitDirect(downStreamTaskID, streamID, tuple, new Values(node.getKeys().get(i).getKey(), convertToByteArray(node.getKeys().get(i).getTmpIDs()), false));
                 this.outputCollector.ack(tuple);
             }

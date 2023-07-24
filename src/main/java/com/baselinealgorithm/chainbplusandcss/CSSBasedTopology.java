@@ -6,14 +6,37 @@ import com.stormiequality.test.SplitBolt;
 import com.stormiequality.test.Spout;
 import org.apache.storm.Config;
 import org.apache.storm.LocalCluster;
+import org.apache.storm.kafka.spout.*;
 import org.apache.storm.topology.TopologyBuilder;
 import org.apache.storm.tuple.Fields;
+import org.apache.storm.tuple.Values;
 
+import java.util.Arrays;
 import java.util.Map;
 
 public class CSSBasedTopology {
     public static void main(String[] args) throws Exception {
         Config config= new Config();
+
+
+        KafkaSpoutConfig<String, String> kafkaSpoutConfigForStreamR = KafkaSpoutConfig.builder(args[0], args[1])
+                .setRetry(getRetryService())
+                .setProcessingGuarantee(KafkaSpoutConfig.ProcessingGuarantee.AT_LEAST_ONCE)
+                .setRecordTranslator(record -> new Values( record.value(), System.currentTimeMillis()),
+                        new Fields( "Tuple", "Time"),"StreamR")
+                .setFirstPollOffsetStrategy(FirstPollOffsetStrategy.UNCOMMITTED_LATEST)
+                .build();
+
+        KafkaSpoutConfig<String, String> kafkaSpoutConfigForStreamS = KafkaSpoutConfig.builder(args[0], args[2])
+                .setRetry(getRetryService())
+                .setProcessingGuarantee(KafkaSpoutConfig.ProcessingGuarantee.AT_LEAST_ONCE)
+                .setRecordTranslator(record -> new Values( record.value(), System.currentTimeMillis()),
+                        new Fields( "Tuple", "Time"), "StreamS")
+                .setFirstPollOffsetStrategy(FirstPollOffsetStrategy.UNCOMMITTED_LATEST)
+                .build();
+
+
+
         Map<String, Object> map= Configuration.configurationConstantForStreamIDs();
         config.setNumWorkers(6);
         config.registerSerialization(java.util.BitSet.class);
@@ -49,5 +72,10 @@ public class CSSBasedTopology {
 
         LocalCluster cluster = new LocalCluster();
         cluster.submitTopology("Storm", config, builder.createTopology());
+    }
+    public static KafkaSpoutRetryService getRetryService() {
+        return new KafkaSpoutRetryExponentialBackoff(KafkaSpoutRetryExponentialBackoff.TimeInterval.microSeconds(0),
+                KafkaSpoutRetryExponentialBackoff.TimeInterval.milliSeconds(2), Integer.MAX_VALUE,
+                KafkaSpoutRetryExponentialBackoff.TimeInterval.seconds(10));
     }
 }
