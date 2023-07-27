@@ -52,7 +52,7 @@ public class LeftPredicateBoltBST extends BaseRichBolt {
         if(tuple.getSourceStreamId().equals(leftSmallerStreamID)){
             if(!leftPredicateLinkedListBST.isEmpty()){
                 treeArchiveThresholdLeft++;
-                RedBlackBST treeForTupleInsertion= leftPredicateLinkedListBST.getFirst();
+                RedBlackBST treeForTupleInsertion= leftPredicateLinkedListBST.getLast();
                 treeForTupleInsertion.put(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.TUPLE_ID));
                 if (treeArchiveThresholdLeft>= tupleCountForArchiveUserDefined) {
                     RedBlackBST newRedBlackBST = new RedBlackBST();
@@ -87,7 +87,7 @@ public class LeftPredicateBoltBST extends BaseRichBolt {
 
             if (!rightPredicateLinkedListBST.isEmpty()) {
                 treeArchiveThresholdRight++;
-                RedBlackBST treeForTupleInsertion = rightPredicateLinkedListBST.getFirst();
+                RedBlackBST treeForTupleInsertion = rightPredicateLinkedListBST.getLast();
                 treeForTupleInsertion.put(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.TUPLE_ID));
                 if (treeArchiveThresholdRight >= tupleCountForArchiveUserDefined) {
                     RedBlackBST newRedBlackBST = new RedBlackBST();
@@ -117,9 +117,9 @@ public class LeftPredicateBoltBST extends BaseRichBolt {
             }
         }
         if(tupleRemovalCountForLocal>= tupleCountForRemovalUserDefined){
-            rightPredicateLinkedListBST.remove(rightPredicateLinkedListBST.getLast());
-            leftPredicateLinkedListBST.remove(leftPredicateLinkedListBST.getLast());
-            System.out.println("Removing");
+            rightPredicateLinkedListBST.remove(rightPredicateLinkedListBST.getFirst());
+            leftPredicateLinkedListBST.remove(leftPredicateLinkedListBST.getFirst());
+
             tupleRemovalCountForLocal=0;
         }
         }

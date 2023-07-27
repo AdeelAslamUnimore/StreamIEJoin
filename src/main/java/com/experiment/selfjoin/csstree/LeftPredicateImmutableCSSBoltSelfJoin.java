@@ -1,5 +1,6 @@
-package com.baselinealgorithm.chainbplusandcss;
+package com.experiment.selfjoin.csstree;
 
+import com.baselinealgorithm.chainbplusandcss.CSSTreeUpdated;
 import com.configurationsandconstants.iejoinandbaseworks.Configuration;
 import com.configurationsandconstants.iejoinandbaseworks.Constants;
 import org.apache.storm.task.OutputCollector;
@@ -16,48 +17,48 @@ import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.util.*;
 
-public class LeftPredicateImmutableCSSBolt extends BaseRichBolt {
+public class LeftPredicateImmutableCSSBoltSelfJoin extends BaseRichBolt {
     // Two linked that holds the linked list of two relation for example R.Duration and S.Time
     private LinkedList<CSSTreeUpdated> leftStreamLinkedListCSSTree = null;
-    private LinkedList<CSSTreeUpdated> rightStreamLinkedListCSSTree = null;
+
     // The two stream ids from upstream processing elements
     private String leftStreamSmaller;
-    private String rightStreamSmaller;
+
     // Signature for CSS tree that used as an object
     private CSSTreeUpdated leftStreamCSSTree = null;
-    private CSSTreeUpdated rightStreamCSSTree = null;
+
     // Two boolean that are used as a flag for merge operation one for R other for S
     private boolean leftStreamMergeSmaller = false;
-    private boolean rightStreamMergeSmaller = false;
+
     // Two queues that maintian two stream of tuples during merge and evaluate the tuples of CSS tree that is newly added to the linked list during merge
     private Queue<Tuple> leftStreamSmallerQueueMerge = null;
-    private Queue<Tuple> rightStreamSmallerQueueMerge = null;
+
     // Two boolean for counter that indicate true and flag that tuple removal counter for both is above the threshold
     private boolean leftBooleanTupleRemovalCounter = false;
-    private boolean rightBooleanTupleRemovalCounter = false;
+
     // Tuple removal counter
     private static int tupleRemovalCount = 0;
     // Output collector
     private OutputCollector outputCollector;
 
-    public LeftPredicateImmutableCSSBolt() {
+    public LeftPredicateImmutableCSSBoltSelfJoin() {
         // These are the initialization of upstream streamIDS
         Map<String, Object> map = Configuration.configurationConstantForStreamIDs();
-        this.leftStreamSmaller = (String) map.get("LeftSmallerPredicateTuple");
-        this.rightStreamSmaller = (String) map.get("RightSmallerPredicateTuple");
+        this.leftStreamSmaller = (String) map.get("LeftGreaterPredicateTuple");
+
     }
 
     @Override
     public void prepare(Map<String, Object> map, TopologyContext topologyContext, OutputCollector outputCollector) {
         // both linked list and CSS trees are initilized
         leftStreamLinkedListCSSTree = new LinkedList<>();
-        rightStreamLinkedListCSSTree = new LinkedList<>();
+
         leftStreamCSSTree = new CSSTreeUpdated(Constants.ORDER_OF_CSS_TREE);
-        rightStreamCSSTree = new CSSTreeUpdated(Constants.ORDER_OF_CSS_TREE);
+
         // Merge operation
         // Updated  queue during merge
         this.leftStreamSmallerQueueMerge = new LinkedList<>();
-        this.rightStreamSmallerQueueMerge = new LinkedList<>();
+
 
         this.outputCollector = outputCollector;
 
@@ -72,7 +73,7 @@ public class LeftPredicateImmutableCSSBolt extends BaseRichBolt {
                 this.leftStreamSmallerQueueMerge.offer(tuple);
             }
             // Probing the results
-            HashSet<Integer> leftHashSet = probingResultsSmaller(tuple, rightStreamLinkedListCSSTree);
+            HashSet<Integer> leftHashSet = probingResultsGreater(tuple, leftStreamLinkedListCSSTree);
            if(leftHashSet!=null) {
                // Only emit whole hashSet if linked list contains the tuples;
                // emit for hashset evaluation/
@@ -82,45 +83,30 @@ public class LeftPredicateImmutableCSSBolt extends BaseRichBolt {
 
         }
         // // Check tuple from left stream S.Duration
-        if (tuple.getSourceStreamId().equals("RightStream")) {
-            if (rightStreamMergeSmaller) {
-                // IF MERGE FLAG is ON then associated queue must be updated.
-                this.rightStreamSmallerQueueMerge.offer(tuple);
-            }
-            HashSet<Integer> rightHashSet = probingResultsGreater(tuple, leftStreamLinkedListCSSTree);
-            if(rightHashSet!=null) {
-                outputCollector.emit("LeftPredicate", tuple, new Values(convertHashSetToByteArray(rightHashSet), tuple.getIntegerByField("ID")));
-                outputCollector.ack(tuple);
-            }
-        }
+
         // During merge flag that just indicate update for inserting tuples in queue
         if (tuple.getSourceStreamId().equals("LeftCheckForMerge")) {
             //this.leftStreamSmallerQueueMerge.offer(tuple);
             leftStreamMergeSmaller = true;
         }
-        if (tuple.getSourceStreamId().equals("RightCheckForMerge")) {
-            // this.rightStreamSmallerQueueMerge.offer(tuple);
-            rightStreamMergeSmaller = true;
-        }
+
         // leftStreamSmaller If the Merging TUples arrives from R.Duration
         if (tuple.getSourceStreamId().equals(leftStreamSmaller)) {
             leftInsertionTuplesSmaller(tuple);
         }
         //rightStream If merging tuples arrives from S.Time
-        if (tuple.getSourceStreamId().equals(rightStreamSmaller)) {
-            rightInsertionTupleSmaller(tuple);
-        }
+
 
 
         /// Change For Both Right Stream and Left Stream depend upon which sliding window you are using
-        if (leftBooleanTupleRemovalCounter && rightBooleanTupleRemovalCounter) {
+        if (leftBooleanTupleRemovalCounter) {
           //removing tuples only remove last CSS TREE from both R an S such as R.Duration and S.Time
-            rightStreamLinkedListCSSTree.remove(rightStreamLinkedListCSSTree.getFirst());
+
             leftStreamLinkedListCSSTree.remove(leftStreamLinkedListCSSTree.getFirst());
             tupleRemovalCount = tupleRemovalCount - Constants.MUTABLE_WINDOW_SIZE; // Reintilize counter with just substract one length of CSS structure;
             // set removal boolean to false again
             leftBooleanTupleRemovalCounter = false;
-            rightBooleanTupleRemovalCounter = false;
+
 
         }
 
@@ -157,7 +143,7 @@ public class LeftPredicateImmutableCSSBolt extends BaseRichBolt {
             tupleRemovalCount++;
             for (CSSTreeUpdated cssTree : linkedListCSSTree) {
 
-                rightHashSet.addAll(cssTree.searchSmaller(tuple.getIntegerByField("Time")));
+                rightHashSet.addAll(cssTree.searchSmaller(tuple.getIntegerByField("Duration")));
 
             }
             return rightHashSet;
@@ -198,33 +184,7 @@ public class LeftPredicateImmutableCSSBolt extends BaseRichBolt {
         }
     }
 
-    public void rightInsertionTupleSmaller(Tuple tuple) {
 
-        if (tuple.getBooleanByField(Constants.BATCH_CSS_FLAG)) {
-            rightStreamLinkedListCSSTree.add(rightStreamCSSTree);
-            if (rightStreamMergeSmaller) {
-                int i = 0;
-                for (Tuple tuples : rightStreamSmallerQueueMerge) {
-                    i = i + 1;
-                    HashSet hashSet = rightStreamCSSTree.searchSmaller(tuples.getIntegerByField("Time"));
-                    outputCollector.emit("LeftMergeBitSet", new Values(convertHashSetToByteArray(hashSet), i));
-
-                }
-                rightStreamSmallerQueueMerge = new LinkedList<>();
-                rightStreamMergeSmaller = false;
-            }
-            rightStreamCSSTree = new CSSTreeUpdated(Constants.ORDER_OF_CSS_TREE);
-            tupleRemovalCount = tupleRemovalCount + Constants.MUTABLE_WINDOW_SIZE;
-            if (tupleRemovalCount >= Constants.IMMUTABLE_CSS_PART_REMOVAL) {
-                this.rightBooleanTupleRemovalCounter = true;
-            }
-        } else {
-
-            rightStreamCSSTree.insertBulkUpdate(tuple.getIntegerByField(Constants.BATCH_CSS_TREE_KEY),
-                    convertToIntegerList(tuple.getBinaryByField(Constants.BATCH_CSS_TREE_VALUES)));
-
-        }
-    }
 
     private static List<Integer> convertToIntegerList(byte[] byteArray) {
         List<Integer> integerList = new ArrayList<>();

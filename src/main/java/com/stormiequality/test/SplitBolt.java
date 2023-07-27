@@ -41,7 +41,7 @@ public class SplitBolt extends BaseRichBolt {
 
     @Override
     public void execute(Tuple tuple) {
-        System.out.print(tuple);
+
         if (tuple.getSourceStreamId().equals("LeftStreamTuples")) {
 
             Values valuesLeft = new Values(tuple.getIntegerByField("Duration"), tuple.getIntegerByField("ID"), "LeftStream", tuple.getValueByField("TupleID"));

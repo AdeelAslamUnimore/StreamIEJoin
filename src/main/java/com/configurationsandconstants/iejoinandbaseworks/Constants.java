@@ -44,4 +44,8 @@ public class Constants {
     public static final String LEFT_PREDICATE_BPLUS_TREE_AND_RBS_BOLT ="leftPredicateBplusAndRedBlackTreeBolt";
     public static final String RIGHT_PREDICATE_BPLUS_TREE_AND_RBST_BOLT ="rightPredicateBPlusTreeBolt";
     public static final String HASH_SET_EVALUATION="hashSetEvaluation";
+
+    public static final String KAFKA_SPOUT="kafkaSpout";
+    public static final String SPLIT_BOLT="distributorBolt";
+
 }

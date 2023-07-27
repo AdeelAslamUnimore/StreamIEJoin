@@ -167,8 +167,8 @@ public class IEJoinWithLinkedList extends BaseRichBolt {
             this.listRightPermutation = new ArrayList<>();
             this.listLeftOffset = new ArrayList<>();
             this.listRightOffset = new ArrayList<>();
-            if(linkedListIEJoinModel.getLast().getTupleRemovalCounter()>=Constants.IMMUTABLE_WINDOW_SIZE){
-                linkedListIEJoinModel.remove(linkedListIEJoinModel.getLast());
+            if(linkedListIEJoinModel.getFirst().getTupleRemovalCounter()>=Constants.IMMUTABLE_WINDOW_SIZE){
+                linkedListIEJoinModel.remove(linkedListIEJoinModel.getFirst());
             }
 
 

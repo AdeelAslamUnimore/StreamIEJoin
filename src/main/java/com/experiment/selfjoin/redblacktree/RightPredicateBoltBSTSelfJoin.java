@@ -1,6 +1,7 @@
-package com.baselinealgorithm.chainindexrbst;
+package com.experiment.selfjoin.redblacktree;
 
-import clojure.lang.Cons;
+import com.baselinealgorithm.chainindexrbst.Node;
+import com.baselinealgorithm.chainindexrbst.RedBlackBST;
 import com.configurationsandconstants.iejoinandbaseworks.Configuration;
 import com.configurationsandconstants.iejoinandbaseworks.Constants;
 import org.apache.storm.task.OutputCollector;
@@ -18,29 +19,27 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Map;
 
-public class RightPredicateBoltBST extends BaseRichBolt {
+public class RightPredicateBoltBSTSelfJoin extends BaseRichBolt {
     private LinkedList<RedBlackBST> rightPredicateLinkedList;
-    private LinkedList<RedBlackBST> leftPredicateLinkedList;
     private int tupleCountForArchiveUserDefined =0;
     private int tupleCountForRemovalUserDefined =0;
     private int treeArchiveThresholdLeft;
     private int treeArchiveThresholdRight;
     private int tupleRemovalCountForLocal;
     private OutputCollector outputCollector;
-    private String leftGreaterStreamID;
-    private String rightGreaterStreamID;
+
+    private String rightSmallerStreamID;
     private Map<String, Object> map;
-    public RightPredicateBoltBST(){
+    public RightPredicateBoltBSTSelfJoin(){
         this.tupleCountForArchiveUserDefined = Constants.TUPLE_ARCHIVE_THRESHOLD;
         this.tupleCountForRemovalUserDefined =Constants.TUPLE_REMOVAL_THRESHOLD;
         map= Configuration.configurationConstantForStreamIDs();
-        this.leftGreaterStreamID= (String) map.get("LeftGreaterPredicateTuple");
-        this.rightGreaterStreamID= (String) map.get("RightGreaterPredicateTuple");
+
+        this.rightSmallerStreamID = (String) map.get("RightSmallerPredicateTuple");
     }
     @Override
     public void prepare(Map<String, Object> map, TopologyContext topologyContext, OutputCollector outputCollector) {
         rightPredicateLinkedList = new LinkedList<>();
-        leftPredicateLinkedList = new LinkedList<>();
         this.outputCollector=outputCollector;
         this.tupleRemovalCountForLocal=0;
 
@@ -49,41 +48,11 @@ public class RightPredicateBoltBST extends BaseRichBolt {
     @Override
     public void execute(Tuple tuple) {
         tupleRemovalCountForLocal++;
-        if(tuple.getSourceStreamId().equals(leftGreaterStreamID)) {
-            if (!leftPredicateLinkedList.isEmpty()) {
-                treeArchiveThresholdLeft++;
-                RedBlackBST treeForTupleInsertion = leftPredicateLinkedList.getLast();
-                treeForTupleInsertion.put(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.TUPLE_ID));
-                if (treeArchiveThresholdLeft >= tupleCountForArchiveUserDefined) {
-                    RedBlackBST newRedBlackBST = new RedBlackBST();
-                    leftPredicateLinkedList.add(newRedBlackBST);
-                    treeArchiveThresholdLeft=0;
-                }
-            } else {
-                RedBlackBST redBlackBSTForRevenue = new RedBlackBST();
-                treeArchiveThresholdLeft++;
-                //Adding tuple to the linked list when list is not empty:
-                redBlackBSTForRevenue.put(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.TUPLE_ID));
-                leftPredicateLinkedList.add(redBlackBSTForRevenue);
-            }
 
-            for (RedBlackBST redBlackBST : rightPredicateLinkedList) {
-                HashSet<Integer> hashSet = new HashSet<>();
-                for (Node nodeThatContainsGreater : redBlackBST.lessThanKey(tuple.getIntegerByField("tuple"))) {
-
-                        hashSet.addAll( nodeThatContainsGreater.getVals()); //HashSet
-                        //Also add BitSet
-
-                }
-
-                outputCollector.emit(Constants.RIGHT_PREDICATE_BOLT, new Values(convertHashSetToByteArray(hashSet), tuple.getIntegerByField(Constants.TUPLE_ID)));
-                outputCollector.ack(tuple);
-            }
-        }
-        if (tuple.getSourceStreamId().equals(rightGreaterStreamID)) {
+        if (tuple.getSourceStreamId().equals(rightSmallerStreamID)) {
             if (!rightPredicateLinkedList.isEmpty()) {
                 treeArchiveThresholdRight++;
-                RedBlackBST treeForTupleInsertion = rightPredicateLinkedList.getLast();
+                RedBlackBST treeForTupleInsertion = rightPredicateLinkedList.getFirst();
                 treeForTupleInsertion.put(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.TUPLE_ID));
                 if ( treeArchiveThresholdRight >= tupleCountForArchiveUserDefined) {
                     RedBlackBST newRedBlackBST = new RedBlackBST();
@@ -97,7 +66,7 @@ public class RightPredicateBoltBST extends BaseRichBolt {
                 redBlackBSTForCost.put(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.TUPLE_ID));
                 rightPredicateLinkedList.add(redBlackBSTForCost);
             }
-            for (RedBlackBST redBlackBST : leftPredicateLinkedList) {
+            for (RedBlackBST redBlackBST : rightPredicateLinkedList) {
                 HashSet<Integer> hashSet= new HashSet<>();
                 for(Node  nodeThatContainsGreater: redBlackBST.getNodesGreaterThan(tuple.getIntegerByField(Constants.TUPLE_ID))){
 
@@ -111,9 +80,7 @@ public class RightPredicateBoltBST extends BaseRichBolt {
             }
         }
         if(tupleRemovalCountForLocal>= tupleCountForRemovalUserDefined){
-            leftPredicateLinkedList.remove(leftPredicateLinkedList.getFirst());
             rightPredicateLinkedList.remove(rightPredicateLinkedList.getFirst());
-
             tupleRemovalCountForLocal=0;
         }
         //Add the data values

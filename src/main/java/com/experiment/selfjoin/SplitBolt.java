@@ -36,11 +36,11 @@ public class SplitBolt extends BaseRichBolt {
 
     @Override
     public void execute(Tuple tuple) {
-        if (tuple.getSourceStreamId().equals("LeftStreamTuples")) {
+        if (tuple.getSourceStreamId().equals("StreamR")) {
 
-            Values valuesLeft = new Values(tuple.getIntegerByField("Duration"), tuple.getIntegerByField("ID"), "LeftStream", tuple.getValueByField("TupleID"));
+            Values valuesLeft = new Values(tuple.getIntegerByField("distance"), tuple.getIntegerByField("ID"), "LeftStream");
 
-            Values valuesRight = new Values(tuple.getIntegerByField("Revenue"), tuple.getIntegerByField("ID"), "LeftStream", tuple.getValueByField("TupleID"));
+            Values valuesRight = new Values(tuple.getIntegerByField("time"), tuple.getIntegerByField("ID"), "LeftStream");
             this.outputCollector.emit(leftStreamGreater, tuple, valuesRight);
             this.outputCollector.emit(rightStreamSmaller, tuple, valuesLeft);
             this.outputCollector.ack(tuple);
@@ -52,8 +52,8 @@ public class SplitBolt extends BaseRichBolt {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer outputFieldsDeclarer) {
-        outputFieldsDeclarer.declareStream(leftStreamGreater, new Fields(Constants.TUPLE, Constants.TUPLE_ID, "StreamID", "TupleID"));
-        outputFieldsDeclarer.declareStream(rightStreamSmaller, new Fields(Constants.TUPLE, Constants.TUPLE_ID, "StreamID", "TupleID"));
+        outputFieldsDeclarer.declareStream(leftStreamGreater, new Fields(Constants.TUPLE, Constants.TUPLE_ID, "StreamID"));
+        outputFieldsDeclarer.declareStream(rightStreamSmaller, new Fields(Constants.TUPLE, Constants.TUPLE_ID, "StreamID"));
 
 
     }
