@@ -48,4 +48,15 @@ public class Constants {
     public static final String KAFKA_SPOUT="kafkaSpout";
     public static final String SPLIT_BOLT="distributorBolt";
 
+    /// Records Constants
+    public static final String BITSET_RECORD_BOLT= "bitSetRecordBolt";
+    public static final String KAFKA_TIME="kafkaTime";
+    public static final String SPLIT_BOLT_TIME="splitBoltTime";
+    public static final String TASK_ID_FOR_SPLIT_BOLT="taskIdForSplitBolt";
+    public static final String HOST_NAME_FOR_SPLIT_BOLT="hostNameForSplitBolt";
+    public static final String GREATER_PREDICATE_EVALUATION_TIME_BOLT="greaterPredicateEvaluationTimeBolt";
+    public static final String LESSER_PREDICATE_EVALUATION_TIME_BOLT="lesserPredicateEvaluationTimeBolt";
+    public static final String MUTABLE_BOLT_TASK_ID="mutableTaskID";
+    public static final String MUTABLE_BOLT_MACHINE="machineID";
+
 }

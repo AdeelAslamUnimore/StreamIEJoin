@@ -32,7 +32,7 @@ public class IEJoin extends BaseRichBolt {
         Map<String, Object> map = Configuration.configurationConstantForStreamIDs();
         this.permutationLeft = (String) map.get("LeftBatchPermutation");
         this.permutationRight = (String) map.get("RightBatchPermutation");
-        this.leftStreamID = (String) map.get("LeftPredicateTuple");
+        this.leftStreamID = (String) map.get("StreamR");
         this.mergeOperationStreamID = (String) map.get("MergingFlag");
     }
 
@@ -142,7 +142,6 @@ public class IEJoin extends BaseRichBolt {
         linkedList.add(listPermutationSelfJoin);
         // Tuple Merge Evaluation: // Queue evaluation for the last item of linked list
         for(Tuple tuple:queueDuringMerge){
-            System.out.println(queueDuringMerge.size()+"Merging Operation");
             bitSetEvaluation(linkedList.getLast(),tuple);
         }
 
@@ -206,7 +205,8 @@ public class IEJoin extends BaseRichBolt {
         }
 
         // If the target is not found, return the index of the nearest element
-        return result + 1;
+        // It should be result
+        return result;
     }
 
     public int binarySearchWithIndex(ArrayList<PermutationSelfJoin> arr, int target) {

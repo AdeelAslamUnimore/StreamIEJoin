@@ -1,5 +1,6 @@
 package com.experiment.selfjoin;
 
+import clojure.lang.Cons;
 import com.baselinealgorithm.chainbplusandcss.*;
 import com.baselinealgorithm.chainindexbplustree.JoinerBoltBplusTree;
 import com.baselinealgorithm.chainindexbplustree.LeftStreamPredicateBplusTree;
@@ -17,6 +18,7 @@ import com.experiment.selfjoin.csstree.RightPredicateCSSTreeBoltSelfJoin;
 import com.experiment.selfjoin.csstree.RightPredicateImmutableCSSBoltSelfJoin;
 import com.experiment.selfjoin.iejoinproposed.IEJoin;
 import com.experiment.selfjoin.iejoinproposed.MutableBPlusTree;
+import com.experiment.selfjoin.iejoinproposed.ResultBoltBitOperation;
 import com.experiment.selfjoin.redblacktree.LeftPredicateBoltBSTSelfJoin;
 import com.experiment.selfjoin.redblacktree.RightPredicateBoltBSTSelfJoin;
 import com.proposed.iejoinandbplustreebased.IEJoinWithLinkedList;
@@ -70,7 +72,7 @@ public class Topology {
     public void IEJoin() throws Exception {
         Config config = new Config();
         Map<String, Object> map = Configuration.configurationConstantForStreamIDs();
-        config.setNumWorkers(6);
+        config.setNumWorkers(10);
         config.registerSerialization(java.util.BitSet.class);
         config.registerSerialization(java.util.HashSet.class);
         TopologyBuilder builder = new TopologyBuilder();
@@ -90,7 +92,7 @@ public class Topology {
                     id.getAndIncrement();
                     //String value3 = splitValues[2];
                     return new Values(value1, value2, id, System.currentTimeMillis());
-                }, new Fields("distance", "trip", "ID", "Time"), "StreamR")
+                }, new Fields("distance", "amount", "ID", "Time"), "StreamR")
                 .setFirstPollOffsetStrategy(FirstPollOffsetStrategy.UNCOMMITTED_LATEST)
                 .build();
 
@@ -104,6 +106,14 @@ public class Topology {
                 .fieldsGrouping(Constants.SPLIT_BOLT, (String) map.get("RightSmallerPredicateTuple"), new Fields(Constants.TUPLE_ID));//.fieldsGrouping("testBolt", (String) map.get("RightGreaterPredicateTuple"), new Fields(Constants.TUPLE_ID));
         builder.setBolt(Constants.BIT_SET_EVALUATION_BOLT, new JoinerBoltForBitSetOperation()).fieldsGrouping(Constants.LEFT_PREDICATE_BOLT, (String) map.get("LeftPredicateSourceStreamIDBitSet"), new Fields(Constants.TUPLE_ID)).
                 fieldsGrouping(Constants.RIGHT_PREDICATE_BOLT, (String) map.get("RightPredicateSourceStreamIDBitSet"), new Fields(Constants.TUPLE_ID)).setNumTasks(10);
+
+
+        builder.setBolt(Constants.BITSET_RECORD_BOLT, new ResultBoltBitOperation()).shuffleGrouping(Constants.BIT_SET_EVALUATION_BOLT,
+                (String) map.get("LeftPredicateSourceStreamIDBitSet"))
+                .shuffleGrouping(Constants.BIT_SET_EVALUATION_BOLT, (String) map.get("RightPredicateSourceStreamIDBitSet")).
+                shuffleGrouping(Constants.BIT_SET_EVALUATION_BOLT,(String) map.get("Results"));
+
+
         builder.setBolt(Constants.OFFSET_AND_IE_JOIN_BOLT_ID, new IEJoin())
                 .directGrouping(Constants.LEFT_PREDICATE_BOLT, (String) map.get("LeftBatchPermutation"))
                 .directGrouping(Constants.RIGHT_PREDICATE_BOLT, (String) map.get("RightBatchPermutation"))

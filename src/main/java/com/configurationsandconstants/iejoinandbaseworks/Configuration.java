@@ -35,6 +35,9 @@ public class Configuration {
 
       mapJoinerBoltConstant.put("LeftPredicateSourceStreamIDHashSet","PredicateLeft");
       mapJoinerBoltConstant.put("RightPredicateSourceStreamIDHashSet","PredicateRight");
+
+      /// Result Taking
+      mapJoinerBoltConstant.put("Results","result");
       return mapJoinerBoltConstant;
     }
 
