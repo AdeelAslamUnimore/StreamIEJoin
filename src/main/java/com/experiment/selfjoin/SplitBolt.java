@@ -12,7 +12,6 @@ import org.apache.storm.tuple.Values;
 
 import java.net.InetAddress;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
 
 public class SplitBolt extends BaseRichBolt {
     private OutputCollector outputCollector;
@@ -63,9 +62,9 @@ public class SplitBolt extends BaseRichBolt {
     @Override
     public void declareOutputFields(OutputFieldsDeclarer outputFieldsDeclarer) {
         outputFieldsDeclarer.declareStream(leftStreamGreater, new Fields(Constants.TUPLE, Constants.TUPLE_ID, "StreamID",
-                Constants.KAFKA_TIME,Constants.SPLIT_BOLT,Constants.TASK_ID_FOR_SPLIT_BOLT,Constants.HOST_NAME_FOR_SPLIT_BOLT));
+                Constants.KAFKA_SPOUT_TIME,Constants.SPLIT_BOLT,Constants.TASK_ID_FOR_SPLIT_BOLT,Constants.HOST_NAME_FOR_SPLIT_BOLT));
         outputFieldsDeclarer.declareStream(rightStreamSmaller, new Fields(Constants.TUPLE, Constants.TUPLE_ID, "StreamID",
-                Constants.KAFKA_TIME,Constants.SPLIT_BOLT,Constants.TASK_ID_FOR_SPLIT_BOLT,Constants.HOST_NAME_FOR_SPLIT_BOLT));
+                Constants.KAFKA_SPOUT_TIME,Constants.SPLIT_BOLT,Constants.TASK_ID_FOR_SPLIT_BOLT,Constants.HOST_NAME_FOR_SPLIT_BOLT));
 
 
     }

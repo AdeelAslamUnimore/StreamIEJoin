@@ -64,7 +64,7 @@ public class JoinerBoltForBitSetOperation extends BaseRichBolt {
             predicate1BitSet = convertToObject(byteArrayPredicateLeftBitSet);
             this.outputCollector.emit(leftPredicateSourceStreamID, tuple, new Values(tuple
                     .getValue(1), tuple.getValue(2),tuple.getValue(3),tuple.getValue(4),tuple.getValue(5),
-                    tuple.getValue(6),tuple.getValue(7),tuple.getValue(8)));
+                    tuple.getValue(6),tuple.getValue(7),tuple.getValue(8),tuple.getValue(9),tuple.getValue(10)));
 
         }
         if (tuple.getSourceStreamId().equals(rightPredicateSourceStreamID)) {
@@ -74,7 +74,7 @@ public class JoinerBoltForBitSetOperation extends BaseRichBolt {
 
             this.outputCollector.emit(rightPredicateSourceStreamID, tuple, new Values(tuple
                     .getValue(1), tuple.getValue(2),tuple.getValue(3),tuple.getValue(4),tuple.getValue(5),
-                    tuple.getValue(6),tuple.getValue(7),tuple.getValue(8)));
+                    tuple.getValue(6),tuple.getValue(7),tuple.getValue(8), tuple.getValue(9),tuple.getValue(10)));
 
         }
         if ((predicate1BitSet != null) && (predicate2BitSet != null)) {
@@ -89,12 +89,12 @@ public class JoinerBoltForBitSetOperation extends BaseRichBolt {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer outputFieldsDeclarer) {
-      Fields greaterFields= new Fields(  Constants.TUPLE_ID,
-                Constants.KAFKA_TIME, Constants.SPLIT_BOLT_TIME, Constants.TASK_ID_FOR_SPLIT_BOLT, Constants.HOST_NAME_FOR_SPLIT_BOLT,
+      Fields greaterFields= new Fields(  Constants.TUPLE_ID, Constants.KAFKA_TIME,
+                Constants.KAFKA_SPOUT_TIME, Constants.SPLIT_BOLT_TIME, Constants.TASK_ID_FOR_SPLIT_BOLT, Constants.HOST_NAME_FOR_SPLIT_BOLT, "TupleArrivalTime",
                 Constants.GREATER_PREDICATE_EVALUATION_TIME_BOLT, Constants.MUTABLE_BOLT_TASK_ID,Constants.MUTABLE_BOLT_MACHINE);
         outputFieldsDeclarer.declareStream(leftPredicateSourceStreamID, greaterFields);
-        Fields lesserFields= new Fields(  Constants.TUPLE_ID,
-                Constants.KAFKA_TIME, Constants.SPLIT_BOLT_TIME, Constants.TASK_ID_FOR_SPLIT_BOLT, Constants.HOST_NAME_FOR_SPLIT_BOLT,
+        Fields lesserFields= new Fields(  Constants.TUPLE_ID,Constants.KAFKA_TIME,
+                Constants.KAFKA_SPOUT_TIME, Constants.SPLIT_BOLT_TIME, Constants.TASK_ID_FOR_SPLIT_BOLT, Constants.HOST_NAME_FOR_SPLIT_BOLT,"TupleArrivalTime",
                 Constants.LESSER_PREDICATE_EVALUATION_TIME_BOLT, Constants.MUTABLE_BOLT_TASK_ID,Constants.MUTABLE_BOLT_MACHINE);
         outputFieldsDeclarer.declareStream(leftPredicateSourceStreamID, lesserFields);
         outputFieldsDeclarer.declareStream(result, new Fields("Time","TaskID","HostName"));

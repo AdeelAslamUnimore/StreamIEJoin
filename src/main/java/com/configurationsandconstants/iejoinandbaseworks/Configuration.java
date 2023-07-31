@@ -38,6 +38,11 @@ public class Configuration {
 
       /// Result Taking
       mapJoinerBoltConstant.put("Results","result");
+      // IEJoin Result Taking
+      //Constant for Merging the tuples
+     mapJoinerBoltConstant.put("MergingTuplesRecord", "mergingTuplesRecord");
+      mapJoinerBoltConstant.put("IEJoinResult","ieJoinResult");
+      mapJoinerBoltConstant.put("MergingTupleEvaluation","mergingTuplesEvaluation");
       return mapJoinerBoltConstant;
     }
 

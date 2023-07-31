@@ -1,6 +1,5 @@
 package com.experiment.selfjoin.iejoinproposed;
 
-import clojure.lang.Cons;
 import com.configurationsandconstants.iejoinandbaseworks.Configuration;
 import com.configurationsandconstants.iejoinandbaseworks.Constants;
 import com.stormiequality.BTree.BPlusTreeWithTmpForPermutation;
@@ -55,6 +54,8 @@ public class MutableBPlusTree extends BaseRichBolt {
     private String hostName;
     // Tasl ID
     private int taskID;
+    //
+    private long tupleArrivalTime;
 
     public MutableBPlusTree(String operator, String permutationComputationStreamID) {
         this.operator = operator;
@@ -89,10 +90,12 @@ public class MutableBPlusTree extends BaseRichBolt {
 
         if (operator.equals(">")) {
             this.mergeIntervalCount++;
+            tupleArrivalTime=System.currentTimeMillis();
             greaterPredicateEvaluation(tuple);
         }
         if (operator.equals("<")) {
             this.mergeIntervalCount++;
+            tupleArrivalTime=System.currentTimeMillis();
             lessPredicateEvaluation(tuple);
         }
         if (mergeIntervalCount >= mergeIntervalDefinedByUser) {
@@ -107,16 +110,16 @@ public class MutableBPlusTree extends BaseRichBolt {
     public void declareOutputFields(OutputFieldsDeclarer outputFieldsDeclarer) {
         // Left
         outputFieldsDeclarer.declareStream(leftPredicateBitSetSteamID, new Fields(Constants.BYTE_ARRAY, Constants.TUPLE_ID,
-                Constants.KAFKA_TIME, Constants.SPLIT_BOLT_TIME, Constants.TASK_ID_FOR_SPLIT_BOLT, Constants.HOST_NAME_FOR_SPLIT_BOLT,
+                Constants.KAFKA_TIME, Constants.KAFKA_SPOUT_TIME, Constants.SPLIT_BOLT_TIME, Constants.TASK_ID_FOR_SPLIT_BOLT, Constants.HOST_NAME_FOR_SPLIT_BOLT, "TupleArrivalTime",
                 Constants.GREATER_PREDICATE_EVALUATION_TIME_BOLT, Constants.MUTABLE_BOLT_TASK_ID,Constants.MUTABLE_BOLT_MACHINE));
         //Right part of predicate
         outputFieldsDeclarer.declareStream(rightPredicateBitSetStreamID, new Fields(Constants.BYTE_ARRAY, Constants.TUPLE_ID,
-                Constants.KAFKA_TIME, Constants.SPLIT_BOLT_TIME, Constants.TASK_ID_FOR_SPLIT_BOLT, Constants.HOST_NAME_FOR_SPLIT_BOLT,
+                Constants.KAFKA_TIME, Constants.KAFKA_SPOUT_TIME, Constants.SPLIT_BOLT_TIME, Constants.TASK_ID_FOR_SPLIT_BOLT, Constants.HOST_NAME_FOR_SPLIT_BOLT, "TupleArrivalTime",
                 Constants.LESSER_PREDICATE_EVALUATION_TIME_BOLT, Constants.MUTABLE_BOLT_TASK_ID,Constants.MUTABLE_BOLT_MACHINE));
         //Permutation
-        outputFieldsDeclarer.declareStream(permutationComputationStreamID, new Fields(Constants.TUPLE, Constants.PERMUTATION_TUPLE_IDS, Constants.BATCH_COMPLETION_FLAG));
+        outputFieldsDeclarer.declareStream(permutationComputationStreamID, new Fields(Constants.TUPLE, Constants.PERMUTATION_TUPLE_IDS, Constants.BATCH_COMPLETION_FLAG, Constants.MERGING_TIME));
         //Merge
-        outputFieldsDeclarer.declareStream(mergeOperationStreamID, new Fields(Constants.MERGING_OPERATION_FLAG));
+        outputFieldsDeclarer.declareStream(mergeOperationStreamID, new Fields(Constants.MERGING_OPERATION_FLAG, Constants.MERGING_TIME));
 
     }
 
@@ -148,8 +151,8 @@ public class MutableBPlusTree extends BaseRichBolt {
                     byte[] bytArrayRBitSet = convertToByteArray(bitSet);
                     //Emit logic here tuple emitting
                     this.outputCollector.emit(leftPredicateBitSetSteamID, tuple, new Values(bytArrayRBitSet, tuple.getIntegerByField(Constants.TUPLE_ID),
-                            tuple.getLongByField(Constants.KAFKA_TIME), tuple.getLongByField(Constants.SPLIT_BOLT_TIME),tuple.getIntegerByField(Constants.TASK_ID_FOR_SPLIT_BOLT),
-                            tuple.getStringByField(Constants.HOST_NAME_FOR_SPLIT_BOLT), System.currentTimeMillis(), this.taskID, hostName));
+                            tuple.getLongByField(Constants.KAFKA_TIME)   , tuple.getLongByField(Constants.KAFKA_SPOUT_TIME), tuple.getLongByField(Constants.SPLIT_BOLT_TIME),tuple.getIntegerByField(Constants.TASK_ID_FOR_SPLIT_BOLT),
+                            tuple.getStringByField(Constants.HOST_NAME_FOR_SPLIT_BOLT), tupleArrivalTime, System.currentTimeMillis(), this.taskID, hostName));
                     this.outputCollector.ack(tuple);
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -173,8 +176,8 @@ public class MutableBPlusTree extends BaseRichBolt {
                     byte[] bytArrayRBitSet = convertToByteArray(bitSet);
                     // Only emitting the bit array  tuple is due to acking mechanisim
                     this.outputCollector.emit(rightPredicateBitSetStreamID, tuple, new Values(bytArrayRBitSet, tuple.getIntegerByField(Constants.TUPLE_ID),
-                            tuple.getLongByField(Constants.KAFKA_TIME), tuple.getLongByField(Constants.SPLIT_BOLT_TIME),tuple.getIntegerByField(Constants.TASK_ID_FOR_SPLIT_BOLT),
-                            tuple.getStringByField(Constants.HOST_NAME_FOR_SPLIT_BOLT), System.currentTimeMillis(), this.taskID, hostName));
+                            tuple.getLongByField(Constants.KAFKA_TIME)   ,   tuple.getLongByField(Constants.KAFKA_SPOUT_TIME), tuple.getLongByField(Constants.SPLIT_BOLT_TIME),tuple.getIntegerByField(Constants.TASK_ID_FOR_SPLIT_BOLT),
+                            tuple.getStringByField(Constants.HOST_NAME_FOR_SPLIT_BOLT), tupleArrivalTime,System.currentTimeMillis(), this.taskID, hostName));
                     this.outputCollector.ack(tuple);
                     // Emitting Logic for tuples
 
@@ -190,7 +193,7 @@ public class MutableBPlusTree extends BaseRichBolt {
     public void mergingOfMutableStructureForImmutableDataStructure(Tuple tuple) {
         // Collector for merge operation.
 
-        this.outputCollector.emitDirect(downStreamTasksForIEJoin.get(idForDownStreamTasksForIEJoin), mergeOperationStreamID, new Values(true));
+        this.outputCollector.emitDirect(downStreamTasksForIEJoin.get(idForDownStreamTasksForIEJoin), mergeOperationStreamID, new Values(true,System.currentTimeMillis()));
 
         // Left most node for stream R
         Node batch = bPlusTree.leftMostNode();
@@ -211,14 +214,14 @@ public class MutableBPlusTree extends BaseRichBolt {
             for (int i = 0; i < node.getKeys().size(); i++) {
                 // Emitting tuples to downStream Task for tuple
                 for (int j : node.getKeys().get(i).getValues())
-                    this.outputCollector.emitDirect(downStreamTaskID, streamID, tuple, new Values(node.getKeys().get(i).getKey(), convertToByteArray(node.getKeys().get(i).getTmpIDs()), false));
+                    this.outputCollector.emitDirect(downStreamTaskID, streamID, tuple, new Values(node.getKeys().get(i).getKey(), convertToByteArray(node.getKeys().get(i).getTmpIDs()), false,0l));
                 this.outputCollector.ack(tuple);
             }
             node = node.getNext();
         }
         // Flag tuple that indicates the completeness of batch
 
-        this.outputCollector.emitDirect(downStreamTaskID, streamID, tuple, new Values(0, 0, true));
+        this.outputCollector.emitDirect(downStreamTaskID, streamID, tuple, new Values(0, 0, true, System.currentTimeMillis()));
         this.outputCollector.ack(tuple);
     }
 

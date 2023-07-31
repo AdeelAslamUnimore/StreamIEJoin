@@ -8,10 +8,12 @@ import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.OutputFieldsDeclarer;
 import org.apache.storm.topology.base.BaseRichBolt;
+import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
 import org.apache.storm.tuple.Values;
 
 import java.io.ByteArrayInputStream;
+import java.net.InetAddress;
 import java.util.*;
 
 public class IEJoin extends BaseRichBolt {
@@ -26,7 +28,16 @@ public class IEJoin extends BaseRichBolt {
     private int tupleRemovalCounter = 0;
     private Queue<Tuple> queueDuringMerge;
     private String leftStreamID;
+
+    private OutputCollector outputCollector;
     private LinkedList<ArrayList<PermutationSelfJoin>> linkedList;
+    /// Time Taken
+    private long mergingTime;
+    private int taskID;
+    private String hostName;
+    private String mergingTuplesRecord;
+    private String recordIEJoinStreamID;
+    private String mergeRecordEvaluationStreamID;
 
     public IEJoin() {
         Map<String, Object> map = Configuration.configurationConstantForStreamIDs();
@@ -34,6 +45,10 @@ public class IEJoin extends BaseRichBolt {
         this.permutationRight = (String) map.get("RightBatchPermutation");
         this.leftStreamID = (String) map.get("StreamR");
         this.mergeOperationStreamID = (String) map.get("MergingFlag");
+        this.recordIEJoinStreamID= (String) map.get("IEJoinResult");
+        this.mergingTuplesRecord= (String) map.get("MergingTuplesRecord");
+        this.mergeRecordEvaluationStreamID= (String) map.get("MergingTupleEvaluation");
+        this.mergingTime=0l;
     }
 
     @Override
@@ -46,6 +61,13 @@ public class IEJoin extends BaseRichBolt {
         this.linkedList = new LinkedList<>();
         this.tupleRemovalCounter = Constants.MUTABLE_WINDOW_SIZE;
         this.flagDuringMerge = false;
+        this.taskID= topologyContext.getThisTaskId();
+        try{
+            this.hostName= InetAddress.getLocalHost().getHostName();
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+        this.outputCollector=outputCollector;
 
     }
 
@@ -54,6 +76,7 @@ public class IEJoin extends BaseRichBolt {
         if (tuple.getSourceStreamId().equals(mergeOperationStreamID)) {
 
             flagDuringMerge = tuple.getBooleanByField(Constants.MERGING_OPERATION_FLAG);
+            this.mergingTime=tuple.getLongByField(Constants.MERGING_TIME);
         }
         if ((tuple.getSourceStreamId().equals(this.leftStreamID))) {
             tupleRemovalCounter++;
@@ -97,6 +120,9 @@ public class IEJoin extends BaseRichBolt {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer outputFieldsDeclarer) {
+        outputFieldsDeclarer.declareStream(mergingTuplesRecord,new Fields("Time","Com_Time","taskId","hostName"));
+        outputFieldsDeclarer.declareStream(recordIEJoinStreamID, new Fields("KafkaTupleReadingTime","KafkaTime","Time","Com_Time","taskId","hostName"));
+        outputFieldsDeclarer.declareStream(mergeRecordEvaluationStreamID, new Fields("Time","taskId","hostName"));
 
     }
 
@@ -139,11 +165,14 @@ public class IEJoin extends BaseRichBolt {
                 //  permutationArray.add(new Permutation(holdingList[ids],permutationsArrayRight.get(i).getIndex()));
             }
         }
+        long time= System.currentTimeMillis();
         linkedList.add(listPermutationSelfJoin);
         // Tuple Merge Evaluation: // Queue evaluation for the last item of linked list
+        long timeDuringMerge=System.currentTimeMillis();
         for(Tuple tuple:queueDuringMerge){
             bitSetEvaluation(linkedList.getLast(),tuple);
         }
+        timeDuringMerge=System.currentTimeMillis()-timeDuringMerge;
 
 
         if (tupleRemovalCounter >= Constants.IMMUTABLE_WINDOW_SIZE) {
@@ -151,15 +180,22 @@ public class IEJoin extends BaseRichBolt {
             tupleRemovalCounter = Constants.MUTABLE_WINDOW_SIZE;
         }
         queueDuringMerge = new LinkedList<>();
-
+        outputCollector.emit(mergingTuplesRecord, new Values(mergingTime,time,taskID,hostName));
+        outputCollector.emit(mergeRecordEvaluationStreamID, new Values(timeDuringMerge, taskID,hostName));
 
     }
 
     public void resultComputation(Tuple tuple) {
+        long kafkaReadingTime= tuple.getLongByField("KafkaTime");
+        long KafkaSpoutTime=tuple.getLongByField("Time");
+        long tupleArrivalTime=System.currentTimeMillis();
         for (int i = 0; i < linkedList.size(); i++) {
 
             bitSetEvaluation(linkedList.get(i), tuple);
         }
+        long tupleEvaluationTime=System.currentTimeMillis();
+
+        outputCollector.emit(recordIEJoinStreamID, new Values(kafkaReadingTime,KafkaSpoutTime,tupleArrivalTime,tupleEvaluationTime, taskID, hostName));
     }
 
     public void bitSetEvaluation(ArrayList<PermutationSelfJoin> listPermutationSelfJoin, Tuple tuple) {
