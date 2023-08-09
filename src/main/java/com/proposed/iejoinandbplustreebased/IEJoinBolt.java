@@ -336,7 +336,7 @@ public class IEJoinBolt extends BaseRichBolt {
         if (offset >= 0) {
             for (int j = 0; j <= offset; j++) {
                 try {
-                    bitSet.set(listRightPermutation.get(j).getIndex() - 1, true);
+                    bitSet.set(listRightPermutation.get(j).getTuple() - 1, true);
                 } catch (IndexOutOfBoundsException e) {
                     e.printStackTrace();
                 }
@@ -419,7 +419,7 @@ public class IEJoinBolt extends BaseRichBolt {
         BitSet bitSet = new BitSet();
         for (int i = offsetSearchKeySecond; i < listLeftPermutation.size(); i++) {
             try {
-                bitSet.set(listLeftPermutation.get(i).getIndex() - 1, true);
+                bitSet.set(listLeftPermutation.get(i).getTuple() - 1, true);
             } catch (IndexOutOfBoundsException e) {
                 e.printStackTrace();
             }

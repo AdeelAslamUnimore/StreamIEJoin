@@ -362,7 +362,7 @@ public class IEJoinWithLinkedList extends BaseRichBolt {
 
                     try {
 
-                        bitSet.set(ieJoinModel.getRightStreamPermutation().get(j).getIndex() - 1, true);
+                        bitSet.set(ieJoinModel.getRightStreamPermutation().get(j).getTuple() - 1, true);
                     } catch (IndexOutOfBoundsException e) {
                         e.printStackTrace();
                     }
@@ -456,7 +456,7 @@ public class IEJoinWithLinkedList extends BaseRichBolt {
             for (int i = offsetSearchKeySecond; i < ieJoinModel.getLeftStreamPermutation().size(); i++) {
 
                 try {
-                    bitSet.set(ieJoinModel.getLeftStreamPermutation().get(i).getIndex() - 1, true);
+                    bitSet.set(ieJoinModel.getLeftStreamPermutation().get(i).getTuple() - 1, true);
                 } catch (IndexOutOfBoundsException e) {
                     e.printStackTrace();
                 }

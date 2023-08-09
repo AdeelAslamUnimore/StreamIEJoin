@@ -16,10 +16,7 @@ import com.experiment.selfjoin.csstree.LeftPredicateCSSTreeBoltSelfJoin;
 import com.experiment.selfjoin.csstree.LeftPredicateImmutableCSSBoltSelfJoin;
 import com.experiment.selfjoin.csstree.RightPredicateCSSTreeBoltSelfJoin;
 import com.experiment.selfjoin.csstree.RightPredicateImmutableCSSBoltSelfJoin;
-import com.experiment.selfjoin.iejoinproposed.IEJoin;
-import com.experiment.selfjoin.iejoinproposed.MutableBPlusTree;
-import com.experiment.selfjoin.iejoinproposed.ResultBoltBitOperation;
-import com.experiment.selfjoin.iejoinproposed.ResultBoltIEJoinOperation;
+import com.experiment.selfjoin.iejoinproposed.*;
 import com.experiment.selfjoin.redblacktree.LeftPredicateBoltBSTSelfJoin;
 import com.experiment.selfjoin.redblacktree.RightPredicateBoltBSTSelfJoin;
 import com.proposed.iejoinandbplustreebased.IEJoinWithLinkedList;
@@ -31,6 +28,7 @@ import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.storm.Config;
 import org.apache.storm.LocalCluster;
+import org.apache.storm.StormSubmitter;
 import org.apache.storm.generated.AlreadyAliveException;
 import org.apache.storm.generated.AuthorizationException;
 import org.apache.storm.generated.InvalidTopologyException;
@@ -41,12 +39,14 @@ import org.apache.storm.topology.TopologyBuilder;
 import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Values;
 
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class Topology {
     public static void main(String[] args) throws Exception {
-        new Topology().CSSTree();
+
+        new Topology().IEJoin();
 
     }
 
@@ -73,46 +73,67 @@ public class Topology {
     }
 
     public void IEJoin() throws Exception {
+
         Config config = new Config();
         Map<String, Object> map = Configuration.configurationConstantForStreamIDs();
         config.setNumWorkers(10);
         config.registerSerialization(java.util.BitSet.class);
         config.registerSerialization(java.util.HashSet.class);
+        config.registerSerialization(java.util.concurrent.atomic.AtomicLong.class);
+        List<String> workerChildopts = new ArrayList<>();
+        workerChildopts.add("-Xmx2g");
+        workerChildopts.add("-Xss8m");
+        config.put(Config.TOPOLOGY_WORKER_CHILDOPTS, workerChildopts);
+        config.setNumAckers(4);
         TopologyBuilder builder = new TopologyBuilder();
-        AtomicLong id = new AtomicLong();
+        final int[] id = {0};
         String groupId = "kafka-reader-group";
         // Kafka Spout for reading tuples:
 
-        KafkaSpoutConfig<String, String> kafkaSpoutConfigForStreamR = KafkaSpoutConfig.builder("192.168.122.159:9092,192.168.122.231:9092", "selfjoin")
+        KafkaSpoutConfig<String, String> kafkaSpoutConfigForStreamR = KafkaSpoutConfig.builder("192.168.122.160:9093,192.168.122.231:9094", "selfjoin")
                 .setProp(ConsumerConfig.GROUP_ID_CONFIG, groupId)
                 .setProp(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class)
                 .setProp(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class)
                 .setProcessingGuarantee(KafkaSpoutConfig.ProcessingGuarantee.AT_LEAST_ONCE)
                 .setRecordTranslator(record -> {
                     String[] splitValues = record.value().split(","); // Split record.value() based on a delimiter, adjust it as needed
-                    String value1 = splitValues[5]; // Extract the first value
-                    String value2 = splitValues[11];
-                    long kafkaTime= Long.parseLong(splitValues[splitValues.length-1]);
+                    double value1, value2 = 0;
+                  //  int id=0;
+                    try {
+                        value1 = Double.parseDouble(splitValues[5]);
+                        value2 = Double.parseDouble(splitValues[11]);
+                    //    id= Integer.parseInt(splitValues[splitValues.length - 2]);
+
+
+                    } catch (NumberFormatException e) {
+                        value1 = 0;
+                        value2 = 0;
+                      //  id=0;
+                    }
+                    long kafkaTime = Long.parseLong(splitValues[splitValues.length - 1]);
                     // Extract the second value
-                    id.getAndIncrement();
+                   id[0]++;
                     //String value3 = splitValues[2];
-                    return new Values(value1, value2, id, kafkaTime, System.currentTimeMillis());
-                }, new Fields("distance", "amount", "ID","KafkaTime", "Time"), "StreamR")
+
+                    return new Values((int) Math.round(value1), (int) Math.round(value2), id[0], kafkaTime, System.currentTimeMillis());
+                }, new Fields("distance", "amount", "ID", "kafkaTime", "Time"), "StreamR")
                 .setFirstPollOffsetStrategy(FirstPollOffsetStrategy.UNCOMMITTED_LATEST)
                 .build();
-
-
         builder.setSpout(Constants.KAFKA_SPOUT, new KafkaSpout<>(kafkaSpoutConfigForStreamR), 1);
+       // builder.setSpout(Constants.KAFKA_SPOUT, new Spout(1000));
         builder.setBolt(Constants.SPLIT_BOLT, new SplitBolt())
                 .fieldsGrouping(Constants.KAFKA_SPOUT, "StreamR", new Fields("ID"));
         builder.setBolt(Constants.LEFT_PREDICATE_BOLT, new MutableBPlusTree(">", (String) map.get("LeftBatchPermutation")))
                 .fieldsGrouping(Constants.SPLIT_BOLT, (String) map.get("LeftGreaterPredicateTuple"), new Fields(Constants.TUPLE_ID));//fieldsGrouping("testBolt", (String) map.get("RightSmallerPredicateTuple"), new Fields(Constants.TUPLE_ID));
         builder.setBolt(Constants.RIGHT_PREDICATE_BOLT, new MutableBPlusTree("<", (String) map.get("RightBatchPermutation")))
                 .fieldsGrouping(Constants.SPLIT_BOLT, (String) map.get("RightSmallerPredicateTuple"), new Fields(Constants.TUPLE_ID));//.fieldsGrouping("testBolt", (String) map.get("RightGreaterPredicateTuple"), new Fields(Constants.TUPLE_ID));
-        builder.setBolt(Constants.BIT_SET_EVALUATION_BOLT, new JoinerBoltForBitSetOperation()).fieldsGrouping(Constants.LEFT_PREDICATE_BOLT, (String) map.get("LeftPredicateSourceStreamIDBitSet"), new Fields(Constants.TUPLE_ID)).
-                fieldsGrouping(Constants.RIGHT_PREDICATE_BOLT, (String) map.get("RightPredicateSourceStreamIDBitSet"), new Fields(Constants.TUPLE_ID)).setNumTasks(10);
+//        builder.setBolt(Constants.BIT_SET_EVALUATION_BOLT, new JoinerBoltForBitSetOperation()).fieldsGrouping(Constants.LEFT_PREDICATE_BOLT, (String) map.get("LeftPredicateSourceStreamIDBitSet"), new Fields(Constants.TUPLE_ID)).
+//                fieldsGrouping(Constants.RIGHT_PREDICATE_BOLT, (String) map.get("RightPredicateSourceStreamIDBitSet"), new Fields(Constants.TUPLE_ID)).setNumTasks(50);
 
+        builder.setBolt(Constants.BIT_SET_EVALUATION_BOLT, new MutableJoiner()).fieldsGrouping(Constants.LEFT_PREDICATE_BOLT, (String) map.get("LeftPredicateSourceStreamIDBitSet"), new Fields(Constants.TUPLE_ID)).
+                fieldsGrouping(Constants.RIGHT_PREDICATE_BOLT, (String) map.get("RightPredicateSourceStreamIDBitSet"), new Fields(Constants.TUPLE_ID)).setNumTasks(50);
 
+//
         builder.setBolt(Constants.BITSET_RECORD_BOLT, new ResultBoltBitOperation()).
                 shuffleGrouping(Constants.BIT_SET_EVALUATION_BOLT, (String) map.get("LeftPredicateSourceStreamIDBitSet"))
                 .shuffleGrouping(Constants.BIT_SET_EVALUATION_BOLT, (String) map.get("RightPredicateSourceStreamIDBitSet")).
@@ -120,22 +141,24 @@ public class Topology {
 
 
         builder.setBolt(Constants.OFFSET_AND_IE_JOIN_BOLT_ID, new IEJoin())
+                .allGrouping(Constants.KAFKA_SPOUT, "StreamR")
                 .directGrouping(Constants.LEFT_PREDICATE_BOLT, (String) map.get("LeftBatchPermutation"))
                 .directGrouping(Constants.RIGHT_PREDICATE_BOLT, (String) map.get("RightBatchPermutation"))
                 .directGrouping(Constants.LEFT_PREDICATE_BOLT, (String) map.get("MergingFlag"))
-                .directGrouping(Constants.RIGHT_PREDICATE_BOLT, (String) map.get("MergingFlag"))
-                .allGrouping(Constants.KAFKA_SPOUT, "StreamR");//.allGrouping(Constants.KAFKA_SPOUT, "RightStream").setNumTasks(10);
+                .directGrouping(Constants.RIGHT_PREDICATE_BOLT, (String) map.get("MergingFlag"));
+        //.allGrouping(Constants.KAFKA_SPOUT, "RightStream").setNumTasks(10);
         // Record bolt
         builder.setBolt(Constants.IEJOIN_BOLT_RESULT, new ResultBoltIEJoinOperation()).shuffleGrouping(Constants.OFFSET_AND_IE_JOIN_BOLT_ID, (String) map.get("MergingTuplesRecord"))
                 .shuffleGrouping(Constants.OFFSET_AND_IE_JOIN_BOLT_ID, (String) map.get("MergingTupleEvaluation")).shuffleGrouping(Constants.OFFSET_AND_IE_JOIN_BOLT_ID, (String) map.get("IEJoinResult"));
-        LocalCluster cluster = new LocalCluster();
-        cluster.submitTopology("selfjoin", config, builder.createTopology());
+//        LocalCluster cluster = new LocalCluster();
+//        cluster.submitTopology("Storm", config, builder.createTopology());
+        StormSubmitter.submitTopology("selfjoinIE", config, builder.createTopology());
     }
 
     public void BplusTree() throws Exception {
         Config config = new Config();
         Map<String, Object> map = Configuration.configurationConstantForStreamIDs();
-        config.setNumWorkers(6);
+        config.setNumWorkers(20);
         config.registerSerialization(java.util.BitSet.class);
         config.registerSerialization(java.util.HashSet.class);
         TopologyBuilder builder = new TopologyBuilder();

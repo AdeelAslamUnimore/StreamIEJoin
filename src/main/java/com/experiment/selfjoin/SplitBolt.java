@@ -10,6 +10,10 @@ import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
 import org.apache.storm.tuple.Values;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.net.InetAddress;
 import java.util.Map;
 
@@ -19,7 +23,6 @@ public class SplitBolt extends BaseRichBolt {
     private String leftStreamGreater;
     private int taskID;
     private String hostName;
-
 
 
     public SplitBolt() {
@@ -37,7 +40,7 @@ public class SplitBolt extends BaseRichBolt {
         this.taskID=topologyContext.getThisTaskId();
         try{
           this.hostName= InetAddress.getLocalHost().getHostName();
-        }catch (Exception e){
+              }catch (Exception e){
             e.printStackTrace();
         }
     }
@@ -45,11 +48,11 @@ public class SplitBolt extends BaseRichBolt {
     @Override
     public void execute(Tuple tuple) {
         if (tuple.getSourceStreamId().equals("StreamR")) {
-
+            long time=System.currentTimeMillis();
             Values valuesLeft = new Values(tuple.getIntegerByField("distance"), tuple.getIntegerByField("ID"), "LeftStream",
-                    tuple.getLongByField("Time"),System.currentTimeMillis(),taskID,hostName);
+                    tuple.getLongByField("kafkaTime"),tuple.getLongByField("Time"),System.currentTimeMillis(),taskID,hostName);
             Values valuesRight = new Values(tuple.getIntegerByField("amount"), tuple.getIntegerByField("ID"), "LeftStream",
-                    tuple.getLongByField("Time"),System.currentTimeMillis(),taskID,hostName);
+                    tuple.getLongByField("kafkaTime"),tuple.getLongByField("Time"),System.currentTimeMillis(),taskID,hostName);
             this.outputCollector.emit(leftStreamGreater, tuple, valuesRight);
             this.outputCollector.emit(rightStreamSmaller, tuple, valuesLeft);
             this.outputCollector.ack(tuple);
@@ -61,10 +64,10 @@ public class SplitBolt extends BaseRichBolt {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer outputFieldsDeclarer) {
-        outputFieldsDeclarer.declareStream(leftStreamGreater, new Fields(Constants.TUPLE, Constants.TUPLE_ID, "StreamID",
-                Constants.KAFKA_SPOUT_TIME,Constants.SPLIT_BOLT,Constants.TASK_ID_FOR_SPLIT_BOLT,Constants.HOST_NAME_FOR_SPLIT_BOLT));
+        outputFieldsDeclarer.declareStream(leftStreamGreater, new Fields(Constants.TUPLE, Constants.TUPLE_ID, "StreamID",Constants.KAFKA_TIME,
+                Constants.KAFKA_SPOUT_TIME,Constants.SPLIT_BOLT_TIME,Constants.TASK_ID_FOR_SPLIT_BOLT,Constants.HOST_NAME_FOR_SPLIT_BOLT));
         outputFieldsDeclarer.declareStream(rightStreamSmaller, new Fields(Constants.TUPLE, Constants.TUPLE_ID, "StreamID",
-                Constants.KAFKA_SPOUT_TIME,Constants.SPLIT_BOLT,Constants.TASK_ID_FOR_SPLIT_BOLT,Constants.HOST_NAME_FOR_SPLIT_BOLT));
+               Constants.KAFKA_TIME, Constants.KAFKA_SPOUT_TIME,Constants.SPLIT_BOLT_TIME,Constants.TASK_ID_FOR_SPLIT_BOLT,Constants.HOST_NAME_FOR_SPLIT_BOLT));
 
 
     }

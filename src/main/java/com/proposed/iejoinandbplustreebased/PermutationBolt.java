@@ -153,7 +153,7 @@ public class PermutationBolt extends BaseRichBolt {
             for (int ids : permutationsArrayRight.get(i).getListOfIDs()) {
                 //Emit these tuples at once
                 try {
-                    outputCollector.emitDirect(downStreamTaskIDs, streamID, tuple, new Values(holdingList[ids], permutationsArrayRight.get(i).getIndex(), false));
+                    outputCollector.emitDirect(downStreamTaskIDs, streamID, tuple, new Values(holdingList[ids], permutationsArrayRight.get(i).getTuple(), false));
                     outputCollector.ack(tuple);
                 }
                 catch (ArrayIndexOutOfBoundsException e){

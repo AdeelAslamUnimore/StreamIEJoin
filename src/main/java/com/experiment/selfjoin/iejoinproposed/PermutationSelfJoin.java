@@ -34,4 +34,13 @@ public class PermutationSelfJoin {
     public void setRightStreamValue(int rightStreamValue) {
         this.rightStreamValue = rightStreamValue;
     }
+
+    @Override
+    public String toString() {
+        return "PermutationSelfJoin{" +
+                "index=" + index +
+                ", leftStreamValue=" + leftStreamValue +
+                ", rightStreamValue=" + rightStreamValue +
+                '}';
+    }
 }

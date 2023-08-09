@@ -14,7 +14,6 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.net.InetAddress;
 import java.util.*;
-import java.util.zip.GZIPInputStream;
 
 public class JoinBoltForIEJoin extends BaseRichBolt {
     Node LeftStreamNodeL1=null;
@@ -242,13 +241,13 @@ public class JoinBoltForIEJoin extends BaseRichBolt {
          //   System.out.println(offsetArrayL2.get(i).getIndex()+".."+permutationArrayL1.size());
             for (int j = index; j <= off2; j++) {
                // System.out.println(permutationArrayL2[j].getIndex());
-                bitSet.set(permutationArrayL2.get(j-1).getIndex(), true);
+                bitSet.set(permutationArrayL2.get(j-1).getTuple(), true);
             }
             index = off2;
             try {
             // System.out.println(permutationArrayL1.length + "The Length is " + offsetArrayL1.size());
-            if((permutationArrayL1.get(i).getIndex() + 1)<offsetArrayL1.size())
-                for (int j = offsetArrayL1.get(permutationArrayL1.get(i).getIndex() + 1).getIndex(); j < permutationArrayL2.size(); j++) {
+            if((permutationArrayL1.get(i).getTuple() + 1)<offsetArrayL1.size())
+                for (int j = offsetArrayL1.get(permutationArrayL1.get(i).getTuple() + 1).getIndex(); j < permutationArrayL2.size(); j++) {
 //            System.out.println(bitSet);
                     if (bitSet.get(j)) {
                         //System.out.println("..."+offsetArrayL1[permutationArrayEast[i]]);
@@ -337,10 +336,10 @@ public class JoinBoltForIEJoin extends BaseRichBolt {
        // int result=
         while (left <= right) {
             int mid = (left + right) / 2;
-            if (permutation.get(mid).getValue() == key) {
+            if (permutation.get(mid).getId() == key) {
                 // Found the element
                 return mid;
-            } else if (permutation.get(mid).getValue() < key) {
+            } else if (permutation.get(mid).getId() < key) {
                 // Search in the right half of the list
                 left = mid + 1;
 //                if(permutation[mid].getValue()==(permutation.length-1)){

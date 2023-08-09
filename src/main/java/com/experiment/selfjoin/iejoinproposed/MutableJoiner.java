@@ -1,4 +1,4 @@
-package com.proposed.iejoinandbplustreebased;
+package com.experiment.selfjoin.iejoinproposed;
 
 import com.configurationsandconstants.iejoinandbaseworks.Configuration;
 import com.configurationsandconstants.iejoinandbaseworks.Constants;
@@ -15,9 +15,10 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.net.InetAddress;
 import java.util.BitSet;
+import java.util.HashMap;
 import java.util.Map;
 
-public class JoinerBoltForBitSetOperation extends BaseRichBolt {
+public class MutableJoiner extends BaseRichBolt {
     private BitSet predicate1BitSet = null;
     private BitSet predicate2BitSet = null;
     private String leftPredicateSourceStreamID = null;
@@ -28,8 +29,9 @@ public class JoinerBoltForBitSetOperation extends BaseRichBolt {
     private String hostName;
     private int streamIDLeft;
     private int streamIDRight;
-
-    public JoinerBoltForBitSetOperation() {
+    private HashMap<Integer, BitSet> hashMapBitSet;
+    private int streamID;
+    public MutableJoiner() {
         Map<String, Object> map = Configuration.configurationConstantForStreamIDs();
         this.leftPredicateSourceStreamID = (String) map.get("LeftPredicateSourceStreamIDBitSet");
         this.rightPredicateSourceStreamID = (String) map.get("RightPredicateSourceStreamIDBitSet");
@@ -41,6 +43,7 @@ public class JoinerBoltForBitSetOperation extends BaseRichBolt {
     public void prepare(Map<String, Object> map, TopologyContext topologyContext, OutputCollector outputCollector) {
         this.outputCollector = outputCollector;
         taskID= topologyContext.getThisTaskId();
+        hashMapBitSet= new HashMap<>();
         try{
             hostName= InetAddress.getLocalHost().getHostName();
         }catch (Exception e){
@@ -60,39 +63,62 @@ public class JoinerBoltForBitSetOperation extends BaseRichBolt {
      */
     @Override
     public void execute(Tuple tuple) {
-
-        if (tuple.getSourceStreamId().equals(leftPredicateSourceStreamID)) {
-            streamIDLeft= (Integer) tuple.getValue(1);
-            byte[] byteArrayPredicateLeftBitSet = tuple.getBinaryByField(Constants.BYTE_ARRAY);
-            predicate1BitSet = convertToObject(byteArrayPredicateLeftBitSet);
-            this.outputCollector.emit(leftPredicateSourceStreamID, tuple, new Values(tuple
-                    .getValue(1), tuple.getValue(2),tuple.getValue(3),tuple.getValue(4),tuple.getValue(5),
-                    tuple.getValue(6),tuple.getValue(7),tuple.getValue(8),tuple.getValue(9),tuple.getValue(10)));
-
-        }
-        if (tuple.getSourceStreamId().equals(rightPredicateSourceStreamID)) {
-            streamIDRight= (Integer) tuple.getValue(1);
-            byte[] byteArrayPredicateRightArray = tuple.getBinaryByField(Constants.BYTE_ARRAY);
-            predicate2BitSet = convertToObject(byteArrayPredicateRightArray);
-
-            this.outputCollector.emit(rightPredicateSourceStreamID, tuple, new Values(tuple
-                    .getValue(1), tuple.getValue(2),tuple.getValue(3),tuple.getValue(4),tuple.getValue(5),
-                    tuple.getValue(6),tuple.getValue(7),tuple.getValue(8), tuple.getValue(9),tuple.getValue(10)));
+        streamID=(Integer) tuple.getValue(1);
+        long time=System.currentTimeMillis();
+        byte[] byteArrayForBitSet = tuple.getBinaryByField(Constants.BYTE_ARRAY);
+        predicate1BitSet = convertToObject(byteArrayForBitSet);
+        if(hashMapBitSet.containsKey(streamID)){
+            predicate1BitSet.and(hashMapBitSet.get(streamID));
+            long timeAfterCalculation= System.currentTimeMillis();
+            hashMapBitSet.remove(streamID);
+            this.outputCollector.emit(result, tuple, new Values( time, timeAfterCalculation,streamID,taskID,hostName));
+            this.outputCollector.ack(tuple);
+        }else{
+            hashMapBitSet.put(streamID,predicate1BitSet);
+            //this.outputCollector.emit(result, tuple, new Values( time, 0l,streamID,taskID,hostName));
 
         }
-        if ((predicate1BitSet != null) && (predicate2BitSet != null)) {
-            predicate2BitSet.and(predicate1BitSet);
-            long time= System.currentTimeMillis();
-            this.outputCollector.emit(result, tuple, new Values( time, streamIDLeft,streamIDRight,taskID,hostName));
 
-            predicate1BitSet = null;
-            predicate2BitSet = null;
-        }
+        this.outputCollector.emit(tuple.getSourceStreamId(), tuple, new Values(tuple
+                .getValue(1), tuple.getValue(2),tuple.getValue(3),tuple.getValue(4),tuple.getValue(5),
+                tuple.getValue(6),tuple.getValue(7),tuple.getValue(8), tuple.getValue(9),tuple.getValue(10)));
+        this.outputCollector.ack(tuple);
+
+
+//
+//
+//        if (tuple.getSourceStreamId().equals(leftPredicateSourceStreamID)) {
+//            streamIDLeft= (Integer) tuple.getValue(1);
+//            byte[] byteArrayPredicateLeftBitSet = tuple.getBinaryByField(Constants.BYTE_ARRAY);
+//            predicate1BitSet = convertToObject(byteArrayPredicateLeftBitSet);
+//            this.outputCollector.emit(leftPredicateSourceStreamID, tuple, new Values(tuple
+//                    .getValue(1), tuple.getValue(2),tuple.getValue(3),tuple.getValue(4),tuple.getValue(5),
+//                    tuple.getValue(6),tuple.getValue(7),tuple.getValue(8),tuple.getValue(9),tuple.getValue(10)));
+//
+//        }
+//        if (tuple.getSourceStreamId().equals(rightPredicateSourceStreamID)) {
+//            streamIDRight= (Integer) tuple.getValue(1);
+//            byte[] byteArrayPredicateRightArray = tuple.getBinaryByField(Constants.BYTE_ARRAY);
+//            predicate2BitSet = convertToObject(byteArrayPredicateRightArray);
+//
+//            this.outputCollector.emit(rightPredicateSourceStreamID, tuple, new Values(tuple
+//                    .getValue(1), tuple.getValue(2),tuple.getValue(3),tuple.getValue(4),tuple.getValue(5),
+//                    tuple.getValue(6),tuple.getValue(7),tuple.getValue(8), tuple.getValue(9),tuple.getValue(10)));
+//
+//        }
+//        if ((predicate1BitSet != null) && (predicate2BitSet != null)) {
+//            predicate2BitSet.and(predicate1BitSet);
+//            long time= System.currentTimeMillis();
+//            this.outputCollector.emit(result, tuple, new Values( time, streamIDLeft,streamIDRight,taskID,hostName));
+//
+//            predicate1BitSet = null;
+//            predicate2BitSet = null;
+//        }
     }
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer outputFieldsDeclarer) {
-      Fields greaterFields= new Fields(  Constants.TUPLE_ID, Constants.KAFKA_TIME,
+        Fields greaterFields= new Fields(  Constants.TUPLE_ID, Constants.KAFKA_TIME,
                 Constants.KAFKA_SPOUT_TIME, Constants.SPLIT_BOLT_TIME, Constants.TASK_ID_FOR_SPLIT_BOLT, Constants.HOST_NAME_FOR_SPLIT_BOLT, "TupleArrivalTime",
                 Constants.GREATER_PREDICATE_EVALUATION_TIME_BOLT, Constants.MUTABLE_BOLT_TASK_ID,Constants.MUTABLE_BOLT_MACHINE);
         outputFieldsDeclarer.declareStream(leftPredicateSourceStreamID, greaterFields);
@@ -100,7 +126,7 @@ public class JoinerBoltForBitSetOperation extends BaseRichBolt {
                 Constants.KAFKA_SPOUT_TIME, Constants.SPLIT_BOLT_TIME, Constants.TASK_ID_FOR_SPLIT_BOLT, Constants.HOST_NAME_FOR_SPLIT_BOLT,"TupleArrivalTime",
                 Constants.LESSER_PREDICATE_EVALUATION_TIME_BOLT, Constants.MUTABLE_BOLT_TASK_ID,Constants.MUTABLE_BOLT_MACHINE);
         outputFieldsDeclarer.declareStream(rightPredicateSourceStreamID, lesserFields);
-        outputFieldsDeclarer.declareStream(result, new Fields("Time","streamleft", "streamright","TaskID","HostName"));
+        outputFieldsDeclarer.declareStream(result, new Fields("Time","timeAfterCalculation", "streamright","TaskID","HostName"));
 
 
     }

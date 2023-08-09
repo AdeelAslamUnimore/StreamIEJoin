@@ -42,12 +42,13 @@ public class ResultBoltIEJoinOperation extends BaseRichBolt {
         this.recordMergingTuplesCounter = 0;
         this.mergingTuplesRecordEvaluationCounter = 0;
         try {
+
             bufferedWriterRecordIEJoin = new BufferedWriter(new FileWriter(new File("/home/adeel/Data/Results/bufferedWriterRecordIEJoin.csv")));
             bufferedWriterRecordMergingTuple = new BufferedWriter(new FileWriter(new File("/home/adeel/Data/Results/bufferedWriterRecordMergingTuple.csv")));
             bufferedWriterRecordEvaluationTuple = new BufferedWriter(new FileWriter(new File("/home/adeel/Data/Results/bufferedWriterRecordEvaluationTuple.csv")));
-            bufferedWriterRecordIEJoin.write("KafkaTime,Kafka_SPOUT_TIME, TupleArrivalTime, TupleEvaluationTime, Task, Host \n");
+            bufferedWriterRecordIEJoin.write("ID,KafkaTime,Kafka_SPOUT_TIME, TupleArrivalTime, TupleEvaluationTime, Task, Host \n");
             bufferedWriterRecordIEJoin.flush();
-            bufferedWriterRecordMergingTuple.write("MergeStartTime, MergeEndTime, Task, Host \n");
+            bufferedWriterRecordMergingTuple.write("MergeStartTime, MergeEndTime, MergeComputationStartPermuation, MergeEndTimeWithPermutation, Task, Host \n");
             bufferedWriterRecordMergingTuple.flush();
             bufferedWriterRecordEvaluationTuple.write("EvaluatedTime,Task, Host\n");
             bufferedWriterRecordEvaluationTuple.flush();
@@ -64,44 +65,60 @@ public class ResultBoltIEJoinOperation extends BaseRichBolt {
         if (tuple.getSourceStreamId().equals(recordIEJoinStreamID)) {
             this.recordIEJoinCounter++;
             recordIEJoinStringBuilder.append(tuple.getValue(0) + "," + tuple.getValue(1) + "," + tuple.getValue(2) +
-                    "," + tuple.getValue(3) + "," + tuple.getValue(4) + "," + tuple.getValue(5) +"\n");
+                    "," + tuple.getValue(3) + "," + tuple.getValue(4) + "," + tuple.getValue(5) + "," + tuple.getValue(6)  +"\n");
         }
         if (tuple.getSourceStreamId().equals(mergingTuplesRecord)) {
-            this.recordMergingTuplesCounter++;
-            recordMergingTuplesRecordStringBuilder.append(tuple.getValue(0) + "," + tuple.getValue(1) + "," + tuple.getValue(2) + tuple.getValue(4) + "\n");
 
+            this.recordMergingTuplesCounter++;
+            try {
+                bufferedWriterRecordMergingTuple.write(tuple.getValue(0) + "," + tuple.getValue(1) + "," + tuple.getValue(2) + "," + tuple.getValue(3) + "," + tuple.getValue(4) + "," + tuple.getValue(5)+ "\n");
+                bufferedWriterRecordMergingTuple.flush();
+            }
+            catch (Exception e){
+                e.printStackTrace();
+            }
         }
         if (tuple.getSourceStreamId().equals(mergeRecordEvaluationStreamID)) {
+
             this.mergingTuplesRecordEvaluationCounter++;
-            mergingTuplesRecordEvaluationStringBuilder.append(tuple.getValue(0) + "," + tuple.getValue(1) + "," + tuple.getValue(2) + "\n");
+            try {
+                bufferedWriterRecordEvaluationTuple.write(tuple.getValue(0) + "," + tuple.getValue(1) + "," + tuple.getValue(2) + "\n");
+                bufferedWriterRecordEvaluationTuple.flush();
+            }
+            catch (Exception e){
+                e.printStackTrace();
+            }
         }
-        if (recordIEJoinCounter == 10000) {
+        if (recordIEJoinCounter == 1000) {
             try {
                 bufferedWriterRecordIEJoin.write(recordIEJoinStringBuilder.toString());
                 bufferedWriterRecordIEJoin.flush();
                 recordIEJoinStringBuilder = new StringBuilder();
+                recordIEJoinCounter = 0;
             } catch (Exception e) {
-
+                e.printStackTrace();
             }
         }
-        if (this.recordMergingTuplesCounter == 100) {
-            try {
-                bufferedWriterRecordMergingTuple.write(recordMergingTuplesRecordStringBuilder.toString());
-                bufferedWriterRecordMergingTuple.flush();
-                recordMergingTuplesRecordStringBuilder = new StringBuilder();
-            } catch (Exception e) {
-
-            }
-        }
-        if (mergingTuplesRecordEvaluationCounter == 100) {
-            try {
-                bufferedWriterRecordEvaluationTuple.write(mergingTuplesRecordEvaluationStringBuilder.toString());
-                bufferedWriterRecordEvaluationTuple.flush();
-                mergingTuplesRecordEvaluationStringBuilder = new StringBuilder();
-            } catch (Exception e) {
-
-            }
-        }
+//        if (this.recordMergingTuplesCounter == 2) {
+//            try {
+//                bufferedWriterRecordMergingTuple.write(recordMergingTuplesRecordStringBuilder.toString());
+//                bufferedWriterRecordMergingTuple.flush();
+//                recordMergingTuplesRecordStringBuilder = new StringBuilder();
+//                recordMergingTuplesCounter=0;
+//            } catch (Exception e) {
+//
+//            }
+//        }
+//        if (mergingTuplesRecordEvaluationCounter == 2) {
+//            try {
+//                bufferedWriterRecordEvaluationTuple.write(mergingTuplesRecordEvaluationStringBuilder.toString());
+//                bufferedWriterRecordEvaluationTuple.flush();
+//                mergingTuplesRecordEvaluationStringBuilder = new StringBuilder();
+//                mergingTuplesRecordEvaluationCounter=0;
+//            } catch (Exception e) {
+//
+//            }
+       // }
     }
 
     @Override

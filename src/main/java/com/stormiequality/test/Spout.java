@@ -35,22 +35,25 @@ public class Spout extends BaseRichSpout {
         int duration=random.nextInt(1500-9)+9;
         int time=random.nextInt(1500-9)+9;
 
-        Values left = new Values(duration,revenue,id,"Left"+counter);
-        Values right= new Values(time, cost, id,"Right"+counter);
+        Values left = new Values(duration,revenue,id,System.currentTimeMillis(), System.currentTimeMillis());
+      //  Values right= new Values(time, cost, id,"Right"+counter);
         id++;
-        if(id==count) {
-            id = 1;
-        }
-        Utils.sleep(10);
-        this.spoutOutputCollector.emit("LeftStreamTuples",left);
-        this.spoutOutputCollector.emit("RightStream",right);
+//        if(count==100) {
+//           //id = 1;
+//            count=1;
+          Utils.sleep(2);
+//        }
+ // Utils.sleep(2);
+        this.spoutOutputCollector.emit("StreamR",left);
+        // ordinary comment
+         // this.spoutOutputCollector.emit("RightStream",right);
 
 
     }
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer outputFieldsDeclarer) {
-        outputFieldsDeclarer.declareStream("LeftStreamTuples", new Fields("Duration","Revenue","ID", "TupleID"));
+        outputFieldsDeclarer.declareStream("StreamR", new Fields("distance","amount","ID", "kafkaTime","Time"));
         outputFieldsDeclarer.declareStream("RightStream", new Fields("Time", "Cost","ID","TupleID"));
 
     }

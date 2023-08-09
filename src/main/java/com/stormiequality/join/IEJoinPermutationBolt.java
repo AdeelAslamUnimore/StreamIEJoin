@@ -1,7 +1,5 @@
 package com.stormiequality.join;
 
-import com.stormiequality.BTree.Key;
-import com.stormiequality.BTree.Node;
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.OutputFieldsDeclarer;
@@ -10,10 +8,7 @@ import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
 import org.apache.storm.tuple.Values;
 
-import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.FileWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -124,7 +119,7 @@ public class IEJoinPermutationBolt extends BaseRichBolt {
         for(int i=0;i<permutationsArrayRight.size();i++){
             for(int ids: permutationsArrayRight.get(i).getListOfIDs()){
                 //Emit these tuples at once
-               collector.emitDirect(taskID,streamID,tuple, new Values(holdingList[ids],permutationsArrayRight.get(i).getIndex(),false,System.currentTimeMillis()));
+               collector.emitDirect(taskID,streamID,tuple, new Values(holdingList[ids],permutationsArrayRight.get(i).getTuple(),false,System.currentTimeMillis()));
              //  permutationArray.add(new Permutation(holdingList[ids],permutationsArrayRight.get(i).getIndex()));
             }
         }

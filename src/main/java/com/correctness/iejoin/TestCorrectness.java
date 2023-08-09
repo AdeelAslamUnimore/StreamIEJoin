@@ -1,6 +1,5 @@
 package com.correctness.iejoin;
 
-import com.baselinealgorithm.chainbplusandcss.CSSTree;
 import com.stormiequality.BTree.BPlusTree;
 import com.stormiequality.BTree.Key;
 import com.stormiequality.BTree.Node;
@@ -13,13 +12,8 @@ import com.testcomparatorclasses.ieJoin.Time;
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.tuple.Tuple;
 
-import java.io.IOException;
 import java.sql.*;
 import java.util.*;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicReference;
 
 public class TestCorrectness {
     static BPlusTree durationBPlusTree = null;
@@ -272,7 +266,7 @@ public class TestCorrectness {
             for (int ids : permutationsArrayRight.get(i).getListOfIDs()) {
                 //Emit these tuples at once
 //                System.out.println(holdingList[ids]);
-                arrayAListPermutation.add(new Permutation(holdingList[ids], permutationsArrayRight.get(i).getValue(), ids));
+                arrayAListPermutation.add(new Permutation(holdingList[ids], permutationsArrayRight.get(i).getId(), ids));
                 // System.out.println(holdingList[ids]+"....."+permutationsArrayRight.get(i).getIndex());
                 //collector.emitDirect(taskID,streamID,tuple, new Values(holdingList[ids],permutationsArrayRight.get(i).getIndex(),false,System.currentTimeMillis()));
                 //  permutationArray.add(new Permutation(holdingList[ids],permutationsArrayRight.get(i).getIndex()));
@@ -373,14 +367,14 @@ public class TestCorrectness {
             //   System.out.println(offsetArrayL2.get(i).getIndex()+".."+permutationArrayL1.size());
             for (int j = index; j <= off2; j++) {
                 // System.out.println(permutationArrayL2[j].getIndex());
-                bitSet.set(permutationArrayL2.get(j - 1).getIndex(), true);
+                bitSet.set(permutationArrayL2.get(j - 1).getTuple(), true);
             }
             // System.out.println(bitSet);
             index = off2;
             try {
                 // System.out.println(permutationArrayL1.length + "The Length is " + offsetArrayL1.size());
-                if ((permutationArrayL1.get(i).getIndex() + 1) < offsetArrayL1.size())
-                    for (int j = offsetArrayL1.get(permutationArrayL1.get(i).getIndex() + 1).getIndex(); j < permutationArrayL2.size(); j++) {
+                if ((permutationArrayL1.get(i).getTuple() + 1) < offsetArrayL1.size())
+                    for (int j = offsetArrayL1.get(permutationArrayL1.get(i).getTuple() + 1).getIndex(); j < permutationArrayL2.size(); j++) {
 //            System.out.println(bitSet);
                         if (bitSet.get(j)) {
                             //System.out.println("..."+offsetArrayL1[permutationArrayEast[i]]);
@@ -414,13 +408,13 @@ public class TestCorrectness {
                 for (int j = 0; j <= offset; j++) {
 
                     try {
-                        bitSet.set(permutationArrayL2.get(j).getIndex() - 1, true);
+                        bitSet.set(permutationArrayL2.get(j).getTuple() - 1, true);
 
                     } catch (IndexOutOfBoundsException e) {
                         System.out.println(permutationArrayL2.size() + "..." + offset);
                     }
                 }
-                int permutationArray = permutationArrayL1.get(i).getIndex() - 1;
+                int permutationArray = permutationArrayL1.get(i).getTuple() - 1;
                 Offset offset1 = offsetArrayL1.get(permutationArray);
                 int off = offset1.getIndex() - 1;
 
