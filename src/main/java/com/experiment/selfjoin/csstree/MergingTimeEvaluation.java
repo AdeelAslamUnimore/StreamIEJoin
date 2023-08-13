@@ -1,4 +1,4 @@
-package com.baselinealgorithm.chainbplusandcss;
+package com.experiment.selfjoin.csstree;
 
 import com.configurationsandconstants.iejoinandbaseworks.Configuration;
 import com.configurationsandconstants.iejoinandbaseworks.Constants;
@@ -17,20 +17,21 @@ import java.net.InetAddress;
 import java.util.HashSet;
 import java.util.Map;
 
-public class JoinerCSSTreeBolt extends BaseRichBolt {
+public class MergingTimeEvaluation extends BaseRichBolt {
     private HashSet<Integer> leftHashSet;
     private HashSet<Integer> rightHashSet;
     private String leftStreamID;
     private String rightStreamID;
     private OutputCollector outputCollector;
-    private String result;
     private int taskID;
     private String hostName;
-    public JoinerCSSTreeBolt(String leftStreamID, String rightStreamID){
+    private String leftStreamRecord;
+    private String rightStreamRecord;
+    public MergingTimeEvaluation(String leftStreamID, String rightStreamID){
         Map<String, Object> map = Configuration.configurationConstantForStreamIDs();
         this.leftStreamID=leftStreamID;
         this.rightStreamID=rightStreamID;
-        this.result= (String) map.get("Results");
+
     }
 
     @Override
@@ -46,40 +47,34 @@ public class JoinerCSSTreeBolt extends BaseRichBolt {
 
     @Override
     public void execute(Tuple tuple) {
-        int streamID=(Integer) tuple.getValue(1);
-        long time=System.currentTimeMillis();
+
         if(tuple.getSourceStreamId().equals(leftStreamID)) {
-            leftHashSet = convertByteArrayToHashSet(tuple.getBinaryByField(Constants.LEFT_HASH_SET));
+
+         //   leftHashSet = convertByteArrayToHashSet(tuple.getBinaryByField(Constants.LEFT_HASH_SET));
+            leftStreamRecord=tuple.getValue(0)+","+tuple.getValue(1)+","+tuple.getValue(2)+","+tuple.getValue(3);
         }
         if(tuple.getSourceStreamId().equals(rightStreamID)){
-            rightHashSet=convertByteArrayToHashSet(tuple.getBinaryByField(Constants.RIGHT_HASH_SET));
+          //  rightHashSet=convertByteArrayToHashSet(tuple.getBinaryByField(Constants.RIGHT_HASH_SET));
+            rightStreamRecord=tuple.getValue(0)+","+tuple.getValue(1)+","+tuple.getValue(2)+","+tuple.getValue(3);
+
         }
-        if(leftHashSet!=null&&rightHashSet!=null){
-            leftHashSet.retainAll(rightHashSet);
+        if(leftStreamRecord!=null&&rightStreamRecord!=null){
+           // leftHashSet.retainAll(rightHashSet);
             long timeAfterCalculation= System.currentTimeMillis();
-            leftHashSet=null;
-            rightHashSet=null;
-            this.outputCollector.emit(result, tuple, new Values( time, timeAfterCalculation,streamID,taskID,hostName));
+
+            this.outputCollector.emit("MergingTime", tuple, new Values(leftStreamRecord, rightStreamRecord));
             this.outputCollector.ack(tuple);
+            leftStreamRecord=null;
+            rightStreamRecord=null;
         }
-        this.outputCollector.emit(tuple.getSourceStreamId(), tuple, new Values(tuple
-                .getValue(1), tuple.getValue(2),tuple.getValue(3),tuple.getValue(4),tuple.getValue(5),
-                tuple.getValue(6),tuple.getValue(7),tuple.getValue(8), tuple.getValue(9),tuple.getValue(10)));
-        this.outputCollector.ack(tuple);
+
 
     }
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer outputFieldsDeclarer) {
-        Fields greaterFields= new Fields(  Constants.TUPLE_ID, Constants.KAFKA_TIME,
-                Constants.KAFKA_SPOUT_TIME, Constants.SPLIT_BOLT_TIME, Constants.TASK_ID_FOR_SPLIT_BOLT, Constants.HOST_NAME_FOR_SPLIT_BOLT, "TupleArrivalTime",
-                Constants.GREATER_PREDICATE_EVALUATION_TIME_BOLT, Constants.MUTABLE_BOLT_TASK_ID,Constants.MUTABLE_BOLT_MACHINE);
-        outputFieldsDeclarer.declareStream(leftStreamID, greaterFields);
-        Fields lesserFields= new Fields(  Constants.TUPLE_ID,Constants.KAFKA_TIME,
-                Constants.KAFKA_SPOUT_TIME, Constants.SPLIT_BOLT_TIME, Constants.TASK_ID_FOR_SPLIT_BOLT, Constants.HOST_NAME_FOR_SPLIT_BOLT,"TupleArrivalTime",
-                Constants.LESSER_PREDICATE_EVALUATION_TIME_BOLT, Constants.MUTABLE_BOLT_TASK_ID,Constants.MUTABLE_BOLT_MACHINE);
-        outputFieldsDeclarer.declareStream(rightStreamID, lesserFields);
-        outputFieldsDeclarer.declareStream(result, new Fields("Time","timeAfterCalculation", "streamright","TaskID","HostName"));
+
+        outputFieldsDeclarer.declareStream("MergingTime", new Fields("LeftStreamRecord","RightStreamRecord"));
 
 
     }

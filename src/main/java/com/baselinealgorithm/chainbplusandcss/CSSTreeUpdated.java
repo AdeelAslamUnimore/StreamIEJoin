@@ -476,7 +476,6 @@ public class CSSTreeUpdated {
         HashSet<Integer> hashSetForAllIdsGreaterThanAKey = new HashSet<>();
 
         Node node = leafNodeSearch(this.rootBlock, key);
-        System.out.println(node + "=======" + key);
         for (Key keys : node.getKeys()) {
             if (keys.getKey() > key) {
                 hashSetForAllIdsGreaterThanAKey.addAll(keys.getValue());

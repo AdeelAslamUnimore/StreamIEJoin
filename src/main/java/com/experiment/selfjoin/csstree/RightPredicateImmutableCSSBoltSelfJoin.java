@@ -15,6 +15,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
+import java.net.InetAddress;
 import java.util.*;
 
 public class RightPredicateImmutableCSSBoltSelfJoin extends BaseRichBolt {
@@ -34,6 +35,9 @@ public class RightPredicateImmutableCSSBoltSelfJoin extends BaseRichBolt {
 
     private boolean rightBooleanTupleRemovalCounter = false;
     private OutputCollector outputCollector;
+    private long rightMergeStartTime;
+    private int taskID;
+    private String hostName;
 
     public RightPredicateImmutableCSSBoltSelfJoin() {
         Map<String, Object> map = Configuration.configurationConstantForStreamIDs();
@@ -50,18 +54,27 @@ public class RightPredicateImmutableCSSBoltSelfJoin extends BaseRichBolt {
 
         this.rightStreamGreaterQueueMerge = new LinkedList<>();
         this.outputCollector = outputCollector;
+        taskID= topologyContext.getThisTaskId();
+        try {
+            hostName= InetAddress.getLocalHost().getHostName();
+        }catch (Exception e){
+            e.printStackTrace();
+        }
 
     }
 
     @Override
     public void execute(Tuple tuple) {
-        if (tuple.getSourceStreamId().equals("LeftStreamTuples")) {
+        if (tuple.getSourceStreamId().equals("StreamR")) {
             if (rightStreamMergeGreater) {
+
                 rightStreamGreaterQueueMerge.offer(tuple);
             }
-            HashSet<Integer> leftHashSet = probingResultsGreater(tuple, rightStreamLinkedListCSSTree);
+            long rightProbingStart=System.currentTimeMillis();
+            HashSet<Integer> leftHashSet = probingResultsSmaller(tuple, rightStreamLinkedListCSSTree);
+            long probingEnd=System.currentTimeMillis();
             if (leftHashSet != null) {
-                outputCollector.emit("RightPredicate", tuple, new Values(convertHashSetToByteArray(leftHashSet), tuple.getIntegerByField("ID")));
+                outputCollector.emit("RightPredicate", tuple, new Values(convertHashSetToByteArray(leftHashSet), tuple.getIntegerByField("ID"),rightProbingStart,probingEnd,taskID,hostName));
                 outputCollector.ack(tuple);
 
             }
@@ -70,11 +83,14 @@ public class RightPredicateImmutableCSSBoltSelfJoin extends BaseRichBolt {
 
         if (tuple.getSourceStreamId().equals(rightStreamGreater)) {
             rightInsertionTupleGreater(tuple);
+            outputCollector.emit("RightMergingTuplesCSSCreation", tuple, new Values(rightMergeStartTime,System.currentTimeMillis(),taskID, hostName));
+            outputCollector.ack(tuple);
         }
 
         if (tuple.getSourceStreamId().equals("RightCheckForMerge")) {
-
+           // System.out.println("Right==="+tuple);
             rightStreamMergeGreater = true;
+            rightMergeStartTime =System.currentTimeMillis();
         }
 
 
@@ -84,23 +100,10 @@ public class RightPredicateImmutableCSSBoltSelfJoin extends BaseRichBolt {
     @Override
     public void declareOutputFields(OutputFieldsDeclarer outputFieldsDeclarer) {
 
-        outputFieldsDeclarer.declareStream("RightPredicate", new Fields(Constants.RIGHT_HASH_SET, Constants.TUPLE_ID));
-        outputFieldsDeclarer.declareStream("RightMergeBitSet", new Fields(Constants.RIGHT_HASH_SET, Constants.TUPLE_ID));
+        outputFieldsDeclarer.declareStream("RightPredicate", new Fields(Constants.RIGHT_HASH_SET, Constants.TUPLE_ID,"StartProbing","EndProbing","taskID","hostName"));
+        outputFieldsDeclarer.declareStream("RightMergeHashSet", new Fields(Constants.HASH_SET, Constants.TUPLE_ID, "MergeEvaluationStartTime", "MergeEvaluatingTime","taskID","host"));
+        outputFieldsDeclarer.declareStream("RightMergingTuplesCSSCreation", new Fields("leftMergeStartTime","LeftMergeEnd","taskID", "hostName"));
 
-    }
-
-    public HashSet<Integer> probingResultsGreater(Tuple tuple, LinkedList<CSSTree> linkedListCSSTree) {
-        HashSet<Integer> hashSet = new HashSet<>();
-        if (!linkedListCSSTree.isEmpty()) {
-            tupleRemovalCount++;
-            for (CSSTree cssTree : linkedListCSSTree) {
-                hashSet.addAll(cssTree.searchSmaller(tuple.getIntegerByField("Revenue")));
-
-            }
-            return hashSet;
-
-        }
-        return null;
     }
 
     public HashSet<Integer> probingResultsSmaller(Tuple tuple, LinkedList<CSSTree> linkedListCSSTree) {
@@ -108,7 +111,7 @@ public class RightPredicateImmutableCSSBoltSelfJoin extends BaseRichBolt {
         if (!linkedListCSSTree.isEmpty()) {
             tupleRemovalCount++;
             for (CSSTree cssTree : linkedListCSSTree) {
-                hashSet.addAll(cssTree.searchSmaller(tuple.getIntegerByField("Revenue")));
+                hashSet.addAll(cssTree.searchSmaller(tuple.getIntegerByField("amount")));
 
             }
             return hashSet;
@@ -116,6 +119,20 @@ public class RightPredicateImmutableCSSBoltSelfJoin extends BaseRichBolt {
         }
         return null;
     }
+
+//    public HashSet<Integer> probingResultsSmaller(Tuple tuple, LinkedList<CSSTree> linkedListCSSTree) {
+//        HashSet<Integer> hashSet = new HashSet<>();
+//        if (!linkedListCSSTree.isEmpty()) {
+//            tupleRemovalCount++;
+//            for (CSSTree cssTree : linkedListCSSTree) {
+//                hashSet.addAll(cssTree.searchSmaller(tuple.getIntegerByField("amount")));
+//
+//            }
+//            return hashSet;
+//
+//        }
+//        return null;
+//    }
 
 
 
@@ -125,10 +142,11 @@ public class RightPredicateImmutableCSSBoltSelfJoin extends BaseRichBolt {
             rightStreamLinkedListCSSTree.add(rightStreamCSSTree);
             if (rightStreamMergeGreater) {
                 int i = 0;
+                long mergeTupleEvaluationStartTime= System.currentTimeMillis();
                 for (Tuple tuples : rightStreamGreaterQueueMerge) {
                     i = i + 1;
-                    HashSet hashSet = rightStreamCSSTree.searchGreater(tuples.getIntegerByField("Revenue"));
-                    outputCollector.emit("RightMergeBitSet", new Values(convertHashSetToByteArray(hashSet), i));
+                    HashSet hashSet = rightStreamCSSTree.searchGreater(tuples.getIntegerByField("amount"));
+                    outputCollector.emit("RightMergeHashSet", new Values(convertHashSetToByteArray(hashSet), i,mergeTupleEvaluationStartTime, System.currentTimeMillis(),taskID,hostName));
                 }
                 rightStreamGreaterQueueMerge = new LinkedList<>();
                 rightStreamMergeGreater = false;
@@ -137,6 +155,7 @@ public class RightPredicateImmutableCSSBoltSelfJoin extends BaseRichBolt {
             tupleRemovalCount = tupleRemovalCount + Constants.MUTABLE_WINDOW_SIZE;
             if (tupleRemovalCount >= Constants.IMMUTABLE_CSS_PART_REMOVAL) {
                 this.rightBooleanTupleRemovalCounter = true;
+                rightStreamLinkedListCSSTree.remove(rightStreamLinkedListCSSTree.getFirst());
             }
         } else {
 

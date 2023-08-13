@@ -15,6 +15,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
+import java.net.InetAddress;
 import java.util.*;
 
 public class LeftPredicateImmutableCSSBoltSelfJoin extends BaseRichBolt {
@@ -22,13 +23,13 @@ public class LeftPredicateImmutableCSSBoltSelfJoin extends BaseRichBolt {
     private LinkedList<CSSTreeUpdated> leftStreamLinkedListCSSTree = null;
 
     // The two stream ids from upstream processing elements
-    private String leftStreamSmaller;
+    private String leftStreamGreater;
 
     // Signature for CSS tree that used as an object
     private CSSTreeUpdated leftStreamCSSTree = null;
 
     // Two boolean that are used as a flag for merge operation one for R other for S
-    private boolean leftStreamMergeSmaller = false;
+    private boolean leftStreamMergeGreater = false;
 
     // Two queues that maintian two stream of tuples during merge and evaluate the tuples of CSS tree that is newly added to the linked list during merge
     private Queue<Tuple> leftStreamSmallerQueueMerge = null;
@@ -40,11 +41,15 @@ public class LeftPredicateImmutableCSSBoltSelfJoin extends BaseRichBolt {
     private static int tupleRemovalCount = 0;
     // Output collector
     private OutputCollector outputCollector;
+    //
+    private long leftMergeStartTime;
+    private int taskID;
+    private String hostName;
 
     public LeftPredicateImmutableCSSBoltSelfJoin() {
         // These are the initialization of upstream streamIDS
         Map<String, Object> map = Configuration.configurationConstantForStreamIDs();
-        this.leftStreamSmaller = (String) map.get("LeftGreaterPredicateTuple");
+        this.leftStreamGreater = (String) map.get("LeftGreaterPredicateTuple");
 
     }
 
@@ -61,23 +66,31 @@ public class LeftPredicateImmutableCSSBoltSelfJoin extends BaseRichBolt {
 
 
         this.outputCollector = outputCollector;
+        taskID= topologyContext.getThisTaskId();
+        try {
+            hostName= InetAddress.getLocalHost().getHostName();
+        }catch (Exception e){
+            e.printStackTrace();
+        }
 
     }
 
     @Override
     public void execute(Tuple tuple) {
         // Check tuple from left stream R.Duration
-        if (tuple.getSourceStreamId().equals("LeftStreamTuples")) {
+        if (tuple.getSourceStreamId().equals("StreamR")) {
             // IF MERGE FLAG is ON then associated queue must be updated.
-            if (leftStreamMergeSmaller) {
+            if (leftStreamMergeGreater) {
                 this.leftStreamSmallerQueueMerge.offer(tuple);
             }
             // Probing the results
+            long leftProbingStart=System.currentTimeMillis();
             HashSet<Integer> leftHashSet = probingResultsGreater(tuple, leftStreamLinkedListCSSTree);
-           if(leftHashSet!=null) {
+           long probingEnd=System.currentTimeMillis();
+            if(leftHashSet!=null) {
                // Only emit whole hashSet if linked list contains the tuples;
                // emit for hashset evaluation/
-               outputCollector.emit("LeftPredicate", tuple, new Values(convertHashSetToByteArray(leftHashSet), tuple.getIntegerByField("ID")));
+               outputCollector.emit("LeftPredicate", tuple, new Values(convertHashSetToByteArray(leftHashSet), tuple.getIntegerByField("ID"),leftProbingStart,probingEnd,taskID,hostName));
                outputCollector.ack(tuple);
            }
 
@@ -87,12 +100,17 @@ public class LeftPredicateImmutableCSSBoltSelfJoin extends BaseRichBolt {
         // During merge flag that just indicate update for inserting tuples in queue
         if (tuple.getSourceStreamId().equals("LeftCheckForMerge")) {
             //this.leftStreamSmallerQueueMerge.offer(tuple);
-            leftStreamMergeSmaller = true;
+            //System.out.println("Left==="+tuple);
+            leftStreamMergeGreater = true;
+            leftMergeStartTime =System.currentTimeMillis();
         }
 
         // leftStreamSmaller If the Merging TUples arrives from R.Duration
-        if (tuple.getSourceStreamId().equals(leftStreamSmaller)) {
-            leftInsertionTuplesSmaller(tuple);
+        if (tuple.getSourceStreamId().equals(leftStreamGreater)) {
+            leftInsertionTuplesGreater(tuple);
+            outputCollector.emit("LeftMergingTuplesCSSCreation", tuple, new Values(leftMergeStartTime,System.currentTimeMillis(),taskID, hostName));
+            outputCollector.ack(tuple);
+
         }
         //rightStream If merging tuples arrives from S.Time
 
@@ -114,9 +132,9 @@ public class LeftPredicateImmutableCSSBoltSelfJoin extends BaseRichBolt {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer outputFieldsDeclarer) {
-        outputFieldsDeclarer.declareStream("LeftPredicate", new Fields(Constants.LEFT_HASH_SET, Constants.TUPLE_ID));
-        outputFieldsDeclarer.declareStream("LeftMergeBitSet", new Fields(Constants.LEFT_HASH_SET, Constants.TUPLE_ID));
-
+        outputFieldsDeclarer.declareStream("LeftPredicate", new Fields(Constants.LEFT_HASH_SET, Constants.TUPLE_ID,"StartProbingTime","EndProbingTime","taskID","hostName"));
+        outputFieldsDeclarer.declareStream("LeftMergeHashSet", new Fields(Constants.HASH_SET, Constants.TUPLE_ID, "MergeEvaluationStartTime", "MergeEvaluatingTime","taskID","host"));
+        outputFieldsDeclarer.declareStream("LeftMergingTuplesCSSCreation", new Fields("leftMergeStartTime","LeftMergeEnd","taskID", "hostName"));
     }
     // Probing results insert tuple R.Duration search Greater to all for every new tuple.
     public HashSet<Integer> probingResultsSmaller(Tuple tuple, LinkedList<CSSTreeUpdated> linkedListCSSTree) {
@@ -126,7 +144,7 @@ public class LeftPredicateImmutableCSSBoltSelfJoin extends BaseRichBolt {
             tupleRemovalCount++;
             // Probe to all linked list
             for (CSSTreeUpdated cssTree : linkedListCSSTree) {
-                leftHashSet.addAll(cssTree.searchGreater(tuple.getIntegerByField("Duration")));
+                leftHashSet.addAll(cssTree.searchGreater(tuple.getIntegerByField("distance")));
 
             }
             return leftHashSet;
@@ -143,7 +161,7 @@ public class LeftPredicateImmutableCSSBoltSelfJoin extends BaseRichBolt {
             tupleRemovalCount++;
             for (CSSTreeUpdated cssTree : linkedListCSSTree) {
 
-                rightHashSet.addAll(cssTree.searchSmaller(tuple.getIntegerByField("Duration")));
+                rightHashSet.addAll(cssTree.searchSmaller(tuple.getIntegerByField("distance")));
 
             }
             return rightHashSet;
@@ -152,21 +170,23 @@ public class LeftPredicateImmutableCSSBoltSelfJoin extends BaseRichBolt {
         return null;
     }
     // Insertion R.Duration insert into the CSS Tree
-    public void leftInsertionTuplesSmaller(Tuple tuple) {
+    public void leftInsertionTuplesGreater(Tuple tuple) {
         if (tuple.getBooleanByField(Constants.BATCH_CSS_FLAG)) { // If tuples arrive and have flag true;
             leftStreamLinkedListCSSTree.add(leftStreamCSSTree);
                 // Evaluating tuples during merge
-            if (leftStreamMergeSmaller) {
+            if (leftStreamMergeGreater) {
                 int i = 0;
+                long mergeTupleEvaluationStartTime =System.currentTimeMillis();
                 for (Tuple tuples : leftStreamSmallerQueueMerge) {
                     i = i + 1;
-                    HashSet hashSet = leftStreamCSSTree.searchGreater(tuples.getIntegerByField("Duration"));
-                    outputCollector.emit("LeftMergeBitSet", new Values(convertHashSetToByteArray(hashSet), i));
+                    HashSet hashSet = leftStreamCSSTree.searchGreater(tuples.getIntegerByField("distance"));
+                    outputCollector.emit("LeftMergeHashSet", tuple,new Values(convertHashSetToByteArray(hashSet), i,mergeTupleEvaluationStartTime, System.currentTimeMillis(),taskID,hostName));
+                    outputCollector.ack(tuple);
 
                 }
                 // flush the queue that maintain that tuples
                 leftStreamSmallerQueueMerge = new LinkedList<>();
-                leftStreamMergeSmaller = false; // set associated flag to false
+                leftStreamMergeGreater = false; // set associated flag to false
             }
             // create new CSS tree object
             leftStreamCSSTree = new CSSTreeUpdated(Constants.ORDER_OF_CSS_TREE);
@@ -175,7 +195,7 @@ public class LeftPredicateImmutableCSSBoltSelfJoin extends BaseRichBolt {
             // If tuple removal counter approach to limit then its associated boolean is on the structure is removed only when both R.Duration and S.Duration or union of both tuples reaches to the limit
             if (tupleRemovalCount >= Constants.IMMUTABLE_CSS_PART_REMOVAL) {
                 this.leftBooleanTupleRemovalCounter = true;
-                //  leftStreamLinkedListCSSTree.remove(leftStreamLinkedListCSSTree.getLast());
+                 leftStreamLinkedListCSSTree.remove(leftStreamLinkedListCSSTree.getFirst());
             }
         } else {
             // leftStreamCSSTree is used for inserting tuples first all upstream tuples are inserted first into css tree

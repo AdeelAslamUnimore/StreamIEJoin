@@ -20,13 +20,14 @@ public class Constants {
     public static final String LEFT_PREDICATE_BOLT = "left_stream";
     public static final String RIGHT_PREDICATE_BOLT = "right_stream";
     public static final String BIT_SET_EVALUATION_BOLT ="bitset_evaluation";
-    public static final int MUTABLE_WINDOW_SIZE =70000;
-    public static final int IMMUTABLE_WINDOW_SIZE =700000;
+    public static final int MUTABLE_WINDOW_SIZE =100;
+    public static final int IMMUTABLE_WINDOW_SIZE =1000;
 
     //// Constant for benchMarks///
     public static final int ORDER_OF_CSS_TREE = 4;
     public static final String LEFT_HASH_SET="left_hash_set";
     public static final String RIGHT_HASH_SET="right_hash_set";
+    public static final String HASH_SET="hash_set";
     public static final String LEFT_PREDICATE_CSS_TREE_BOLT="leftPredicateCSSTreeBolt";
     public static final String RIGHT_PREDICATE_CSS_TREE_BOLT="rightPredicateCSSTreeBolt";
     public static final String MUTABLE_PART_EVALUATION_BOLT="mutablePartEvaluationBolt";
@@ -63,5 +64,7 @@ public class Constants {
     public static final String MERGING_TIME="merging_time";
     // IEJoinBoltResult
     public static final String IEJOIN_BOLT_RESULT="iejoinresultbolt";
+    // HashSet
+    public static final String HASHSET_RECORD_BOLT="hashSetRecordBolt";
 
 }

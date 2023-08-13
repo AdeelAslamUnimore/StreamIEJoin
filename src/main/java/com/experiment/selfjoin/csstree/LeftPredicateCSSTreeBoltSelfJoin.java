@@ -16,6 +16,7 @@ import org.apache.storm.tuple.Values;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
+import java.net.InetAddress;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -30,6 +31,10 @@ public class LeftPredicateCSSTreeBoltSelfJoin extends BaseRichBolt {
     private String leftStreamGreater;
 
     private String leftPredicateSourceStreamIDHashSet;
+
+    private int taskID;
+    private String hostName;
+    private long tupleArrivalTime;
 
     public LeftPredicateCSSTreeBoltSelfJoin() {
         // Map that defines the constants StreamID For Every bolt
@@ -47,24 +52,32 @@ public class LeftPredicateCSSTreeBoltSelfJoin extends BaseRichBolt {
         // For Mutable part initialization
 
         this.leftStreamBPlusTree = new BPlusTree(orderOfTreeBothBPlusTreeAndCSSTree);
-
-        // Output collector
         this.outputCollector = outputCollector;
+        try{
+            this.taskID=topologyContext.getThisTaskId();
+            this.hostName= InetAddress.getLocalHost().getHostName();
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+        // Output collector
+
     }
 
     @Override
     public void execute(Tuple tuple) {
-        counter++; // Counter for mutable to immutable merge
+        this.tupleArrivalTime=System.currentTimeMillis();
+        // Counter for mutable to immutable merge
         if (tuple.getSourceStreamId().equals(leftStreamGreater)) {
             // Stream from left StreamID; per
-            leftStreamSmallerPredicateEvaluation(tuple, outputCollector);
+            counter++;
+            leftStreamPredicateEvaluation(tuple, outputCollector);
         }
 
         if (counter >= Constants.MUTABLE_WINDOW_SIZE) {
             // When merging counter reached:
             // Just 2 flags to downstream to holds data for compeletion of tuples;
             // One flag for left and other for right
-            this.outputCollector.emit("LeftCheckForMerge", new Values(true));
+            this.outputCollector.emit("LeftCheckForMerge", new Values(true, System.currentTimeMillis()));
 
             // start merging: Node from left
             Node nodeForLeft = leftStreamBPlusTree.leftMostNode();
@@ -86,11 +99,12 @@ public class LeftPredicateCSSTreeBoltSelfJoin extends BaseRichBolt {
     @Override
     public void declareOutputFields(OutputFieldsDeclarer outputFieldsDeclarer) {
         // Declaring for hashset evaluation
-        outputFieldsDeclarer.declareStream(this.leftPredicateSourceStreamIDHashSet, new Fields(Constants.LEFT_HASH_SET, Constants.TUPLE_ID));
+        outputFieldsDeclarer.declareStream(this.leftPredicateSourceStreamIDHashSet, new Fields(Constants.LEFT_HASH_SET, Constants.TUPLE_ID, Constants.KAFKA_TIME, Constants.KAFKA_SPOUT_TIME,Constants.SPLIT_BOLT_TIME,Constants.TASK_ID_FOR_SPLIT_BOLT,Constants.HOST_NAME_FOR_SPLIT_BOLT, "TupleArrivalTime",
+                Constants.GREATER_PREDICATE_EVALUATION_TIME_BOLT, Constants.MUTABLE_BOLT_TASK_ID, Constants.MUTABLE_BOLT_MACHINE));
         // Two stream same as upstream as downstream for merging
         outputFieldsDeclarer.declareStream(this.leftStreamGreater, new Fields(Constants.BATCH_CSS_TREE_KEY, Constants.BATCH_CSS_TREE_VALUES, Constants.BATCH_CSS_FLAG));
           // Flags holding tmp data during merge
-        outputFieldsDeclarer.declareStream("LeftCheckForMerge", new Fields("mergeFlag"));
+        outputFieldsDeclarer.declareStream("LeftCheckForMerge", new Fields("mergeFlag","Time"));
 
 
     }
@@ -98,13 +112,15 @@ public class LeftPredicateCSSTreeBoltSelfJoin extends BaseRichBolt {
 
     // Right Stream evaluation R<S
     // Here in R<S means from all greater and vice versa for other
-    private void leftStreamSmallerPredicateEvaluation(Tuple tuple, OutputCollector outputCollector) {
+    private void leftStreamPredicateEvaluation(Tuple tuple, OutputCollector outputCollector) {
         // Tuple from S stream evaluates
         leftStreamBPlusTree.insert(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.TUPLE_ID));
         HashSet<Integer> hashSetIds = leftStreamBPlusTree.smallerThenSpecificValueHashSet(tuple.getIntegerByField(Constants.TUPLE));
         //Results form BPlus Tree
         if (hashSetIds != null) {
-            outputCollector.emit(this.leftPredicateSourceStreamIDHashSet, tuple, new Values(convertHashSetToByteArray(hashSetIds), tuple.getIntegerByField(Constants.TUPLE_ID)));
+            outputCollector.emit(this.leftPredicateSourceStreamIDHashSet, tuple, new Values(convertHashSetToByteArray(hashSetIds), tuple.getIntegerByField(Constants.TUPLE_ID),
+                    tuple.getLongByField(Constants.KAFKA_TIME),tuple.getLongByField(Constants.KAFKA_SPOUT_TIME),tuple.getLongByField(Constants.SPLIT_BOLT_TIME),
+                    tuple.getIntegerByField(Constants.TASK_ID_FOR_SPLIT_BOLT),tuple.getStringByField(Constants.HOST_NAME_FOR_SPLIT_BOLT), tupleArrivalTime,System.currentTimeMillis(),taskID, hostName));
             outputCollector.ack(tuple);
         }
     }

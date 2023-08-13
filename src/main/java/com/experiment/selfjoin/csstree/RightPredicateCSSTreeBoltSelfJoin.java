@@ -16,6 +16,7 @@ import org.apache.storm.tuple.Values;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
+import java.net.InetAddress;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -27,6 +28,10 @@ public class RightPredicateCSSTreeBoltSelfJoin extends BaseRichBolt {
     private OutputCollector outputCollector;
     private String rightStreamSmaller;
     private String rightStreamHashSetEmitterStreamID;
+
+    private int taskID;
+    private String hostName;
+    private long tupleArrivalTime;
 
     public RightPredicateCSSTreeBoltSelfJoin() {
         this.orderOfTreeBothBPlusTreeAndCSSTree = Constants.ORDER_OF_CSS_TREE;
@@ -40,17 +45,23 @@ public class RightPredicateCSSTreeBoltSelfJoin extends BaseRichBolt {
 
         this.rightStreamBPlusTree = new BPlusTree(orderOfTreeBothBPlusTreeAndCSSTree);
         this.outputCollector = outputCollector;
+        try{
+            this.taskID=topologyContext.getThisTaskId();
+            this.hostName= InetAddress.getLocalHost().getHostName();
+        }catch (Exception e){
+            e.printStackTrace();
+        }
     }
 
     @Override
     public void execute(Tuple tuple) {
-        counter++;
-
+        this.tupleArrivalTime=System.currentTimeMillis();
         if (tuple.getSourceStreamId().equals(rightStreamSmaller)) {
+            counter++;
             rightPredicateEvaluation(tuple, outputCollector);
         }
         if (counter >= Constants.MUTABLE_WINDOW_SIZE) {
-            this.outputCollector.emit("RightCheckForMerge", new Values(true));
+            this.outputCollector.emit("RightCheckForMerge", new Values(true,System.currentTimeMillis()));
 
             Node nodeForRight = rightStreamBPlusTree.leftMostNode();
             dataMergingToCSS(nodeForRight, tuple, this.rightStreamSmaller);
@@ -64,10 +75,11 @@ public class RightPredicateCSSTreeBoltSelfJoin extends BaseRichBolt {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer outputFieldsDeclarer) {
-        outputFieldsDeclarer.declareStream(this.rightStreamHashSetEmitterStreamID, new Fields(Constants.RIGHT_HASH_SET, Constants.TUPLE_ID));
+        outputFieldsDeclarer.declareStream(this.rightStreamHashSetEmitterStreamID, new Fields(Constants.RIGHT_HASH_SET, Constants.TUPLE_ID, Constants.KAFKA_TIME, Constants.KAFKA_SPOUT_TIME,Constants.SPLIT_BOLT_TIME,Constants.TASK_ID_FOR_SPLIT_BOLT,Constants.HOST_NAME_FOR_SPLIT_BOLT, "TupleArrivalTime",
+                Constants.LESSER_PREDICATE_EVALUATION_TIME_BOLT, Constants.MUTABLE_BOLT_TASK_ID, Constants.MUTABLE_BOLT_MACHINE));
         outputFieldsDeclarer.declareStream(this.rightStreamSmaller, new Fields(Constants.BATCH_CSS_TREE_KEY, Constants.BATCH_CSS_TREE_VALUES, Constants.BATCH_CSS_FLAG));
 
-        outputFieldsDeclarer.declareStream("RightCheckForMerge", new Fields("mergeFlag"));
+        outputFieldsDeclarer.declareStream("RightCheckForMerge", new Fields("mergeFlag","Time"));
 
     }
 
@@ -78,7 +90,9 @@ public class RightPredicateCSSTreeBoltSelfJoin extends BaseRichBolt {
         //Results form BPlus Tree searching
         if (hashSetIds != null) {
             // emitting Logic
-            outputCollector.emit(this.rightStreamHashSetEmitterStreamID, tuple, new Values(convertHashSetToByteArray(hashSetIds), tuple.getIntegerByField(Constants.TUPLE_ID)));
+            outputCollector.emit(this.rightStreamHashSetEmitterStreamID, tuple, new Values(convertHashSetToByteArray(hashSetIds), tuple.getIntegerByField(Constants.TUPLE_ID),
+                    tuple.getLongByField(Constants.KAFKA_TIME),tuple.getLongByField(Constants.KAFKA_SPOUT_TIME),tuple.getLongByField(Constants.SPLIT_BOLT_TIME),
+                    tuple.getIntegerByField(Constants.TASK_ID_FOR_SPLIT_BOLT),tuple.getStringByField(Constants.HOST_NAME_FOR_SPLIT_BOLT), tupleArrivalTime,System.currentTimeMillis(),taskID, hostName));
             outputCollector.ack(tuple);
         }
 

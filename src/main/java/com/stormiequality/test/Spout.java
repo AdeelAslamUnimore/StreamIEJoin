@@ -41,7 +41,7 @@ public class Spout extends BaseRichSpout {
 //        if(count==100) {
 //           //id = 1;
 //            count=1;
-          Utils.sleep(2);
+          Utils.sleep(10);
 //        }
  // Utils.sleep(2);
         this.spoutOutputCollector.emit("StreamR",left);
