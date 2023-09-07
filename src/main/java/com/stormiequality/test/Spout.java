@@ -37,13 +37,12 @@ public class Spout extends BaseRichSpout {
 
         Values left = new Values(duration,revenue,id,System.currentTimeMillis(), System.currentTimeMillis());
       //  Values right= new Values(time, cost, id,"Right"+counter);
-        id++;
-//        if(count==100) {
-//           //id = 1;
-//            count=1;
-          Utils.sleep(10);
+   id++;
+//        if(id==1000) {
+//          // count++;
+//          Utils.sleep(100);
 //        }
- // Utils.sleep(2);
+  Utils.sleep(3);
         this.spoutOutputCollector.emit("StreamR",left);
         // ordinary comment
          // this.spoutOutputCollector.emit("RightStream",right);

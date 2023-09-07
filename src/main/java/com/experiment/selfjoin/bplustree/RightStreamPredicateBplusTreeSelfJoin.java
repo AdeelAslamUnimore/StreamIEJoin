@@ -11,9 +11,9 @@ import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
 import org.apache.storm.tuple.Values;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.ObjectOutputStream;
+import java.io.*;
+import java.net.InetAddress;
+import java.util.BitSet;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Map;
@@ -29,6 +29,12 @@ public class RightStreamPredicateBplusTreeSelfJoin extends BaseRichBolt {
     private OutputCollector outputCollector;
     private Map<String, Object> map;
 
+    private int resultCounter;
+    private BufferedWriter bufferedWriter;
+    private StringBuilder stringBuilder;
+    private int taskID;
+    private String hostName;
+
     public RightStreamPredicateBplusTreeSelfJoin() {
         map = Configuration.configurationConstantForStreamIDs();
         treeRemovalThresholdUserDefined = Constants.TUPLE_REMOVAL_THRESHOLD;
@@ -41,17 +47,30 @@ public class RightStreamPredicateBplusTreeSelfJoin extends BaseRichBolt {
 
         rightBPlusTreeLinkedList = new LinkedList<>();
         this.outputCollector = outputCollector;
+        try{
+            this.resultCounter=0;
+            bufferedWriter=new BufferedWriter(new FileWriter(new File("/home/adeel/Data/Results//RightStream.csv")));
+            this.stringBuilder= new StringBuilder();
+            taskID= topologyContext.getThisTaskId();
+            hostName= InetAddress.getLocalHost().getHostName();
+            bufferedWriter.write( Constants.TUPLE_ID+","+Constants.KAFKA_TIME+","+
+                    Constants.KAFKA_SPOUT_TIME+","+Constants.SPLIT_BOLT_TIME+","+Constants.TASK_ID_FOR_SPLIT_BOLT+","+Constants.HOST_NAME_FOR_SPLIT_BOLT+", BeforeTupleEvaluationTime, AfterTupleEvaluationTime,taskID, hostName\n");
+            bufferedWriter.flush();
+        }catch (Exception e){
+            e.printStackTrace();
+        }
     }
 
     @Override
     public void execute(Tuple tuple) {
+        long timeBeforeEvaluation=System.currentTimeMillis();
         tupleRemovalCountForLocal++;
         if (tuple.getSourceStreamId().equals(rightStreamSmaller)) {
             if (!rightBPlusTreeLinkedList.isEmpty()) {
                 BPlusTree currentBplusTreeDuration = rightBPlusTreeLinkedList.getLast();
                 currentBplusTreeDuration.insert(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.TUPLE_ID));
                 treeArchiveThresholdRevenue++;
-                if (treeArchiveThresholdRevenue >= treeArchiveUserDefined) {
+                if (treeArchiveThresholdRevenue == treeArchiveUserDefined) {
                     treeArchiveThresholdRevenue = 0;
                     BPlusTree bPlusTree = new BPlusTree(Constants.ORDER_OF_B_PLUS_TREE);
                     rightBPlusTreeLinkedList.add(bPlusTree);
@@ -63,19 +82,40 @@ public class RightStreamPredicateBplusTreeSelfJoin extends BaseRichBolt {
                 rightBPlusTreeLinkedList.add(bPlusTree);
             }
             for (BPlusTree bPlusTree : rightBPlusTreeLinkedList) {
-                HashSet<Integer> hashSetGreater = bPlusTree.greaterThenSpecificValueHashSet(tuple.getIntegerByField(Constants.TUPLE));
+                BitSet hashSetGreater = bPlusTree.greaterThenSpecificValue(tuple.getIntegerByField(Constants.TUPLE));
 
                 if(hashSetGreater!=null) {
-                    outputCollector.emit(Constants.RIGHT_PREDICATE_BOLT, new Values(convertHashSetToByteArray(hashSetGreater), tuple.getIntegerByField(Constants.TUPLE_ID)));
+                    try {
+                        outputCollector.emit(Constants.RIGHT_PREDICATE_BOLT, new Values(convertToByteArray(hashSetGreater), tuple.getIntegerByField(Constants.TUPLE_ID)));
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
                     outputCollector.ack(tuple);
                 }
             }
 
-
+            long timeAfterEvaluation=System.currentTimeMillis();
+            this.resultCounter++;
+            stringBuilder.append(tuple.getValueByField(Constants.TUPLE_ID) + "," + tuple.getValueByField(Constants.KAFKA_TIME) + "," +
+                    tuple.getValueByField(Constants.KAFKA_SPOUT_TIME) + "," + tuple.getValueByField(Constants.SPLIT_BOLT_TIME) + "," + tuple.getValueByField(Constants.TASK_ID_FOR_SPLIT_BOLT) + "," + tuple.getValueByField(Constants.HOST_NAME_FOR_SPLIT_BOLT) + "," + timeBeforeEvaluation + "," + timeAfterEvaluation +","+taskID+","+hostName+ "\n");
+            if(resultCounter==1000) {
+                try {
+                    bufferedWriter.write(stringBuilder.toString());
+                    bufferedWriter.flush();
+                    resultCounter=0;
+                    this.stringBuilder= new StringBuilder();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
 
 
         }
-        if (tupleRemovalCountForLocal >= treeRemovalThresholdUserDefined) {
+
+
+
+
+        if (tupleRemovalCountForLocal == treeRemovalThresholdUserDefined) {
             rightBPlusTreeLinkedList.remove(rightBPlusTreeLinkedList.getFirst());
 
             tupleRemovalCountForLocal= 0;
@@ -99,4 +139,13 @@ public class RightStreamPredicateBplusTreeSelfJoin extends BaseRichBolt {
         }
         return bos.toByteArray();
     }
+    public synchronized byte[] convertToByteArray(Serializable object) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (ObjectOutputStream objectOutputStream = new ObjectOutputStream(baos)) {
+            objectOutputStream.writeObject(object);
+            objectOutputStream.flush();
+        }
+        return baos.toByteArray();
+    }
+
 }

@@ -146,6 +146,7 @@ public class MutableBPlusTree extends BaseRichBolt {
         if (tuple.getSourceStreamId().equals(leftStreamGreater)) {
             tmpIDForPermutationForStreamR++;
             bPlusTree.insert(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.TUPLE_ID), tmpIDForPermutationForStreamR);
+
             BitSet bitSet = bPlusTree.lessThenSpecificValue(tuple.getIntegerByField(Constants.TUPLE));
             if (bitSet != null) {
                 try {

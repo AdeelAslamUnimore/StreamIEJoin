@@ -16,7 +16,9 @@ import org.apache.storm.tuple.Values;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.net.InetAddress;
+import java.util.BitSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -70,10 +72,14 @@ public class LeftPredicateCSSTreeBoltSelfJoin extends BaseRichBolt {
         if (tuple.getSourceStreamId().equals(leftStreamGreater)) {
             // Stream from left StreamID; per
             counter++;
-            leftStreamPredicateEvaluation(tuple, outputCollector);
+            try {
+                leftStreamPredicateEvaluation(tuple, outputCollector);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
 
-        if (counter >= Constants.MUTABLE_WINDOW_SIZE) {
+        if (counter == Constants.MUTABLE_WINDOW_SIZE) {
             // When merging counter reached:
             // Just 2 flags to downstream to holds data for compeletion of tuples;
             // One flag for left and other for right
@@ -112,13 +118,15 @@ public class LeftPredicateCSSTreeBoltSelfJoin extends BaseRichBolt {
 
     // Right Stream evaluation R<S
     // Here in R<S means from all greater and vice versa for other
-    private void leftStreamPredicateEvaluation(Tuple tuple, OutputCollector outputCollector) {
+    private void leftStreamPredicateEvaluation(Tuple tuple, OutputCollector outputCollector) throws IOException {
         // Tuple from S stream evaluates
         leftStreamBPlusTree.insert(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.TUPLE_ID));
-        HashSet<Integer> hashSetIds = leftStreamBPlusTree.smallerThenSpecificValueHashSet(tuple.getIntegerByField(Constants.TUPLE));
+        BitSet bitSet=leftStreamBPlusTree.lessThenSpecificValue(tuple.getIntegerByField(Constants.TUPLE));
+
+      //  HashSet<Integer> hashSetIds = leftStreamBPlusTree.smallerThenSpecificValueHashSet(tuple.getIntegerByField(Constants.TUPLE));
         //Results form BPlus Tree
-        if (hashSetIds != null) {
-            outputCollector.emit(this.leftPredicateSourceStreamIDHashSet, tuple, new Values(convertHashSetToByteArray(hashSetIds), tuple.getIntegerByField(Constants.TUPLE_ID),
+        if (bitSet != null) {
+            outputCollector.emit(this.leftPredicateSourceStreamIDHashSet, tuple, new Values(convertToByteArray(bitSet), tuple.getIntegerByField(Constants.TUPLE_ID),
                     tuple.getLongByField(Constants.KAFKA_TIME),tuple.getLongByField(Constants.KAFKA_SPOUT_TIME),tuple.getLongByField(Constants.SPLIT_BOLT_TIME),
                     tuple.getIntegerByField(Constants.TASK_ID_FOR_SPLIT_BOLT),tuple.getStringByField(Constants.HOST_NAME_FOR_SPLIT_BOLT), tupleArrivalTime,System.currentTimeMillis(),taskID, hostName));
             outputCollector.ack(tuple);
@@ -130,8 +138,10 @@ public class LeftPredicateCSSTreeBoltSelfJoin extends BaseRichBolt {
 // node to end of all leaf nodes log n for finding the left node from root and linear scna to end n
         while (node != null) {
             for (Key key : node.getKeys()) {
-                outputCollector.emit(streamID, tuple, new Values(key.getKey(), convertToByteArray(key.getValues()), false));
-                outputCollector.ack(tuple);
+                for(int value: key.getValues()) {
+                    outputCollector.emit(streamID, tuple, new Values(key.getKey(), value, false));
+                    outputCollector.ack(tuple);
+                }
             }
             node = node.getNext();
         }
@@ -141,6 +151,15 @@ public class LeftPredicateCSSTreeBoltSelfJoin extends BaseRichBolt {
 
 
     }
+    public synchronized byte[] convertToByteArray(Serializable object) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (ObjectOutputStream objectOutputStream = new ObjectOutputStream(baos)) {
+            objectOutputStream.writeObject(object);
+            objectOutputStream.flush();
+        }
+        return baos.toByteArray();
+    }
+
     // Byte array for Hash Set
     public static byte[] convertHashSetToByteArray(HashSet<Integer> hashSet) {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();

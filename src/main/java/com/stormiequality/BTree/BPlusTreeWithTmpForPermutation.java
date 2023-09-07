@@ -109,7 +109,7 @@ public class BPlusTreeWithTmpForPermutation implements Serializable {
                 node.getKeys().add(indexOfKey, newKey);
             }
         } catch (ArrayIndexOutOfBoundsException e) {
-            System.out.println(indexOfKey);
+         //   System.out.println(indexOfKey);
         }
     }
 

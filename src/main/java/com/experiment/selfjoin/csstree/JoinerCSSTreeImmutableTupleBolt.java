@@ -10,16 +10,15 @@ import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
 import org.apache.storm.tuple.Values;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
+import java.io.*;
 import java.net.InetAddress;
+import java.util.BitSet;
 import java.util.HashSet;
 import java.util.Map;
 
 public class JoinerCSSTreeImmutableTupleBolt extends BaseRichBolt {
-    private HashSet<Integer> leftHashSet;
-    private HashSet<Integer> rightHashSet;
+    private BitSet leftHashSet;
+    private BitSet rightHashSet;
     private String leftStreamID;
     private String rightStreamID;
     private OutputCollector outputCollector;
@@ -27,6 +26,8 @@ public class JoinerCSSTreeImmutableTupleBolt extends BaseRichBolt {
     private String hostName;
     private String leftStreamRecord;
     private String rightStreamRecord;
+
+    private BufferedWriter bufferedWriterRecordCSSJoin;
     public JoinerCSSTreeImmutableTupleBolt(String leftStreamID, String rightStreamID){
         Map<String, Object> map = Configuration.configurationConstantForStreamIDs();
         this.leftStreamID=leftStreamID;
@@ -40,7 +41,11 @@ public class JoinerCSSTreeImmutableTupleBolt extends BaseRichBolt {
         this.outputCollector=outputCollector;
         try{
             hostName= InetAddress.getLocalHost().getHostName();
-        }catch (Exception e){
+            bufferedWriterRecordCSSJoin = new BufferedWriter(new FileWriter(new File("/home/adeel/Data/Results/bufferedWriterRecordCSSJoin.csv")));
+            bufferedWriterRecordCSSJoin.write("LeftID,TupleInsertTime,LeftProbingStartTime,LeftProbingEndTime,LeftTaskID, LeftHostName, TimeArrivalLeft, RightID,RightInsertTimee,RightProbingStartTime,RightProbingEndTime,RightTaskID,RightHostName,TimeArrivalRight, timeAfterCalculation,streamID,TaskID,HostName \n");
+            bufferedWriterRecordCSSJoin.flush();
+        }
+        catch (Exception e){
 
         }
     }
@@ -51,19 +56,29 @@ public class JoinerCSSTreeImmutableTupleBolt extends BaseRichBolt {
         long time=System.currentTimeMillis();
         if(tuple.getSourceStreamId().equals(leftStreamID)) {
 
-            leftHashSet = convertByteArrayToHashSet(tuple.getBinaryByField(Constants.LEFT_HASH_SET));
-            leftStreamRecord=tuple.getValue(1)+","+tuple.getValue(2)+","+tuple.getValue(3)+","+tuple.getValue(4)+","+tuple.getValue(5)+","+time;
+            leftHashSet = convertToObject(tuple.getBinaryByField(Constants.LEFT_HASH_SET));
+
+            leftStreamRecord=tuple.getValue(1)+","+tuple.getValue(2)+","+tuple.getValue(3)+","+tuple.getValue(4)+","+tuple.getValue(5)+","+tuple.getValue(6)+","+time;
         }
         if(tuple.getSourceStreamId().equals(rightStreamID)){
-            rightHashSet=convertByteArrayToHashSet(tuple.getBinaryByField(Constants.RIGHT_HASH_SET));
-            rightStreamRecord=tuple.getValue(1)+","+tuple.getValue(2)+","+tuple.getValue(3)+","+tuple.getValue(4)+","+tuple.getValue(5)+","+time;
+            rightHashSet=convertToObject(tuple.getBinaryByField(Constants.RIGHT_HASH_SET));;
+
+            rightStreamRecord=tuple.getValue(1)+","+tuple.getValue(2)+","+tuple.getValue(3)+","+tuple.getValue(4)+","+tuple.getValue(5)+","+tuple.getValue(6)+","+time;
 
         }
         if(leftHashSet!=null&&rightHashSet!=null){
-            leftHashSet.retainAll(rightHashSet);
+            leftHashSet.and(rightHashSet);
+
             long timeAfterCalculation= System.currentTimeMillis();
             leftHashSet=null;
             rightHashSet=null;
+            try{
+
+                bufferedWriterRecordCSSJoin.write(leftStreamRecord+","+rightStreamRecord+","+timeAfterCalculation+","+streamID+","+taskID+","+hostName+"\n");
+                bufferedWriterRecordCSSJoin.flush();
+            }catch (Exception e){
+                e.printStackTrace();
+            }
             this.outputCollector.emit("ResultTuple", tuple, new Values(leftStreamRecord, rightStreamRecord,timeAfterCalculation,streamID,taskID,hostName));
             this.outputCollector.ack(tuple);
         }
@@ -74,10 +89,26 @@ public class JoinerCSSTreeImmutableTupleBolt extends BaseRichBolt {
     @Override
     public void declareOutputFields(OutputFieldsDeclarer outputFieldsDeclarer) {
 
-        outputFieldsDeclarer.declareStream("ResultTuple", new Fields("LeftStreamRecord","RightStreamRecord","timeAfterCalculation", "streamID","TaskID","HostName"));
+    outputFieldsDeclarer.declareStream("ResultTuple", new Fields("LeftStreamRecord","RightStreamRecord","timeAfterCalculation", "streamID","TaskID","HostName"));
 
 
     }
+    private BitSet convertToObject(byte[] byteData) {
+        try (ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(byteData);
+             ObjectInputStream objectInputStream = new ObjectInputStream(byteArrayInputStream)) {
+            Object object = objectInputStream.readObject();
+            if (object instanceof BitSet) {
+                return (BitSet) object;
+            } else {
+                throw new IllegalArgumentException("Invalid object type after deserialization");
+            }
+        } catch (ClassNotFoundException | IOException e) {
+            e.printStackTrace();
+            // Handle the exception appropriately
+        }
+        return null; // Return null or handle the failure case accordingly
+    }
+
     public static HashSet<Integer> convertByteArrayToHashSet(byte[] byteArray) {
         HashSet<Integer> hashSet = null;
         try {

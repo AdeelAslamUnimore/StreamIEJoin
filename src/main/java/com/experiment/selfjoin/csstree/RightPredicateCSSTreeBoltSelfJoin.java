@@ -16,7 +16,9 @@ import org.apache.storm.tuple.Values;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.net.InetAddress;
+import java.util.BitSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -58,9 +60,13 @@ public class RightPredicateCSSTreeBoltSelfJoin extends BaseRichBolt {
         this.tupleArrivalTime=System.currentTimeMillis();
         if (tuple.getSourceStreamId().equals(rightStreamSmaller)) {
             counter++;
-            rightPredicateEvaluation(tuple, outputCollector);
+            try {
+                rightPredicateEvaluation(tuple, outputCollector);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
-        if (counter >= Constants.MUTABLE_WINDOW_SIZE) {
+        if (counter == Constants.MUTABLE_WINDOW_SIZE) {
             this.outputCollector.emit("RightCheckForMerge", new Values(true,System.currentTimeMillis()));
 
             Node nodeForRight = rightStreamBPlusTree.leftMostNode();
@@ -83,14 +89,15 @@ public class RightPredicateCSSTreeBoltSelfJoin extends BaseRichBolt {
 
     }
 
-    private void rightPredicateEvaluation(Tuple tuple, OutputCollector outputCollector) {
+    private void rightPredicateEvaluation(Tuple tuple, OutputCollector outputCollector) throws IOException {
         // Insertion
         rightStreamBPlusTree.insert(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.TUPLE_ID));
-        HashSet<Integer> hashSetIds = rightStreamBPlusTree.greaterThenSpecificValueHashSet(tuple.getIntegerByField(Constants.TUPLE));
+        //HashSet<Integer> hashSetIds = rightStreamBPlusTree.greaterThenSpecificValueHashSet(tuple.getIntegerByField(Constants.TUPLE));
         //Results form BPlus Tree searching
-        if (hashSetIds != null) {
+        BitSet bitSet= rightStreamBPlusTree.greaterThenSpecificValue(tuple.getIntegerByField(Constants.TUPLE));
+        if (bitSet != null) {
             // emitting Logic
-            outputCollector.emit(this.rightStreamHashSetEmitterStreamID, tuple, new Values(convertHashSetToByteArray(hashSetIds), tuple.getIntegerByField(Constants.TUPLE_ID),
+            outputCollector.emit(this.rightStreamHashSetEmitterStreamID, tuple, new Values(convertToByteArray(bitSet), tuple.getIntegerByField(Constants.TUPLE_ID),
                     tuple.getLongByField(Constants.KAFKA_TIME),tuple.getLongByField(Constants.KAFKA_SPOUT_TIME),tuple.getLongByField(Constants.SPLIT_BOLT_TIME),
                     tuple.getIntegerByField(Constants.TASK_ID_FOR_SPLIT_BOLT),tuple.getStringByField(Constants.HOST_NAME_FOR_SPLIT_BOLT), tupleArrivalTime,System.currentTimeMillis(),taskID, hostName));
             outputCollector.ack(tuple);
@@ -115,20 +122,29 @@ public class RightPredicateCSSTreeBoltSelfJoin extends BaseRichBolt {
         return bos.toByteArray();
     }
 
-    private static byte[] convertToByteArray(List<Integer> integerList) {
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        for (Integer num : integerList) {
-            outputStream.write(num.byteValue());
+//    private static byte[] convertToByteArray(List<Integer> integerList) {
+//        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+//        for (Integer num : integerList) {
+//            outputStream.write(num.byteValue());
+//        }
+//        return outputStream.toByteArray();
+//    }
+    public synchronized byte[] convertToByteArray(Serializable object) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (ObjectOutputStream objectOutputStream = new ObjectOutputStream(baos)) {
+            objectOutputStream.writeObject(object);
+            objectOutputStream.flush();
         }
-        return outputStream.toByteArray();
+        return baos.toByteArray();
     }
-
     public void dataMergingToCSS(Node node, Tuple tuple, String streamID) {
 
         while (node != null) {
             for (Key key : node.getKeys()) {
-                outputCollector.emit(streamID, tuple, new Values(key.getKey(), convertToByteArray(key.getValues()), false));
-                outputCollector.ack(tuple);
+                for(int value: key.getValues()) {
+                    outputCollector.emit(streamID, tuple, new Values(key.getKey(), value, false));
+                    outputCollector.ack(tuple);
+                }
             }
             node = node.getNext();
         }

@@ -12,75 +12,66 @@ import java.io.FileWriter;
 import java.util.Map;
 
 public class RecordImmutablePart extends BaseRichBolt {
-    private StringBuilder resultImmutabalePart;
-    private int recordCounter;
-    private BufferedWriter bufferedWriterRecordCSSJoin;
-    private BufferedWriter bufferedWriterRecordMergingLeftEvaluationTuple;
-    private BufferedWriter bufferedWriterRecordMergingRightEvaluationTuple;
-    private BufferedWriter bufferedWriterRecordEvaluationTimeTuple;
-    @Override
+    private BufferedWriter bufferedWriterTimeMerge;
+    private BufferedWriter bufferedWriterQueueMerge;
+    private String leftStreamTime;
+    private String rightStreamTime;
+    private String leftStreamQueue;
+    private String rightStreamQueue;
+      @Override
     public void prepare(Map<String, Object> map, TopologyContext topologyContext, OutputCollector outputCollector) {
-        this.resultImmutabalePart = new StringBuilder();
-        this.recordCounter=0;
-        try{
-            bufferedWriterRecordCSSJoin = new BufferedWriter(new FileWriter(new File("/home/adeel/Data/Results/bufferedWriterRecordCSSJoin.csv")));
-            bufferedWriterRecordMergingLeftEvaluationTuple = new BufferedWriter(new FileWriter(new File("/home/adeel/Data/Results/bufferedWriterEvaluationLeftMergingTuple.csv")));
-            bufferedWriterRecordMergingRightEvaluationTuple = new BufferedWriter(new FileWriter(new File("/home/adeel/Data/Results/bufferedWriterEvaluationRightMergingTuple.csv")));
-            bufferedWriterRecordEvaluationTimeTuple = new BufferedWriter(new FileWriter(new File("/home/adeel/Data/Results/bufferedWriterRecordMergingTimeTuple.csv")));
-           // tuple.getIntegerByField("ID"),probingEnd,taskID,hostName
-            bufferedWriterRecordCSSJoin.write("LeftID,LeftProbingStartTime,LeftProbingEndTime,LeftTaskID, LeftHostName, TimeArrivalLeft, RightID,RightProbingStartTime,RightProbingEndTime,RightTaskID,RightHostName,TimeArrivalRight, timeAfterCalculation,streamID,TaskID,HostName \n");
-            bufferedWriterRecordCSSJoin.flush();
+       try{
+           this.bufferedWriterTimeMerge= new BufferedWriter(new FileWriter(new File("/home/adeel/Data/Results/MergeTime.csv")));
+           this.bufferedWriterTimeMerge.write("L.StartTime,L.EndTime,L.Machine,L.TaskID,L.StreamID, R.StartTime,R.EndTime,R.Machine,R.TaskID,R.StreamID, \n");
 
-            bufferedWriterRecordMergingLeftEvaluationTuple.write("ID,LeftMergeStartTime, LeftMergeEndTime, LeftTaskID, LeftHostName,ID,TimeArrivalLeft, RightMergeStartTime, RightTaskID, RightMergeEndTime, TimeArrivalRight, ID,timeAfterCalculation, streamID,TaskID,HostName \n");
-            bufferedWriterRecordMergingLeftEvaluationTuple.flush();
-
-            bufferedWriterRecordMergingRightEvaluationTuple.write("ID,LeftMergeStartTime, LeftMergeEndTime, LeftTaskID, LeftHostName,ID,TimeArrivalLeft, RightMergeStartTime, RightTaskID, RightMergeEndTime, TimeArrivalRight, ID,timeAfterCalculation, streamID,TaskID,HostName \n");
-            bufferedWriterRecordMergingRightEvaluationTuple.flush();
-            bufferedWriterRecordEvaluationTimeTuple.write("leftMergeStartTime,LeftMergeEnd,LefttaskID,LefthostName,rightMergeStartTime,rightMergeEnd,rightTaskID,rightHostName\n");
-            bufferedWriterRecordEvaluationTimeTuple.flush();
-        } catch (Exception e){
-            e.printStackTrace();
-        }
+           this.bufferedWriterQueueMerge= new BufferedWriter(new FileWriter(new File("/home/adeel/Data/Results/QueueMerge.csv")));
+           this.bufferedWriterQueueMerge.write("L.StartTime,L.EndTime,L.Machine,L.TaskID,L.StreamID, R.StartTime,R.EndTime,R.Machine,R.TaskID,R.StreamID, \n");
+       }catch (Exception e){
+           e.printStackTrace();
+       }
     }
 
     @Override
     public void execute(Tuple tuple) {
-        if(tuple.getSourceStreamId().equals("ResultTuple")){
-            recordCounter++;
-            this.resultImmutabalePart.append(tuple.getValue(0)+","+tuple.getValue(1)+","+tuple.getValue(2)+","+tuple.getValue(3)+","+tuple.getValue(4)+","+tuple.getValue(5)+"\n");
-            if(recordCounter==1000){
-                try{
-                    bufferedWriterRecordCSSJoin.write(resultImmutabalePart.toString());
-                    bufferedWriterRecordCSSJoin.flush();
-                }catch (Exception e){
-                    e.printStackTrace();
+        try{
+            if(tuple.getSourceStreamId().equals("MergingTime")) {
+                if (tuple.getStringByField("StreamID").equals("LeftStream")) {
+                    leftStreamTime = tuple.getValue(0) + "," + tuple.getValue(1) + "," + tuple.getValue(2) + "," + tuple.getValue(3)  + "," + tuple.getValue(4);
                 }
-                recordCounter=0;
+                if (tuple.getStringByField("StreamID").equals("RightStream")) {
+                    rightStreamTime = tuple.getValue(0) + "," + tuple.getValue(1) + "," + tuple.getValue(2) + "," + tuple.getValue(3) + "," + tuple.getValue(4);
+                }
+                if (leftStreamTime != null && rightStreamTime!= null) {
+                    this.bufferedWriterTimeMerge.write(leftStreamTime + "," + rightStreamTime + "\n");
+                    this.bufferedWriterTimeMerge.flush();
+                    leftStreamTime=null;
+                    rightStreamTime=null;
+                }
             }
+        }catch (Exception e){
+            e.printStackTrace();
         }
-        if (tuple.getSourceStreamId().equals("MergingQueueTuple")){
-            try{
-                if(tuple.getValueByField("stream").equals("Left")){
-                    bufferedWriterRecordMergingLeftEvaluationTuple.write(tuple.getValue(0)+","+tuple.getValue(1)+","+tuple.getValue(2)+","+tuple.getValue(3)+","+tuple.getValue(4)+"\n");
-                    bufferedWriterRecordMergingLeftEvaluationTuple.flush();
-                }
-                if(tuple.getValueByField("stream").equals("Right")){
 
+        try{
+            if(tuple.getSourceStreamId().equals("QueueMergeTime")) {
+
+                if (tuple.getStringByField("StreamID").equals("LeftStream")) {
+                    leftStreamQueue = tuple.getValue(0) + "," + tuple.getValue(1) + "," + tuple.getValue(2) + "," + tuple.getValue(3)  + "," + tuple.getValue(4);
                 }
-                bufferedWriterRecordMergingRightEvaluationTuple.write(tuple.getValue(0)+","+tuple.getValue(1)+","+tuple.getValue(2)+","+tuple.getValue(3)+","+tuple.getValue(4)+"\n");
-                bufferedWriterRecordMergingRightEvaluationTuple.flush();
-            }catch (Exception e){
-                e.printStackTrace();
+                if (tuple.getStringByField("StreamID").equals("RightStream")) {
+                    rightStreamQueue= tuple.getValue(0) + "," + tuple.getValue(1) + "," + tuple.getValue(2) + "," + tuple.getValue(3)  + "," + tuple.getValue(4);
+                }
+                if (leftStreamQueue != null && rightStreamQueue != null) {
+                    this.bufferedWriterQueueMerge.write(leftStreamQueue + "," + rightStreamQueue + "\n");
+                    this.bufferedWriterQueueMerge.flush();
+                    leftStreamQueue=null;
+                    rightStreamQueue=null;
+                }
             }
+        }catch (Exception e){
+            e.printStackTrace();
         }
-        if(tuple.getSourceStreamId().equals("MergingTime")){
-            try{
-                bufferedWriterRecordEvaluationTimeTuple.write(tuple.getValue(0)+","+tuple.getValue(1)+"\n");
-                bufferedWriterRecordEvaluationTimeTuple.flush();
-            }catch (Exception e){
-                e.printStackTrace();
-            }
-        }
+
 
     }
 

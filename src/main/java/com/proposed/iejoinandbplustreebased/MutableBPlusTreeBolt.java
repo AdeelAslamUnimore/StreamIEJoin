@@ -17,6 +17,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.net.InetAddress;
 import java.util.BitSet;
 import java.util.List;
 import java.util.Map;
@@ -66,6 +67,12 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
     private int tmpIDForPermutationForStreamR;
     // tmpCounterForPermutationForStreamS
     private int tmpIDForPermutationForStreamS;
+    // Tuple Arrival Time
+    private long tupleArrivalTime;
+    // Task ID that process this tuple
+    private int taskID;
+    // Host Name
+    private String hostName;
 
     /**
      * constructor that holds the variables
@@ -107,6 +114,8 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
             downStreamTasksForOffset = topologyContext.getComponentTasks(Constants.OFFSET_AND_IE_JOIN_BOLT_ID);
             this.idForDownStreamTasksOffset = 0;
             this.outputCollector = outputCollector;
+            this.taskID=topologyContext.getThisTaskId();
+            this.hostName= InetAddress.getLocalHost().getHostName();
 
         } catch (Exception e) {
 
@@ -120,11 +129,11 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
         try {
             // Right and left predicate evaluation It can be optimized depending on the condition it can be customized
             if (operator.equals("<")) {
-
+            tupleArrivalTime= System.currentTimeMillis();
                 lessPredicateEvaluation(tuple);
             }
             if (operator.equals(">")) {
-
+            tupleArrivalTime= System.currentTimeMillis();
                 greaterPredicateEvaluation(tuple);
             }
         } catch (Exception e) {
@@ -186,7 +195,7 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
                 try {
                     byte[] bytArrayLBitSet = convertToByteArray(bitSet);
                     // Emitting Tuple logic
-                    this.outputCollector.emit(leftPredicateBitSetStreamID, tuple, new Values(bytArrayLBitSet, tuple.getIntegerByField(Constants.TUPLE_ID)));
+                    this.outputCollector.emit(rightPredicateBitSetStreamID, tuple, new Values(bytArrayLBitSet, tuple.getIntegerByField(Constants.TUPLE_ID)));
                     this.outputCollector.ack(tuple);
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -208,7 +217,9 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
                 try {
                     byte[] bytArrayRBitSet = convertToByteArray(bitSet);
                     //Emit logic here tuple emitting
-                    this.outputCollector.emit(rightPredicateBitSetStreamID, tuple, new Values(bytArrayRBitSet, tuple.getIntegerByField(Constants.TUPLE_ID)));
+                    this.outputCollector.emit(leftPredicateBitSetStreamID, tuple, new Values(bytArrayRBitSet, tuple.getIntegerByField(Constants.TUPLE_ID),
+                            tuple.getLongByField(Constants.KAFKA_TIME), tuple.getLongByField(Constants.KAFKA_SPOUT_TIME), tuple.getLongByField(Constants.SPLIT_BOLT_TIME), tuple.getValueByField(Constants.TASK_ID_FOR_SPLIT_BOLT),
+                            tuple.getStringByField(Constants.HOST_NAME_FOR_SPLIT_BOLT), tupleArrivalTime, System.currentTimeMillis(), this.taskID, hostName));
                     this.outputCollector.ack(tuple);
                 } catch (IOException e) {
                     e.printStackTrace();

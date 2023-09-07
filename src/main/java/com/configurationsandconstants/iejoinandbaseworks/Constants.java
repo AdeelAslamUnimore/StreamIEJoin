@@ -20,8 +20,8 @@ public class Constants {
     public static final String LEFT_PREDICATE_BOLT = "left_stream";
     public static final String RIGHT_PREDICATE_BOLT = "right_stream";
     public static final String BIT_SET_EVALUATION_BOLT ="bitset_evaluation";
-    public static final int MUTABLE_WINDOW_SIZE =100;
-    public static final int IMMUTABLE_WINDOW_SIZE =1000;
+    public static final int MUTABLE_WINDOW_SIZE =100000;
+    public static final int IMMUTABLE_WINDOW_SIZE =1000000;
 
     //// Constant for benchMarks///
     public static final int ORDER_OF_CSS_TREE = 4;
@@ -31,7 +31,7 @@ public class Constants {
     public static final String LEFT_PREDICATE_CSS_TREE_BOLT="leftPredicateCSSTreeBolt";
     public static final String RIGHT_PREDICATE_CSS_TREE_BOLT="rightPredicateCSSTreeBolt";
     public static final String MUTABLE_PART_EVALUATION_BOLT="mutablePartEvaluationBolt";
-    public static final int IMMUTABLE_CSS_PART_REMOVAL=10000;
+    public static final int IMMUTABLE_CSS_PART_REMOVAL=1000000;
     public static final String BATCH_CSS_TREE_KEY="batchCSSTreeKey";
     public static final String BATCH_CSS_TREE_VALUES="batchCSSTreeValues";
     public static final String BATCH_CSS_FLAG="flag";
@@ -40,8 +40,8 @@ public class Constants {
     public static final String IMMUTABLE_HASH_SET_EVALUATION="immutableHashSetEvaluation";
     public static final String MERGE_BOLT_EVALUATION_CSS="mergeBoltEvaluationCSS";
     // For BPlusTree Linked Tree and RedBlack tree
-    public static final int TUPLE_ARCHIVE_THRESHOLD =2000;
-    public static final int TUPLE_REMOVAL_THRESHOLD =10000;
+    public static final int TUPLE_ARCHIVE_THRESHOLD =100000;
+    public static final int TUPLE_REMOVAL_THRESHOLD =1000000;
     public static final String LEFT_PREDICATE_BPLUS_TREE_AND_RBS_BOLT ="leftPredicateBplusAndRedBlackTreeBolt";
     public static final String RIGHT_PREDICATE_BPLUS_TREE_AND_RBST_BOLT ="rightPredicateBPlusTreeBolt";
     public static final String HASH_SET_EVALUATION="hashSetEvaluation";
@@ -66,5 +66,11 @@ public class Constants {
     public static final String IEJOIN_BOLT_RESULT="iejoinresultbolt";
     // HashSet
     public static final String HASHSET_RECORD_BOLT="hashSetRecordBolt";
+
+
+    ///
+    public static final int TUPLE_REMOVAL_COUNT_BCHJ=60000;
+    public static final int TUPLE_WINDOW_SIZE=600000;
+
 
 }

@@ -14,12 +14,13 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.net.InetAddress;
+import java.util.BitSet;
 import java.util.HashSet;
 import java.util.Map;
 
 public class JoinerCSSTreeBolt extends BaseRichBolt {
-    private HashSet<Integer> leftHashSet;
-    private HashSet<Integer> rightHashSet;
+    private BitSet leftHashSet;
+    private BitSet rightHashSet;
     private String leftStreamID;
     private String rightStreamID;
     private OutputCollector outputCollector;
@@ -49,13 +50,15 @@ public class JoinerCSSTreeBolt extends BaseRichBolt {
         int streamID=(Integer) tuple.getValue(1);
         long time=System.currentTimeMillis();
         if(tuple.getSourceStreamId().equals(leftStreamID)) {
-            leftHashSet = convertByteArrayToHashSet(tuple.getBinaryByField(Constants.LEFT_HASH_SET));
+            leftHashSet = convertToObject(tuple.getBinaryByField(Constants.LEFT_HASH_SET));
+         //System.out.println("LeftHashSet"+leftHashSet);
         }
         if(tuple.getSourceStreamId().equals(rightStreamID)){
-            rightHashSet=convertByteArrayToHashSet(tuple.getBinaryByField(Constants.RIGHT_HASH_SET));
+            rightHashSet=convertToObject(tuple.getBinaryByField(Constants.RIGHT_HASH_SET));
+          //  System.out.println("rightStreamID"+rightHashSet);
         }
         if(leftHashSet!=null&&rightHashSet!=null){
-            leftHashSet.retainAll(rightHashSet);
+            leftHashSet.and(rightHashSet);
             long timeAfterCalculation= System.currentTimeMillis();
             leftHashSet=null;
             rightHashSet=null;
@@ -93,5 +96,20 @@ public class JoinerCSSTreeBolt extends BaseRichBolt {
             e.printStackTrace();
         }
         return hashSet;
+    }
+    private BitSet convertToObject(byte[] byteData) {
+        try (ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(byteData);
+             ObjectInputStream objectInputStream = new ObjectInputStream(byteArrayInputStream)) {
+            Object object = objectInputStream.readObject();
+            if (object instanceof BitSet) {
+                return (BitSet) object;
+            } else {
+                throw new IllegalArgumentException("Invalid object type after deserialization");
+            }
+        } catch (ClassNotFoundException | IOException e) {
+            e.printStackTrace();
+            // Handle the exception appropriately
+        }
+        return null; // Return null or handle the failure case accordingly
     }
 }

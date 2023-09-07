@@ -510,7 +510,7 @@ public class CSSTree {
         return smallestHashSetIds;
     }
 
-    public BitSet searchSmallerBitSet(int key) {
+    public void searchSmallerBitSet(int key, BitSet bitSet) {
        BitSet smallestBitSetIds= new BitSet();
         Node node = nodeWithBlockPointer(this.rootBlock, key);
         Node referentNode = findRelevantNode(node, key);
@@ -533,7 +533,7 @@ public class CSSTree {
                 }
             }
         }
-        return smallestBitSetIds;
+       // return smallestBitSetIds;
     }
 
     public BitSet searchGreaterBitSet(int key) {

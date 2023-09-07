@@ -40,9 +40,9 @@ public class RecordMutablePart extends BaseRichBolt{
             this.stringBuilderResultJoiner= new StringBuilder();
             this.counter = 0;
             try {
-                bufferedWriterLeftStream = new BufferedWriter(new FileWriter(new File("/home/adeel/Data/Results/CSShashLeftSetEvaluationLeftStream.csv")));
-                bufferedWriterRightStream = new BufferedWriter(new FileWriter(new File("/home/adeel/Data/Results/CSShashRightSetEvaluationRightStream.csv")));
-                bufferedWriterResultsJoiner = new BufferedWriter(new FileWriter(new File("/home/adeel/Data/Results/csshashSetEvaluationStreamJoiner.csv")));
+                bufferedWriterLeftStream = new BufferedWriter(new FileWriter(new File("/home//adeel/Data/Results/CSShashLeftSetEvaluationLeftStream.csv")));
+                bufferedWriterRightStream = new BufferedWriter(new FileWriter(new File("/home//adeel/Data/Results/CSShashRightSetEvaluationRightStream.csv")));
+                bufferedWriterResultsJoiner = new BufferedWriter(new FileWriter(new File("/home//adeel/Data/Results/csshashSetEvaluationStreamJoiner.csv")));
 
                 //    bufferedWriter= new BufferedWriter(new FileWriter(new File("/home/adeel/Data/Results/BitSetEvaluation.csv")));
                 String greaterEvaluation = Constants.TUPLE_ID + "," +

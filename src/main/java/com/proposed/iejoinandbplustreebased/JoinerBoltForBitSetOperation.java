@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.net.InetAddress;
 import java.util.BitSet;
+import java.util.HashMap;
 import java.util.Map;
 
 public class JoinerBoltForBitSetOperation extends BaseRichBolt {
@@ -28,6 +29,8 @@ public class JoinerBoltForBitSetOperation extends BaseRichBolt {
     private String hostName;
     private int streamIDLeft;
     private int streamIDRight;
+    ///
+    private HashMap<Integer,BitSet> mapBitSet;
 
     public JoinerBoltForBitSetOperation() {
         Map<String, Object> map = Configuration.configurationConstantForStreamIDs();
@@ -43,6 +46,7 @@ public class JoinerBoltForBitSetOperation extends BaseRichBolt {
         taskID= topologyContext.getThisTaskId();
         try{
             hostName= InetAddress.getLocalHost().getHostName();
+            mapBitSet= new HashMap<>();
         }catch (Exception e){
 
         }
@@ -60,6 +64,17 @@ public class JoinerBoltForBitSetOperation extends BaseRichBolt {
      */
     @Override
     public void execute(Tuple tuple) {
+        if(mapBitSet.containsKey(tuple.getIntegerByField(Constants.TUPLE_ID))){
+            long tupleStartTime= System.currentTimeMillis();
+            byte[] byteArrayPredicateLeftBitSet = tuple.getBinaryByField(Constants.BYTE_ARRAY);
+            predicate1BitSet = convertToObject(byteArrayPredicateLeftBitSet);
+            predicate1BitSet.and(mapBitSet.get(tuple.getIntegerByField(Constants.TUPLE_ID)));
+
+            this.outputCollector.emit(leftPredicateSourceStreamID, tuple, new Values(tuple
+                    .getValue(1), tuple.getValue(2),tuple.getValue(3),tuple.getValue(4),tuple.getValue(5),
+                    tuple.getValue(6),tuple.getValue(7),tuple.getValue(8),tuple.getValue(9),tuple.getValue(10)));
+
+        }
 
         if (tuple.getSourceStreamId().equals(leftPredicateSourceStreamID)) {
             streamIDLeft= (Integer) tuple.getValue(1);

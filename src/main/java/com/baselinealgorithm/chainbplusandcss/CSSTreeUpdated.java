@@ -839,8 +839,8 @@ public class CSSTreeUpdated {
         System.out.println(index);
     }
 
-    public BitSet searchSmallerBitSet(int key) {
-        BitSet smallestBitSetIds = new BitSet();
+    public void searchSmallerBitSet(int key, BitSet smallestBitSetIds) {
+      //  BitSet smallestBitSetIds = new BitSet();
         Node node = leafNodeSearch(this.rootBlock, key);
         for (Key keys : node.getKeys()) {
             if (keys.getKey() < key) {
@@ -860,14 +860,14 @@ public class CSSTreeUpdated {
                 }
             }
         }
-        return smallestBitSetIds;
+      //  return smallestBitSetIds;
     }
 
-    public BitSet searchGreaterBitSet(int key) {
+    public void  searchGreaterBitSet(int key, BitSet bitSetForAllIdsGreaterThanAKey) {
         //BitMatrixSpareseBit costHS;
-        BitSet bitSetForAllIdsGreaterThanAKey = new BitSet();
+        //BitSet bitSetForAllIdsGreaterThanAKey = new BitSet();
         Node node = leafNodeSearch(this.rootBlock, key);
-        System.out.println(node);
+
         for (Key keys : node.getKeys()) {
             if (keys.getKey() > key) {
                 for (int i : keys.getValue())
@@ -883,7 +883,7 @@ public class CSSTreeUpdated {
                 }
             }
         }
-        return bitSetForAllIdsGreaterThanAKey;
+     //   return bitSetForAllIdsGreaterThanAKey;
     }
 
 }
