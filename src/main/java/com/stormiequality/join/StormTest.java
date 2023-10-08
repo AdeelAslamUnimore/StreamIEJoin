@@ -1,6 +1,6 @@
 package com.stormiequality.join;
 
-import com.stormiequality.BTree.BPlusTree;
+import com.stormiequality.BTree.BPlusTreeUpdated;
 import com.stormiequality.BTree.Key;
 import com.stormiequality.BTree.Node;
 import com.stormiequality.BTree.Offset;
@@ -57,7 +57,7 @@ public class StormTest {
 //            System.out.println(offsetArrayList.get(i).getIndex());
 //        }
     }
-public static ArrayList<Offset> computation1 (BPlusTree bPlusTree, BPlusTree bPlusTree1) {
+public static ArrayList<Offset> computation1 (BPlusTreeUpdated bPlusTree, BPlusTreeUpdated bPlusTree1) {
     ArrayList<Offset> offsetArrayList = new ArrayList();
     Node nodeForLeft = bPlusTree.leftMostNode();
     Node nodeForRight = null;
@@ -107,8 +107,8 @@ return offsetArrayList;
 }
 
     public void testData(){
-        BPlusTree BTree1= new BPlusTree();
-        BPlusTree BTree2=new BPlusTree();
+        BPlusTreeUpdated BTree1= new BPlusTreeUpdated();
+        BPlusTreeUpdated BTree2=new BPlusTreeUpdated();
         BTree1.initialize(4);
         BTree2.initialize(4);
         BTree1.insert(9,1);

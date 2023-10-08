@@ -18,9 +18,9 @@ import java.util.Map;
 public class JoinBoltForBPlusTree extends WindowBoltForBPlusTree implements Serializable {
     // Let consider the two stream R an S the R.r> S.s then in this case two stream of tuples can arrive at here
     // Tuple from left stream
-   private BPlusTree LeftStreamBPlusTree=null;
+   private BPlusTreeUpdated LeftStreamBPlusTree=null;
    //Tuple from right stream
-   private BPlusTree RightStreamBPlusTree=null;
+   private BPlusTreeUpdated RightStreamBPlusTree=null;
    // Definition of order of BPlus Tree
    private int orderOfBPlusTree=0;
    // Tuple counter that see the counter on the runtime
@@ -64,8 +64,8 @@ public class JoinBoltForBPlusTree extends WindowBoltForBPlusTree implements Seri
        // Index structure for both stream here R.r ans S.s
 
         try {
-            LeftStreamBPlusTree= new BPlusTree();
-            RightStreamBPlusTree= new BPlusTree();
+            LeftStreamBPlusTree= new BPlusTreeUpdated();
+            RightStreamBPlusTree= new BPlusTreeUpdated();
             LeftStreamBPlusTree.initialize(orderOfBPlusTree);
             RightStreamBPlusTree.initialize(orderOfBPlusTree);
             localAddress = InetAddress.getLocalHost();
@@ -104,8 +104,8 @@ public class JoinBoltForBPlusTree extends WindowBoltForBPlusTree implements Seri
             int key= leftBatch.getKeys().get(0).getKey();
             Node searchedNode=RightStreamBPlusTree.searchRelativeNode(key);
             // Flush out existing Data Struture
-            LeftStreamBPlusTree= new BPlusTree();
-            RightStreamBPlusTree= new BPlusTree();
+            LeftStreamBPlusTree= new BPlusTreeUpdated();
+            RightStreamBPlusTree= new BPlusTreeUpdated();
             LeftStreamBPlusTree.initialize(orderOfBPlusTree);
             RightStreamBPlusTree.initialize(orderOfBPlusTree);
             tupleCounter=0;
@@ -142,7 +142,7 @@ public class JoinBoltForBPlusTree extends WindowBoltForBPlusTree implements Seri
         outputFieldsDeclarer.declareStream(emitBatchForIEJoin, new Fields("L1Stream","R1Stream","Offset1","Node","Time"));
        // outputFieldsDeclarer.declareStream(emitBatchForIEJoin, new Fields("Tuple","Node","Time"));
     }
-    public static ArrayList<Offset> offsetComputation(BPlusTree leftBTree, BPlusTree rightBTree){
+    public static ArrayList<Offset> offsetComputation(BPlusTreeUpdated leftBTree, BPlusTreeUpdated rightBTree){
         ArrayList<Offset> offsetArrayList = new ArrayList();
         Node nodeForLeft = leftBTree.leftMostNode();
         Node nodeForRight = null;

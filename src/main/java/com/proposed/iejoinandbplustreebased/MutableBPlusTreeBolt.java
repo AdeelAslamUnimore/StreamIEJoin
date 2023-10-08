@@ -2,9 +2,9 @@ package com.proposed.iejoinandbplustreebased;
 
 import com.configurationsandconstants.iejoinandbaseworks.Configuration;
 import com.configurationsandconstants.iejoinandbaseworks.Constants;
-import com.stormiequality.BTree.BPlusTree;
-import com.stormiequality.BTree.BPlusTreeWithTmpForPermutation;
+import com.stormiequality.BTree.BPlusTreeUpdated;
 import com.stormiequality.BTree.Node;
+import com.stormiequality.BTree.Offset;
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.OutputFieldsDeclarer;
@@ -18,15 +18,13 @@ import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.net.InetAddress;
-import java.util.BitSet;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class MutableBPlusTreeBolt extends BaseRichBolt {
     //left stream for MutableBPlusTree
-    private BPlusTreeWithTmpForPermutation leftStreamBPlusTree;
+    private BPlusTreeUpdated leftStreamBPlusTree;
     // right stream for MutableBPlusTree
-    private BPlusTreeWithTmpForPermutation rightStreamBPlusTree;
+    private BPlusTreeUpdated rightStreamBPlusTree;
     // Order of Trees
     //private mergeIntervalCount;
     private int mergeIntervalCounter;
@@ -48,10 +46,9 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
     private String leftStreamSmaller = null;
     //Right StreamID
     private String rightStreamSmaller = null;
-
-
+    //left streamID
     private String leftStreamGreater = null;
-    //Right StreamID
+    //left StreamID
     private String rightStreamGreater = null;
     // Right batch permutation
     //List Permutation Down Stream Tasks the size is fixed 2
@@ -73,6 +70,11 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
     private int taskID;
     // Host Name
     private String hostName;
+  // Identifier for data provenence
+    private static int identifier;
+    // All down stream tasks for tuple routing
+    private  ArrayList<Offset> offsetArrayList;
+
 
     /**
      * constructor that holds the variables
@@ -80,19 +82,39 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
      * @param operator <, >  define the operator for operation
      * @PermtuationStreamID is the stream id provided by parameters however, it exists in configuration file
      * @OffsetStreamID is the streamID is also provided by parameter from configuration file.
+     *
      */
     public MutableBPlusTreeBolt(String operator, String permutationStreamID, String offsetStreamID) {
+        // Set the operator for this component.
         this.operator = operator;
+
+// Define the merge interval based on the value specified in Constants.
         this.mergeIntervalDefinedByUser = Constants.MUTABLE_WINDOW_SIZE;
+
+// Set the stream ID for permutation computation.
         this.permutationComputationStreamID = permutationStreamID;
+
+// Set the stream ID for offset computation.
         this.offsetComputationStreamID = offsetStreamID;
+
+// Retrieve a mapping of stream IDs from the configuration.
         Map<String, Object> map = Configuration.configurationConstantForStreamIDs();
+
+// Set the stream IDs for smaller predicates from the mapping.
         this.leftStreamSmaller = (String) map.get("LeftSmallerPredicateTuple");
         this.rightStreamSmaller = (String) map.get("RightSmallerPredicateTuple");
+
+// Set the stream IDs for greater predicates from the mapping.
         this.leftStreamGreater = (String) map.get("LeftGreaterPredicateTuple");
         this.rightStreamGreater = (String) map.get("RightGreaterPredicateTuple");
+
+// Set the stream ID for left predicate bit sets from the mapping.
         this.leftPredicateBitSetStreamID = (String) map.get("LeftPredicateSourceStreamIDBitSet");
+
+// Set the stream ID for merge operation flag from the mapping.
         this.mergeOperationStreamID = (String) map.get("MergingFlag");
+
+// Set the stream ID for right predicate bit sets from the mapping.
         this.rightPredicateBitSetStreamID = (String) map.get("RightPredicateSourceStreamIDBitSet");
 
 
@@ -108,14 +130,36 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
     @Override
     public void prepare(Map<String, Object> map, TopologyContext topologyContext, OutputCollector outputCollector) {
         try {
-            leftStreamBPlusTree = new BPlusTreeWithTmpForPermutation(Constants.ORDER_OF_B_PLUS_TREE);
-            rightStreamBPlusTree = new BPlusTreeWithTmpForPermutation(Constants.ORDER_OF_B_PLUS_TREE);
+            // Create a new BPlusTree for the left stream.
+            leftStreamBPlusTree = new BPlusTreeUpdated(Constants.ORDER_OF_B_PLUS_TREE);
+
+// Create a new BPlusTree for the right stream.
+            rightStreamBPlusTree = new BPlusTreeUpdated(Constants.ORDER_OF_B_PLUS_TREE);
+
+// Retrieve the task IDs of downstream tasks for permutation computation.
             downStreamTaskIdsForPermutation = topologyContext.getComponentTasks(Constants.PERMUTATION_COMPUTATION_BOLT_ID);
+
+// Retrieve the task IDs of downstream tasks for offset computation.
             downStreamTasksForOffset = topologyContext.getComponentTasks(Constants.OFFSET_AND_IE_JOIN_BOLT_ID);
+
+// Initialize the identifier for downstream tasks for offset.
             this.idForDownStreamTasksOffset = 0;
+
+// Set the output collector for this component.
             this.outputCollector = outputCollector;
-            this.taskID=topologyContext.getThisTaskId();
-            this.hostName= InetAddress.getLocalHost().getHostName();
+
+// Retrieve the task ID for this component.
+            this.taskID = topologyContext.getThisTaskId();
+
+// Get the hostname of the current machine.
+            this.hostName = InetAddress.getLocalHost().getHostName();
+
+// Initialize the identifier for this component.
+            this.identifier = 0;
+// ArrayList Initiliazation
+            this.offsetArrayList= new ArrayList<>();
+// Commented out code that creates a Redis client.
+// this.redisClient = new Jedis("192.168.122.1", 6379);
 
         } catch (Exception e) {
 
@@ -126,6 +170,8 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
     public void execute(Tuple tuple) {
         // Keep track for window limit
         mergeIntervalCounter++;
+     //   System.out.println(mergeIntervalCounter);
+
         try {
             // Right and left predicate evaluation It can be optimized depending on the condition it can be customized
             if (operator.equals("<")) {
@@ -140,8 +186,10 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
             e.printStackTrace();
         }
         // Check condition for window limit
-        if (mergeIntervalCounter >= mergeIntervalDefinedByUser) {
+        if (mergeIntervalCounter== mergeIntervalDefinedByUser) {
+                identifier= identifier+1;
             mergingOfMutableStructureForImmutableDataStructure(tuple);
+
 
         }
 
@@ -150,30 +198,44 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
     @Override
     public void declareOutputFields(OutputFieldsDeclarer outputFieldsDeclarer) {
         //Left part of predicate
-        outputFieldsDeclarer.declareStream(leftPredicateBitSetStreamID, new Fields(Constants.BYTE_ARRAY, Constants.TUPLE_ID));
+      //  outputFieldsDeclarer.declareStream(leftPredicateBitSetStreamID, new Fields(Constants.BYTE_ARRAY, Constants.TUPLE_ID));
+
+        outputFieldsDeclarer.declareStream(leftPredicateBitSetStreamID, new Fields(Constants.BYTE_ARRAY, Constants.TUPLE_ID,
+                Constants.KAFKA_TIME, Constants.KAFKA_SPOUT_TIME, Constants.SPLIT_BOLT_TIME, Constants.TASK_ID_FOR_SPLIT_BOLT, Constants.HOST_NAME_FOR_SPLIT_BOLT, "TupleArrivalTime",
+                Constants.GREATER_PREDICATE_EVALUATION_TIME_BOLT, Constants.MUTABLE_BOLT_TASK_ID, Constants.MUTABLE_BOLT_MACHINE));
+
         //Right part of predicate
-        outputFieldsDeclarer.declareStream(rightPredicateBitSetStreamID, new Fields(Constants.BYTE_ARRAY, Constants.TUPLE_ID));
+       // outputFieldsDeclarer.declareStream(rightPredicateBitSetStreamID, new Fields(Constants.BYTE_ARRAY, Constants.TUPLE_ID));
+        outputFieldsDeclarer.declareStream(rightPredicateBitSetStreamID, new Fields(Constants.BYTE_ARRAY, Constants.TUPLE_ID,
+                Constants.KAFKA_TIME, Constants.KAFKA_SPOUT_TIME, Constants.SPLIT_BOLT_TIME, Constants.TASK_ID_FOR_SPLIT_BOLT, Constants.HOST_NAME_FOR_SPLIT_BOLT, "TupleArrivalTime",
+                Constants.GREATER_PREDICATE_EVALUATION_TIME_BOLT, Constants.MUTABLE_BOLT_TASK_ID, Constants.MUTABLE_BOLT_MACHINE));
+
+
+
+
         //Permutation Array
-        outputFieldsDeclarer.declareStream(permutationComputationStreamID, new Fields(Constants.TUPLE, Constants.PERMUTATION_TUPLE_IDS, Constants.BATCH_COMPLETION_FLAG));
+        outputFieldsDeclarer.declareStream(permutationComputationStreamID, new Fields(Constants.TUPLE, Constants.PERMUTATION_TUPLE_IDS, Constants.BATCH_COMPLETION_FLAG,Constants.IDENTIFIER));
         //Offset Array
-        outputFieldsDeclarer.declareStream(offsetComputationStreamID, new Fields(Constants.TUPLE, Constants.OFFSET_TUPLE_INDEX, Constants.BYTE_ARRAY, Constants.OFFSET_SIZE_OF_TUPLE, Constants.BATCH_COMPLETION_FLAG));
+        outputFieldsDeclarer.declareStream(offsetComputationStreamID, new Fields(Constants.TUPLE, Constants.OFFSET_TUPLE_INDEX, Constants.BYTE_ARRAY, Constants.OFFSET_SIZE_OF_TUPLE, Constants.BATCH_COMPLETION_FLAG,Constants.IDENTIFIER));
         // Merge Operation
-        outputFieldsDeclarer.declareStream(mergeOperationStreamID, new Fields(Constants.MERGING_OPERATION_FLAG));
+        outputFieldsDeclarer.declareStream(mergeOperationStreamID, new Fields(Constants.MERGING_OPERATION_FLAG,Constants.MERGING_START_TIME,Constants.IDENTIFIER));
     }
 
     // Completely evaluate the < predicate here
     private void lessPredicateEvaluation(Tuple tuple) {
         if (tuple.getSourceStreamId().equals(leftStreamSmaller)) {
-            tmpIDForPermutationForStreamR++;
             // Inserting the tuple into the BTree location;
-            leftStreamBPlusTree.insert(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.TUPLE_ID),tmpIDForPermutationForStreamR);
+            leftStreamBPlusTree.insert(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.TUPLE_ID));
+            tmpIDForPermutationForStreamR++;
             // Evaluating Tuples from right stream BPlus Tree.
             BitSet bitSet = rightStreamBPlusTree.greaterThenSpecificValue(tuple.getIntegerByField(Constants.TUPLE));
             if (bitSet != null) {
                 try {
                     byte[] bytArrayRBitSet = convertToByteArray(bitSet);
                     // Only emitting the bit array  tuple is due to acking mechanisim
-                    this.outputCollector.emit(leftPredicateBitSetStreamID, tuple, new Values(bytArrayRBitSet, tuple.getIntegerByField(Constants.TUPLE_ID)));
+                    this.outputCollector.emit(leftPredicateBitSetStreamID, tuple, new Values(bytArrayRBitSet, tuple.getIntegerByField(Constants.TUPLE_ID)+"L",
+                            tuple.getLongByField(Constants.KAFKA_TIME), tuple.getLongByField(Constants.KAFKA_SPOUT_TIME), tuple.getLongByField(Constants.SPLIT_BOLT_TIME), tuple.getValueByField(Constants.TASK_ID_FOR_SPLIT_BOLT),
+                            tuple.getStringByField(Constants.HOST_NAME_FOR_SPLIT_BOLT), tupleArrivalTime, System.currentTimeMillis(), this.taskID, hostName));
                     this.outputCollector.ack(tuple);
                     // Emitting Logic for tuples
 
@@ -186,16 +248,23 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
 
         if (tuple.getSourceStreamId().equals(rightStreamSmaller)) {
             // Insert into the other stream
+
+            rightStreamBPlusTree.insert(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.TUPLE_ID));
             tmpIDForPermutationForStreamS++;
-            rightStreamBPlusTree.insert(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.TUPLE_ID),tmpIDForPermutationForStreamS);
             // Evaluation of the query
+
             BitSet bitSet = leftStreamBPlusTree.lessThenSpecificValue(tuple.getIntegerByField(Constants.TUPLE));
             //
             if (bitSet != null) {
                 try {
                     byte[] bytArrayLBitSet = convertToByteArray(bitSet);
                     // Emitting Tuple logic
-                    this.outputCollector.emit(rightPredicateBitSetStreamID, tuple, new Values(bytArrayLBitSet, tuple.getIntegerByField(Constants.TUPLE_ID)));
+                    this.outputCollector.emit(rightPredicateBitSetStreamID, tuple, new Values(bytArrayLBitSet, tuple.getIntegerByField(Constants.TUPLE_ID)+"R",
+
+                            tuple.getLongByField(Constants.KAFKA_TIME), tuple.getLongByField(Constants.KAFKA_SPOUT_TIME), tuple.getLongByField(Constants.SPLIT_BOLT_TIME), tuple.getValueByField(Constants.TASK_ID_FOR_SPLIT_BOLT),
+                            tuple.getStringByField(Constants.HOST_NAME_FOR_SPLIT_BOLT), tupleArrivalTime, System.currentTimeMillis(), this.taskID, hostName
+
+                    ));
                     this.outputCollector.ack(tuple);
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -210,14 +279,15 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
     // leftStream: this leftStream depicts the left tuple from right part of predicate
     public void greaterPredicateEvaluation(Tuple tuple) {
         if (tuple.getSourceStreamId().equals(leftStreamGreater)) {
+
+            leftStreamBPlusTree.insert(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.TUPLE_ID));
             tmpIDForPermutationForStreamR++;
-            leftStreamBPlusTree.insert(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.TUPLE_ID),tmpIDForPermutationForStreamR);
             BitSet bitSet = rightStreamBPlusTree.lessThenSpecificValue(tuple.getIntegerByField(Constants.TUPLE));
             if (bitSet != null) {
                 try {
                     byte[] bytArrayRBitSet = convertToByteArray(bitSet);
                     //Emit logic here tuple emitting
-                    this.outputCollector.emit(leftPredicateBitSetStreamID, tuple, new Values(bytArrayRBitSet, tuple.getIntegerByField(Constants.TUPLE_ID),
+                    this.outputCollector.emit(leftPredicateBitSetStreamID, tuple, new Values(bytArrayRBitSet, tuple.getIntegerByField(Constants.TUPLE_ID)+"L",
                             tuple.getLongByField(Constants.KAFKA_TIME), tuple.getLongByField(Constants.KAFKA_SPOUT_TIME), tuple.getLongByField(Constants.SPLIT_BOLT_TIME), tuple.getValueByField(Constants.TASK_ID_FOR_SPLIT_BOLT),
                             tuple.getStringByField(Constants.HOST_NAME_FOR_SPLIT_BOLT), tupleArrivalTime, System.currentTimeMillis(), this.taskID, hostName));
                     this.outputCollector.ack(tuple);
@@ -228,14 +298,20 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
         }
         // rightStream: this rightStream depicts the right tuple from right part of predicate
         if (tuple.getSourceStreamId().equals(rightStreamGreater)) {
+            rightStreamBPlusTree.insert(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.TUPLE_ID));
             tmpIDForPermutationForStreamS++;
-            rightStreamBPlusTree.insert(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.TUPLE_ID),tmpIDForPermutationForStreamS);
             BitSet bitSet = leftStreamBPlusTree.greaterThenSpecificValue(tuple.getIntegerByField(Constants.TUPLE));
             if (bitSet != null) {
                 try {
                     //Emiting the tuples to the downStream processing tasks
                     byte[] bytArrayRBitSet = convertToByteArray(bitSet);
-                    this.outputCollector.emit(rightPredicateBitSetStreamID, tuple, new Values(bytArrayRBitSet, tuple.getIntegerByField(Constants.TUPLE_ID)));
+                  //  this.outputCollector.emit(rightPredicateBitSetStreamID, tuple, new Values(bytArrayRBitSet, tuple.getIntegerByField(Constants.TUPLE_ID)));
+
+                    this.outputCollector.emit(rightPredicateBitSetStreamID, tuple, new Values(bytArrayRBitSet, tuple.getIntegerByField(Constants.TUPLE_ID)+"R",
+                            tuple.getLongByField(Constants.KAFKA_TIME), tuple.getLongByField(Constants.KAFKA_SPOUT_TIME), tuple.getLongByField(Constants.SPLIT_BOLT_TIME), tuple.getValueByField(Constants.TASK_ID_FOR_SPLIT_BOLT),
+                            tuple.getStringByField(Constants.HOST_NAME_FOR_SPLIT_BOLT), tupleArrivalTime, System.currentTimeMillis(), this.taskID, hostName));
+
+
                     this.outputCollector.ack(tuple);
                 } catch (IOException e) {
 
@@ -270,20 +346,20 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
         while (node != null) {
             for (int i = 0; i < node.getKeys().size(); i++) {
                 // Emitting tuples to downStream Task for tuple
-                for(int j:node.getKeys().get(i).getValues())
-                this.outputCollector.emitDirect(downStreamTaskID, streamID, tuple, new Values(node.getKeys().get(i).getKey(), convertToByteArray(node.getKeys().get(i).getTmpIDs()), false));
+                for(int j:node.getKeys().get(i).getValues()){
+                this.outputCollector.emitDirect(downStreamTaskID, streamID, tuple, new Values(node.getKeys().get(i).getKey(), j, false, identifier));
                 this.outputCollector.ack(tuple);
-            }
+            }}
             node = node.getNext();
         }
         // Flag tuple that indicates the completeness of batch
 
-        this.outputCollector.emitDirect(downStreamTaskID, streamID, tuple, new Values(0, 0, true));
+        this.outputCollector.emitDirect(downStreamTaskID, streamID, tuple, new Values(0, 0, true,identifier));
         this.outputCollector.ack(tuple);
     }
 
-    public void offsetComputation(Node nodeForLeft, BPlusTreeWithTmpForPermutation rightBTree, Tuple tuple, int taskIndex) throws IOException {
-        // ArrayList<Offset> offsetArrayList= new ArrayList<>();
+    public synchronized void offsetComputation(Node nodeForLeft, BPlusTreeUpdated rightBTree, Tuple tuple, int taskIndex) throws IOException {
+         offsetArrayList= new ArrayList<>();
         int key = nodeForLeft.getKeys().get(0).getKey(); // FirstKEy Added
         boolean check = false;
         List<Integer> values = nodeForLeft.getKeys().get(0).getValues();
@@ -297,7 +373,7 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
         for (int i = 0; i < node.getKeys().size(); i++) {
             if (node.getKeys().get(i).getKey() < key) {
                 globalCount += node.getKeys().get(i).getValues().size();
-                sizeOfvalues = node.getKeys().get(i).getValues().size();
+             //   sizeOfvalues = node.getKeys().get(i).getValues().size();
 
             }
             if ((node.getKeys().get(i).getKey() >= key) || (i == (node.getKeys().size() - 1))) {
@@ -321,8 +397,10 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
         globalCount = globalCount + calculatePreviousNode(node.getPrev());
         for (int j = 0; j < values.size(); j++) {
             // Add logic for Emit the tuples
-            outputCollector.emitDirect(taskIndex, offsetComputationStreamID, new Values(key, (globalCount + 1), convertToByteArray(bitset1), sizeOfvalues, false));
-            //////// offsetArrayList.add(new Offset(key,(globalCount + 1),bitset1,sizeOfvalues));
+//            outputCollector.emitDirect(taskIndex, offsetComputationStreamID, new Values(key, (globalCount + 1), convertToByteArray(bitset1), sizeOfvalues, false,identifier));
+//            outputCollector.ack(tuple);
+             offsetArrayList.add(new Offset(key,(globalCount + 1),bitset1,sizeOfvalues));
+            //testCounter=testCounter+1;
         }
         // Add to the Offset Array with key
         if (check) {
@@ -332,8 +410,48 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
         } else {
 
             linearScanning(nodeForLeft, node, startingIndexForNext, globalCount, taskIndex);
-            outputCollector.emitDirect(taskIndex, offsetComputationStreamID, new Values(0, 0, null, 0, true));
+            for(int i=0;i<offsetArrayList.size();i++){
+                outputCollector.emitDirect(taskIndex, offsetComputationStreamID, new Values(offsetArrayList.get(i).getKey(),
+                        offsetArrayList.get(i).getIndex(), convertToByteArray(offsetArrayList.get(i).getBitSet()),
+                        offsetArrayList.get(i).getSize(), false,identifier));
+                this.outputCollector.ack(tuple);
+            }
+          //  offsetArrayList= new ArrayList();
+            outputCollector.emitDirect(taskIndex, offsetComputationStreamID, new Values(0, 0, null, 0, true, identifier));
             this.outputCollector.ack(tuple);
+
+//            if(offsetArrayList.size()>5){
+//                System.out.println(offsetArrayList.size()+"Size===");
+//                System.exit(-1);
+//            }
+//            if(offsetArrayList.size()<5){
+//                System.out.println(offsetArrayList.size()+"Size less");
+//                System.exit(-1);
+//            }
+//            System.out.println(testCounter+"Mutable_test_Counter");
+//            if(testCounter==10){
+//                while(nodeForLeft!=null){
+//                    for(int i=0;i<nodeForLeft.getKeys().size();i++){
+//                        System.out.println(nodeForLeft.getKeys().get(i).getKey()+"Left Keys"+ offsetArrayList.size());
+//                        for(int k=0;k<offsetArrayList.size();k++){
+//                            System.out.println(offsetArrayList.get(k).getKey()+"====");
+//                        }
+//                    }
+//                    nodeForLeft= nodeForLeft.getNext();
+//                }
+//                Node rightNode= rightBTree.leftMostNode();
+//                while(rightNode!=null){
+//                    for(int i=0;i<rightNode.getKeys().size();i++){
+//                        System.out.println(rightNode.getKeys().get(i).getKey()+" Right KEys"+offsetArrayList.size());
+//                        for(int k=0;k<offsetArrayList.size();k++){
+//                            System.out.println(offsetArrayList.get(k).getKey()+"====");
+//                        }
+//                    }
+//                    rightNode= rightNode.getNext();
+//                }
+//                System.exit(-1);
+//            }
+//            testCounter= 0;
         }
 
         // return offsetArrayList;
@@ -352,7 +470,7 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
     }
 
     // finding Offset position of leftStream tuple in right stream
-    public void linearScanning(Node nodeForLeft, Node nodeForRight, int indexForStartingScanningFromRightNode, int globalCount, int taskIndex) throws IOException {
+    public synchronized void linearScanning(Node nodeForLeft, Node nodeForRight, int indexForStartingScanningFromRightNode, int globalCount, int taskIndex) throws IOException {
         boolean counterCheckForOverFlow = false;
         int counterGlobalCheck = 0;
         int startIndexForNodeForLeft = 1;
@@ -379,9 +497,10 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
                                     int gc = counterGlobalCheck + (values + 1);
                                     // System.out.println(counterGlobalCheck + "After"+gc);
                                     // Emitting Logic here
-                                    /////////offsetArrayList.add(new Offset(key, gc, bitset1,sizeOfValue));
-                                    outputCollector.emitDirect(taskIndex, offsetComputationStreamID, new Values(key, gc, convertToByteArray(bitset1), sizeOfValue, false));
 
+                                 //outputCollector.emitDirect(taskIndex, offsetComputationStreamID, new Values(key, gc, convertToByteArray(bitset1), sizeOfValue, false, identifier));
+//                                   testCounter= testCounter+1;
+                                   offsetArrayList.add(new Offset(key, gc, bitset1,sizeOfValue));
 
                                 }
                             }
@@ -403,9 +522,10 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
                             }
                             for (int k = 0; k < valuesForSearchingKey.size(); k++) {
                                 // Emitting Logic here
-                                //////  offsetArrayList.add(new Offset(key,(globalCount + 1),bitset1,sizeOfValue));
-                                // System.out.println((globalCount + 1)+"...... "+nodeForRight);
-                                outputCollector.emitDirect(taskIndex, offsetComputationStreamID, new Values(key, (globalCount + 1), convertToByteArray(bitset1), sizeOfValue, false));
+                                  // System.out.println((globalCount + 1)+"...... "+nodeForRight);
+                              //  outputCollector.emitDirect(taskIndex, offsetComputationStreamID, new Values(key, (globalCount + 1), convertToByteArray(bitset1), sizeOfValue, false, identifier));
+//                               testCounter=testCounter+1;
+                             offsetArrayList.add(new Offset(key,(globalCount + 1),bitset1,sizeOfValue));
 
                             }
                             indexForStartingScanningFromRightNode = j;
@@ -425,7 +545,7 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
     public void mergingOfMutableStructureForImmutableDataStructure(Tuple tuple) {
         // Collector for merge operation.
 
-        this.outputCollector.emitDirect(downStreamTasksForOffset.get(idForDownStreamTasksOffset), mergeOperationStreamID, new Values(true));
+        this.outputCollector.emitDirect(downStreamTasksForOffset.get(idForDownStreamTasksOffset), mergeOperationStreamID, new Values(true,System.currentTimeMillis(), identifier));
 
         // Left most node for stream R
         Node leftBatch = leftStreamBPlusTree.leftMostNode();
@@ -451,12 +571,9 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
                 e.printStackTrace();
             }
         });
-
-
-        t1.start();
-        t2.start();
-        t3.start();
-
+             t1.start();
+             t2.start();
+             t3.start();
         try {
             t1.join();
             t2.join();
@@ -464,13 +581,17 @@ public class MutableBPlusTreeBolt extends BaseRichBolt {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+
         idForDownStreamTasksOffset++; // DownStream Task ID updation
         // Flushing the mutable data structure
-        leftStreamBPlusTree = new BPlusTreeWithTmpForPermutation(Constants.ORDER_OF_B_PLUS_TREE);
-        rightStreamBPlusTree = new BPlusTreeWithTmpForPermutation(Constants.ORDER_OF_B_PLUS_TREE);
+        leftStreamBPlusTree = new BPlusTreeUpdated(Constants.ORDER_OF_B_PLUS_TREE);
+        rightStreamBPlusTree = new BPlusTreeUpdated(Constants.ORDER_OF_B_PLUS_TREE);
         mergeIntervalCounter = 0; // Merge interval to 0 if not zero than B tree will be null for next
         if (idForDownStreamTasksOffset == downStreamTasksForOffset.size()) {
             idForDownStreamTasksOffset = 0;
         }
     }
+
+
+
 }

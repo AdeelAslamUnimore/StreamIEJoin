@@ -3,17 +3,24 @@ package com.stormiequality.join;
 import java.util.List;
 
 public class Permutation {
-    int tuple;
-    int id;
+    double tuple;
+
+    int tupleIndexPermutation;
     int idsForTest;
+    int id;
+    int tupleSelfJoin;
 
 
     private List<Integer> listOfIDs;
-    public Permutation(int tuple){
-        this.tuple =tuple;
+    public Permutation(int tupleInt){
+        this.tupleIndexPermutation =tupleInt;
     }
-    public Permutation(int tuple, int id) {
+    public Permutation(double tuple, int id) {
         this.tuple = tuple;
+        this.id = id;
+    }
+    public Permutation(int tupleSelfJoin, int id) {
+        this.tupleSelfJoin = tupleSelfJoin;
         this.id = id;
     }
 //    public Permutation(int index, List<Integer> listOfIds){
@@ -30,12 +37,18 @@ public class Permutation {
         this.id =value;
         this.idsForTest=idsForTest;
     }
+    public int getTupleIndexPermutation() {
+        return tupleIndexPermutation;
+    }
 
-    public int getTuple() {
+    public void setTupleIndexPermutation(int tupleIndexPermutation) {
+        this.tupleIndexPermutation = tupleIndexPermutation;
+    }
+    public double getTuple() {
         return tuple;
     }
 
-    public void setTuple(int tuple) {
+    public void setTuple(double tuple) {
         this.tuple = tuple;
     }
 
@@ -69,5 +82,12 @@ public class Permutation {
                 ", idsForTest=" + idsForTest +
                 ", listOfIDs=" + listOfIDs +
                 '}';
+    }
+    public int getTupleSelfJoin() {
+        return tupleSelfJoin;
+    }
+
+    public void setTupleSelfJoin(int tupleSelfJoin) {
+        this.tupleSelfJoin = tupleSelfJoin;
     }
 }

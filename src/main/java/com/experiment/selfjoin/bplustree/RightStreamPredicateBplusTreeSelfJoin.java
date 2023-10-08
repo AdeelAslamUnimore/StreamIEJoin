@@ -2,7 +2,7 @@ package com.experiment.selfjoin.bplustree;
 
 import com.configurationsandconstants.iejoinandbaseworks.Configuration;
 import com.configurationsandconstants.iejoinandbaseworks.Constants;
-import com.stormiequality.BTree.BPlusTree;
+import com.stormiequality.BTree.BPlusTreeUpdated;
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.OutputFieldsDeclarer;
@@ -19,7 +19,7 @@ import java.util.LinkedList;
 import java.util.Map;
 
 public class RightStreamPredicateBplusTreeSelfJoin extends BaseRichBolt {
-    private LinkedList<BPlusTree> rightBPlusTreeLinkedList = null;
+    private LinkedList<BPlusTreeUpdated> rightBPlusTreeLinkedList = null;
     private int treeRemovalThresholdUserDefined;
     private int treeArchiveThresholdRevenue;
     private int treeArchiveThresholdCost;
@@ -67,21 +67,21 @@ public class RightStreamPredicateBplusTreeSelfJoin extends BaseRichBolt {
         tupleRemovalCountForLocal++;
         if (tuple.getSourceStreamId().equals(rightStreamSmaller)) {
             if (!rightBPlusTreeLinkedList.isEmpty()) {
-                BPlusTree currentBplusTreeDuration = rightBPlusTreeLinkedList.getLast();
+                BPlusTreeUpdated currentBplusTreeDuration = rightBPlusTreeLinkedList.getLast();
                 currentBplusTreeDuration.insert(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.TUPLE_ID));
                 treeArchiveThresholdRevenue++;
                 if (treeArchiveThresholdRevenue == treeArchiveUserDefined) {
                     treeArchiveThresholdRevenue = 0;
-                    BPlusTree bPlusTree = new BPlusTree(Constants.ORDER_OF_B_PLUS_TREE);
+                    BPlusTreeUpdated bPlusTree = new BPlusTreeUpdated(Constants.ORDER_OF_B_PLUS_TREE);
                     rightBPlusTreeLinkedList.add(bPlusTree);
                 }
             } else {
-                BPlusTree bPlusTree = new BPlusTree(Constants.ORDER_OF_B_PLUS_TREE);
+                BPlusTreeUpdated bPlusTree = new BPlusTreeUpdated(Constants.ORDER_OF_B_PLUS_TREE);
                 treeArchiveThresholdRevenue++;
                 bPlusTree.insert(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.TUPLE_ID));
                 rightBPlusTreeLinkedList.add(bPlusTree);
             }
-            for (BPlusTree bPlusTree : rightBPlusTreeLinkedList) {
+            for (BPlusTreeUpdated bPlusTree : rightBPlusTreeLinkedList) {
                 BitSet hashSetGreater = bPlusTree.greaterThenSpecificValue(tuple.getIntegerByField(Constants.TUPLE));
 
                 if(hashSetGreater!=null) {

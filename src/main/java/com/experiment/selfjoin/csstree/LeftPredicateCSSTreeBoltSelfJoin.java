@@ -2,7 +2,7 @@ package com.experiment.selfjoin.csstree;
 
 import com.configurationsandconstants.iejoinandbaseworks.Configuration;
 import com.configurationsandconstants.iejoinandbaseworks.Constants;
-import com.stormiequality.BTree.BPlusTree;
+import com.stormiequality.BTree.BPlusTreeUpdated;
 import com.stormiequality.BTree.Key;
 import com.stormiequality.BTree.Node;
 import org.apache.storm.task.OutputCollector;
@@ -24,7 +24,7 @@ import java.util.List;
 import java.util.Map;
 
 public class LeftPredicateCSSTreeBoltSelfJoin extends BaseRichBolt {
-    private BPlusTree leftStreamBPlusTree = null;
+    private BPlusTreeUpdated leftStreamBPlusTree = null;
     private int archiveCount;
     private int counter;
     private int orderOfTreeBothBPlusTreeAndCSSTree;
@@ -53,7 +53,7 @@ public class LeftPredicateCSSTreeBoltSelfJoin extends BaseRichBolt {
     public void prepare(Map<String, Object> map, TopologyContext topologyContext, OutputCollector outputCollector) {
         // For Mutable part initialization
 
-        this.leftStreamBPlusTree = new BPlusTree(orderOfTreeBothBPlusTreeAndCSSTree);
+        this.leftStreamBPlusTree = new BPlusTreeUpdated(orderOfTreeBothBPlusTreeAndCSSTree);
         this.outputCollector = outputCollector;
         try{
             this.taskID=topologyContext.getThisTaskId();
@@ -95,7 +95,7 @@ public class LeftPredicateCSSTreeBoltSelfJoin extends BaseRichBolt {
 
             counter = 0; // reinitialize counter
             // Re initialization of BTrees:
-            leftStreamBPlusTree = new BPlusTree(Constants.ORDER_OF_B_PLUS_TREE);
+            leftStreamBPlusTree = new BPlusTreeUpdated(Constants.ORDER_OF_B_PLUS_TREE);
 
         }
 

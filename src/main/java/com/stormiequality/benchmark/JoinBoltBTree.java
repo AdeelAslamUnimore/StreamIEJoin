@@ -1,6 +1,6 @@
 package com.stormiequality.benchmark;
 
-import com.stormiequality.BTree.BPlusTree;
+import com.stormiequality.BTree.BPlusTreeUpdated;
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.OutputFieldsDeclarer;
@@ -18,8 +18,8 @@ import java.util.Map;
 
 public class JoinBoltBTree extends BaseRichBolt {
     private int tuplecounter=0;
-    private BPlusTree LeftBPlusTree=null;
-    private BPlusTree RightBPlusTree=null;
+    private BPlusTreeUpdated LeftBPlusTree=null;
+    private BPlusTreeUpdated RightBPlusTree=null;
     int orderOfBPlusTree=0;
     String operator;
     int counterSize=0;
@@ -35,9 +35,9 @@ public class JoinBoltBTree extends BaseRichBolt {
     @Override
     public void prepare(Map<String, Object> map, TopologyContext topologyContext, OutputCollector outputCollector) {
         this.tuplecounter=0;
-        this.LeftBPlusTree= new BPlusTree();
+        this.LeftBPlusTree= new BPlusTreeUpdated();
         this.LeftBPlusTree.initialize(orderOfBPlusTree);
-        this.RightBPlusTree= new BPlusTree();
+        this.RightBPlusTree= new BPlusTreeUpdated();
         this.RightBPlusTree.initialize(orderOfBPlusTree);
         this.collector=outputCollector;
     }
@@ -72,9 +72,9 @@ public class JoinBoltBTree extends BaseRichBolt {
 
         if(tuplecounter==100000){
             tuplecounter=0;
-            LeftBPlusTree= new BPlusTree();
+            LeftBPlusTree= new BPlusTreeUpdated();
             LeftBPlusTree.initialize(orderOfBPlusTree);
-            RightBPlusTree= new BPlusTree();
+            RightBPlusTree= new BPlusTreeUpdated();
             RightBPlusTree.initialize(orderOfBPlusTree);
         }
     }

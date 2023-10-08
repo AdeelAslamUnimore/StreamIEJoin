@@ -3,7 +3,7 @@ package com.stormiequality.BTree;
 import java.io.Serializable;
 import java.util.*;
 
-public class BPlusTree implements Serializable {
+public class BPlusTreeUpdated implements Serializable {
 
 
     /**
@@ -19,11 +19,11 @@ public class BPlusTree implements Serializable {
     /**
      * Instantiates a new b plus tree.
      */
-    public BPlusTree() {
+    public BPlusTreeUpdated() {
 
     }
 
-    public BPlusTree(int initilize) {
+    public BPlusTreeUpdated(int initilize) {
         this.m = initilize;
         this.root = null;
     }

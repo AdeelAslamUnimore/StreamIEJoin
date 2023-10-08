@@ -1,6 +1,6 @@
 package com.stormiequality.join;
 
-import com.stormiequality.BTree.BPlusTree;
+import com.stormiequality.BTree.BPlusTreeUpdated;
 import com.stormiequality.BTree.Key;
 import com.stormiequality.BTree.Node;
 import org.apache.storm.task.OutputCollector;
@@ -21,9 +21,9 @@ import java.util.List;
 import java.util.Map;
 
 public class JoinBoltForBPlusTreeTest extends BaseRichBolt {
-    private BPlusTree LeftStreamBPlusTree=null;
+    private BPlusTreeUpdated LeftStreamBPlusTree=null;
     //Tuple from right stream
-    private BPlusTree RightStreamBPlusTree=null;
+    private BPlusTreeUpdated RightStreamBPlusTree=null;
     // Definition of order of BPlus Tree
     private int orderOfBPlusTree=0;
     // Tuple counter that see the counter on the runtime
@@ -71,8 +71,8 @@ public class JoinBoltForBPlusTreeTest extends BaseRichBolt {
     @Override
     public void prepare(Map<String, Object> map, TopologyContext topologyContext, OutputCollector outputCollector) {
         try{
-            LeftStreamBPlusTree= new BPlusTree();
-            RightStreamBPlusTree= new BPlusTree();
+            LeftStreamBPlusTree= new BPlusTreeUpdated();
+            RightStreamBPlusTree= new BPlusTreeUpdated();
             LeftStreamBPlusTree.initialize(orderOfBPlusTree);
             RightStreamBPlusTree.initialize(orderOfBPlusTree);
             localAddress = InetAddress.getLocalHost();
@@ -151,8 +151,8 @@ public class JoinBoltForBPlusTreeTest extends BaseRichBolt {
 //            emitTuple(rightBatch, tuple,downstreamTaskIdsForIEJoinPermutation.get(1),  collector, localAddress.getHostName());
             //Open this comment
        //     offsetComputation(leftBatch,RightStreamBPlusTree,collector,downStreamTasksIdForIEOfset.get(taskIdForOffset),downStreamTaskOffset,localAddress.getHostName(),tuple);
-            LeftStreamBPlusTree= new BPlusTree();
-            RightStreamBPlusTree= new BPlusTree();
+            LeftStreamBPlusTree= new BPlusTreeUpdated();
+            RightStreamBPlusTree= new BPlusTreeUpdated();
             LeftStreamBPlusTree.initialize(orderOfBPlusTree);
             RightStreamBPlusTree.initialize(orderOfBPlusTree);
             tupleCounter=0;
@@ -265,7 +265,7 @@ public class JoinBoltForBPlusTreeTest extends BaseRichBolt {
 
 
 
-    public synchronized void offsetComputation(Node nodeForLeft, BPlusTree rightBTree, OutputCollector collector, int taskId, String streamID, String nodeName,Tuple tuple){
+    public synchronized void offsetComputation(Node nodeForLeft, BPlusTreeUpdated rightBTree, OutputCollector collector, int taskId, String streamID, String nodeName, Tuple tuple){
        // ArrayList<Offset> offsetArrayList = new ArrayList();
         // Node nodeForLeft = leftBTree.leftMostNode();
         // Node nodeForRight = null;

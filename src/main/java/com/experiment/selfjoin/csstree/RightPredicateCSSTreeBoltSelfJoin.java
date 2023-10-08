@@ -2,7 +2,7 @@ package com.experiment.selfjoin.csstree;
 
 import com.configurationsandconstants.iejoinandbaseworks.Configuration;
 import com.configurationsandconstants.iejoinandbaseworks.Constants;
-import com.stormiequality.BTree.BPlusTree;
+import com.stormiequality.BTree.BPlusTreeUpdated;
 import com.stormiequality.BTree.Key;
 import com.stormiequality.BTree.Node;
 import org.apache.storm.task.OutputCollector;
@@ -20,11 +20,10 @@ import java.io.Serializable;
 import java.net.InetAddress;
 import java.util.BitSet;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 
 public class RightPredicateCSSTreeBoltSelfJoin extends BaseRichBolt {
-    private BPlusTree rightStreamBPlusTree = null;
+    private BPlusTreeUpdated rightStreamBPlusTree = null;
     private int counter;
     private int orderOfTreeBothBPlusTreeAndCSSTree;
     private OutputCollector outputCollector;
@@ -45,7 +44,7 @@ public class RightPredicateCSSTreeBoltSelfJoin extends BaseRichBolt {
     @Override
     public void prepare(Map<String, Object> map, TopologyContext topologyContext, OutputCollector outputCollector) {
 
-        this.rightStreamBPlusTree = new BPlusTree(orderOfTreeBothBPlusTreeAndCSSTree);
+        this.rightStreamBPlusTree = new BPlusTreeUpdated(orderOfTreeBothBPlusTreeAndCSSTree);
         this.outputCollector = outputCollector;
         try{
             this.taskID=topologyContext.getThisTaskId();
@@ -72,7 +71,7 @@ public class RightPredicateCSSTreeBoltSelfJoin extends BaseRichBolt {
             Node nodeForRight = rightStreamBPlusTree.leftMostNode();
             dataMergingToCSS(nodeForRight, tuple, this.rightStreamSmaller);
             counter = 0;
-            rightStreamBPlusTree = new BPlusTree(Constants.ORDER_OF_B_PLUS_TREE);
+            rightStreamBPlusTree = new BPlusTreeUpdated(Constants.ORDER_OF_B_PLUS_TREE);
 
         }
 

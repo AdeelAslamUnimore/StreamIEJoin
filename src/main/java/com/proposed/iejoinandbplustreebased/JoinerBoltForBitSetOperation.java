@@ -1,5 +1,6 @@
 package com.proposed.iejoinandbplustreebased;
 
+import clojure.lang.Cons;
 import com.configurationsandconstants.iejoinandbaseworks.Configuration;
 import com.configurationsandconstants.iejoinandbaseworks.Constants;
 import org.apache.storm.task.OutputCollector;
@@ -10,17 +11,15 @@ import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
 import org.apache.storm.tuple.Values;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
+import java.io.*;
 import java.net.InetAddress;
 import java.util.BitSet;
 import java.util.HashMap;
 import java.util.Map;
 
 public class JoinerBoltForBitSetOperation extends BaseRichBolt {
-    private BitSet predicate1BitSet = null;
-    private BitSet predicate2BitSet = null;
+    private BitSet predicateBitSetLeft = null;
+    private BitSet predicateBitSetRight = null;
     private String leftPredicateSourceStreamID = null;
     private String rightPredicateSourceStreamID = null;
     private OutputCollector outputCollector;
@@ -30,28 +29,62 @@ public class JoinerBoltForBitSetOperation extends BaseRichBolt {
     private int streamIDLeft;
     private int streamIDRight;
     ///
-    private HashMap<Integer,BitSet> mapBitSet;
+    private HashMap<String,BitSet> mapBitSetLeftStream;
+    //
+    private HashMap<String,BitSet> mapBitSetRightStream;
+
+    // The buffered writer left stream
+//    BufferedWriter leftStreamWriter;
+//    // The buffered writer right stream
+//    BufferedWriter rightStreamWriter;
+//     private StringBuilder stringBuilderLeft;
+//    private StringBuilder stringBuilderRight;
+//     private int counterLeft;
+//     private int counterRight;
+
+
 
     public JoinerBoltForBitSetOperation() {
         Map<String, Object> map = Configuration.configurationConstantForStreamIDs();
         this.leftPredicateSourceStreamID = (String) map.get("LeftPredicateSourceStreamIDBitSet");
         this.rightPredicateSourceStreamID = (String) map.get("RightPredicateSourceStreamIDBitSet");
-        this.result= (String) map.get("Results");
+       // this.result= (String) map.get("Results");
 
     }
 
     @Override
     public void prepare(Map<String, Object> map, TopologyContext topologyContext, OutputCollector outputCollector) {
-        this.outputCollector = outputCollector;
-        taskID= topologyContext.getThisTaskId();
-        try{
-            hostName= InetAddress.getLocalHost().getHostName();
-            mapBitSet= new HashMap<>();
-        }catch (Exception e){
+        this.outputCollector = outputCollector; // Assign the output collector.
 
+        taskID = topologyContext.getThisTaskId(); // Get the current task ID.
+
+        try {
+            hostName = InetAddress.getLocalHost().getHostName(); // Get the host name of the local machine.
+            mapBitSetLeftStream = new HashMap<>(); // Initialize a HashMap for bit sets on the left stream.
+            mapBitSetRightStream = new HashMap<>(); // Initialize a HashMap for bit sets on the right stream.
+        } catch (Exception e) {
+            e.printStackTrace(); // Print any exceptions that occur.
         }
-//            this.leftPredicateSourceStreamID= (String) map.get("LeftPredicateSourceStreamIDBitSet");
-//            this.rightPredicateSourceStreamID= (String) map.get("RightPredicateSourceStreamIDBitSet");
+//        try {
+////            //  this.counterForRecord=0;
+////            this.stringBuilderLeft = new StringBuilder();
+////            this.stringBuilderRight = new StringBuilder();
+////            leftStreamWriter = new BufferedWriter(new FileWriter(new File("/home/adeel/Data/Results/leftStream"+taskID+".csv")));
+////            rightStreamWriter = new BufferedWriter(new FileWriter(new File("/home/adeel/Data/Results/rightStream"+taskID+".csv")));
+////            leftStreamWriter.write(Constants.TUPLE_ID + "," +
+////                    Constants.KAFKA_TIME + "," + Constants.KAFKA_SPOUT_TIME + "," + Constants.SPLIT_BOLT_TIME + "," + Constants.TASK_ID_FOR_SPLIT_BOLT + "," + Constants.HOST_NAME_FOR_SPLIT_BOLT + "," + "TupleArrivalTime" + "," +
+////                    Constants.GREATER_PREDICATE_EVALUATION_TIME_BOLT + "," + Constants.MUTABLE_BOLT_TASK_ID + "," + Constants.MUTABLE_BOLT_MACHINE + ",EvaluationStartTime , EvaluationEndTime,TasksID, HostName \n");
+////            leftStreamWriter.flush();
+////            rightStreamWriter.write(Constants.TUPLE_ID + "," +
+////                    Constants.KAFKA_TIME + "," + Constants.KAFKA_SPOUT_TIME + "," + Constants.SPLIT_BOLT_TIME + "," + Constants.TASK_ID_FOR_SPLIT_BOLT + "," + Constants.HOST_NAME_FOR_SPLIT_BOLT + "," + "TupleArrivalTime" + "," +
+////                    Constants.GREATER_PREDICATE_EVALUATION_TIME_BOLT + "," + Constants.MUTABLE_BOLT_TASK_ID + "," + Constants.MUTABLE_BOLT_MACHINE + ",EvaluationStartTime,EvaluationEndTime,TasksID, HostName \n");
+////
+////            rightStreamWriter.flush();
+////        }
+////        catch (Exception e){
+////            e.printStackTrace();
+////        }
+
 
     }
 
@@ -64,58 +97,86 @@ public class JoinerBoltForBitSetOperation extends BaseRichBolt {
      */
     @Override
     public void execute(Tuple tuple) {
-        if(mapBitSet.containsKey(tuple.getIntegerByField(Constants.TUPLE_ID))){
-            long tupleStartTime= System.currentTimeMillis();
-            byte[] byteArrayPredicateLeftBitSet = tuple.getBinaryByField(Constants.BYTE_ARRAY);
-            predicate1BitSet = convertToObject(byteArrayPredicateLeftBitSet);
-            predicate1BitSet.and(mapBitSet.get(tuple.getIntegerByField(Constants.TUPLE_ID)));
-
-            this.outputCollector.emit(leftPredicateSourceStreamID, tuple, new Values(tuple
-                    .getValue(1), tuple.getValue(2),tuple.getValue(3),tuple.getValue(4),tuple.getValue(5),
-                    tuple.getValue(6),tuple.getValue(7),tuple.getValue(8),tuple.getValue(9),tuple.getValue(10)));
-
-        }
-
         if (tuple.getSourceStreamId().equals(leftPredicateSourceStreamID)) {
-            streamIDLeft= (Integer) tuple.getValue(1);
-            byte[] byteArrayPredicateLeftBitSet = tuple.getBinaryByField(Constants.BYTE_ARRAY);
-            predicate1BitSet = convertToObject(byteArrayPredicateLeftBitSet);
-            this.outputCollector.emit(leftPredicateSourceStreamID, tuple, new Values(tuple
-                    .getValue(1), tuple.getValue(2),tuple.getValue(3),tuple.getValue(4),tuple.getValue(5),
-                    tuple.getValue(6),tuple.getValue(7),tuple.getValue(8),tuple.getValue(9),tuple.getValue(10)));
+            // Check if the left stream predicate for the tuple exists in the bit set map.
+            if (mapBitSetLeftStream.containsKey(tuple.getStringByField(Constants.TUPLE_ID))) {
+                // Record the start time for processing the tuple.
+                long tupleStartTime = System.currentTimeMillis();
 
+                // Extract the byte array representing the left stream predicate bit set.
+                byte[] byteArrayPredicateLeftBitSet = tuple.getBinaryByField(Constants.BYTE_ARRAY);
+
+                // Convert the byte array to a BitSet representing the left stream predicate.
+                BitSet predicateBitSetLeftStream = convertToObject(byteArrayPredicateLeftBitSet);
+
+                // Perform a bitwise AND operation with the stored predicate bit set.
+                predicateBitSetLeftStream.and(mapBitSetLeftStream.get(tuple.getStringByField(Constants.TUPLE_ID)));
+
+                // Remove the predicate bit set from the map.
+                mapBitSetLeftStream.remove(tuple.getStringByField(Constants.TUPLE_ID));
+
+                // Emit the tuple to the left predicate stream with updated values.
+                this.outputCollector.emit(leftPredicateSourceStreamID, new Values(tuple
+                        .getValue(1), tuple.getValue(2), tuple.getValue(3), tuple.getValue(4), tuple.getValue(5),
+                        tuple.getValue(6), tuple.getValue(7), tuple.getValue(8), tuple.getValue(9), tuple.getValue(10),
+                        tupleStartTime, System.currentTimeMillis(), taskID, hostName));
+
+                // Acknowledge the tuple processing.
+                this.outputCollector.ack(tuple);
+            } else {
+                // If the predicate does not exist in the map, add it to the map.
+                byte[] byteArrayPredicateLeftBitSet = tuple.getBinaryByField(Constants.BYTE_ARRAY);
+                BitSet predicateBitSetLeftStream = convertToObject(byteArrayPredicateLeftBitSet);
+                mapBitSetLeftStream.put(tuple.getStringByField(Constants.TUPLE_ID), predicateBitSetLeftStream);
+            }
         }
+
         if (tuple.getSourceStreamId().equals(rightPredicateSourceStreamID)) {
-            streamIDRight= (Integer) tuple.getValue(1);
-            byte[] byteArrayPredicateRightArray = tuple.getBinaryByField(Constants.BYTE_ARRAY);
-            predicate2BitSet = convertToObject(byteArrayPredicateRightArray);
+            // Check if the right stream predicate for the tuple exists in the bit set map.
+            if (mapBitSetRightStream.containsKey(tuple.getStringByField(Constants.TUPLE_ID))) {
+                // Record the start time for processing the tuple.
+                long tupleStartTime = System.currentTimeMillis();
 
-            this.outputCollector.emit(rightPredicateSourceStreamID, tuple, new Values(tuple
-                    .getValue(1), tuple.getValue(2),tuple.getValue(3),tuple.getValue(4),tuple.getValue(5),
-                    tuple.getValue(6),tuple.getValue(7),tuple.getValue(8), tuple.getValue(9),tuple.getValue(10)));
+                // Extract the byte array representing the right stream predicate bit set.
+                byte[] byteArrayPredicateRightBitSet = tuple.getBinaryByField(Constants.BYTE_ARRAY);
 
-        }
-        if ((predicate1BitSet != null) && (predicate2BitSet != null)) {
-            predicate2BitSet.and(predicate1BitSet);
-            long time= System.currentTimeMillis();
-            this.outputCollector.emit(result, tuple, new Values( time, streamIDLeft,streamIDRight,taskID,hostName));
+                // Convert the byte array to a BitSet representing the right stream predicate.
+                BitSet predicateBitSetRightStream = convertToObject(byteArrayPredicateRightBitSet);
 
-            predicate1BitSet = null;
-            predicate2BitSet = null;
-        }
+                // Perform a bitwise AND operation with the stored predicate bit set.
+                predicateBitSetRightStream.and(mapBitSetRightStream.get(tuple.getStringByField(Constants.TUPLE_ID)));
+
+                // Remove the predicate bit set from the map.
+                mapBitSetRightStream.remove(tuple.getStringByField(Constants.TUPLE_ID));
+
+                // Emit the tuple to the right predicate stream with updated values.
+                this.outputCollector.emit(rightPredicateSourceStreamID, new Values(tuple
+                        .getValue(1), tuple.getValue(2), tuple.getValue(3), tuple.getValue(4), tuple.getValue(5),
+                        tuple.getValue(6), tuple.getValue(7), tuple.getValue(8), tuple.getValue(9), tuple.getValue(10),
+                        tupleStartTime, System.currentTimeMillis(), taskID, hostName));
+
+                // Acknowledge the tuple processing.
+                this.outputCollector.ack(tuple);
+            } else {
+                // If the predicate does not exist in the map, add it to the map.
+                byte[] byteArrayPredicateRightBitSet = tuple.getBinaryByField(Constants.BYTE_ARRAY);
+                BitSet predicateBitSetRightStream = convertToObject(byteArrayPredicateRightBitSet);
+                mapBitSetRightStream.put(tuple.getStringByField(Constants.TUPLE_ID), predicateBitSetRightStream);
+            }
+
+    }
     }
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer outputFieldsDeclarer) {
-      Fields greaterFields= new Fields(  Constants.TUPLE_ID, Constants.KAFKA_TIME,
+      Fields fields= new Fields(  Constants.TUPLE_ID, Constants.KAFKA_TIME,
                 Constants.KAFKA_SPOUT_TIME, Constants.SPLIT_BOLT_TIME, Constants.TASK_ID_FOR_SPLIT_BOLT, Constants.HOST_NAME_FOR_SPLIT_BOLT, "TupleArrivalTime",
-                Constants.GREATER_PREDICATE_EVALUATION_TIME_BOLT, Constants.MUTABLE_BOLT_TASK_ID,Constants.MUTABLE_BOLT_MACHINE);
-        outputFieldsDeclarer.declareStream(leftPredicateSourceStreamID, greaterFields);
-        Fields lesserFields= new Fields(  Constants.TUPLE_ID,Constants.KAFKA_TIME,
+                Constants.GREATER_PREDICATE_EVALUATION_TIME_BOLT, Constants.MUTABLE_BOLT_TASK_ID,Constants.MUTABLE_BOLT_MACHINE, "startEvalutionTime","EndEvaluationTime","TaskID","MachineID");
+        outputFieldsDeclarer.declareStream(leftPredicateSourceStreamID, fields);
+        Fields rightFields= new Fields(  Constants.TUPLE_ID,Constants.KAFKA_TIME,
                 Constants.KAFKA_SPOUT_TIME, Constants.SPLIT_BOLT_TIME, Constants.TASK_ID_FOR_SPLIT_BOLT, Constants.HOST_NAME_FOR_SPLIT_BOLT,"TupleArrivalTime",
-                Constants.LESSER_PREDICATE_EVALUATION_TIME_BOLT, Constants.MUTABLE_BOLT_TASK_ID,Constants.MUTABLE_BOLT_MACHINE);
-        outputFieldsDeclarer.declareStream(rightPredicateSourceStreamID, lesserFields);
-        outputFieldsDeclarer.declareStream(result, new Fields("Time","streamleft", "streamright","TaskID","HostName"));
+                Constants.LESSER_PREDICATE_EVALUATION_TIME_BOLT, Constants.MUTABLE_BOLT_TASK_ID,Constants.MUTABLE_BOLT_MACHINE,"startEvalutionTime","EndEvaluationTime","TaskID","MachineID");
+        outputFieldsDeclarer.declareStream(rightPredicateSourceStreamID, rightFields);
 
 
     }

@@ -10,21 +10,20 @@ import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
 import org.apache.storm.tuple.Values;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.ObjectOutputStream;
+import java.io.*;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.*;
 
 public class RightPredicateImmutableCSSBolt extends BaseRichBolt {
-    private LinkedList<CSSTree> leftStreamLinkedListCSSTree = null;
-    private LinkedList<CSSTree> rightStreamLinkedListCSSTree = null;
+    private LinkedList<CSSTreeUpdated> leftStreamLinkedListCSSTree = null;
+    private LinkedList<CSSTreeUpdated> rightStreamLinkedListCSSTree = null;
     private String leftStreamGreater;
     private String rightStreamGreater;
     private HashSet<Integer> leftStreamTuplesHashSet = null;
     private HashSet<Integer> rightStreamTuplesHashSet = null;
-    private CSSTree leftStreamCSSTree = null;
-    private CSSTree rightStreamCSSTree = null;
+    private CSSTreeUpdated leftStreamCSSTree = null;
+    private CSSTreeUpdated rightStreamCSSTree = null;
     private boolean leftStreamMergeGreater = false;
     private boolean rightStreamMergeGreater = false;
     private Queue<Tuple> leftStreamGreaterQueueMerge = null;
@@ -34,6 +33,15 @@ public class RightPredicateImmutableCSSBolt extends BaseRichBolt {
     private boolean leftBooleanTupleRemovalCounter = false;
     private boolean rightBooleanTupleRemovalCounter = false;
     private OutputCollector outputCollector;
+///Left merge
+    private long LeftMergeTimeR;
+    private long RightMergeTimeS;
+    private int taskID;
+    private String hostName;
+    private BufferedWriter bufferedWriter;
+    private ArrayList<TupleModel> leftArrayList;
+    private ArrayList<TupleModel> rightArrayList;
+
 
     public RightPredicateImmutableCSSBolt() {
         Map<String, Object> map = Configuration.configurationConstantForStreamIDs();
@@ -45,51 +53,117 @@ public class RightPredicateImmutableCSSBolt extends BaseRichBolt {
     public void prepare(Map<String, Object> map, TopologyContext topologyContext, OutputCollector outputCollector) {
         leftStreamLinkedListCSSTree = new LinkedList<>();
         rightStreamLinkedListCSSTree = new LinkedList<>();
-        leftStreamCSSTree = new CSSTree(Constants.ORDER_OF_CSS_TREE);
-        rightStreamCSSTree = new CSSTree(Constants.ORDER_OF_CSS_TREE);
+        leftStreamCSSTree = new CSSTreeUpdated(Constants.ORDER_OF_CSS_TREE);
+        rightStreamCSSTree = new CSSTreeUpdated(Constants.ORDER_OF_CSS_TREE);
         this.leftStreamGreaterQueueMerge = new LinkedList<>();
         this.rightStreamGreaterQueueMerge = new LinkedList<>();
+        this.taskID= topologyContext.getThisTaskId();
+        try {
+            this.bufferedWriter= new BufferedWriter(new FileWriter(new File("/home/adeel/Data/Results/RightPredicate.csv")));
+            this.hostName= InetAddress.getLocalHost().getHostName();
+            this.leftArrayList= new ArrayList<>();
+            this.rightArrayList= new ArrayList<>();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         this.outputCollector = outputCollector;
 
     }
 
     @Override
     public void execute(Tuple tuple) {
-        if (tuple.getSourceStreamId().equals("LeftStreamTuples")) {
+        if (tuple.getSourceStreamId().equals("StreamR")) {
+            long startTime=System.currentTimeMillis();
             if (leftStreamMergeGreater) {
                 leftStreamGreaterQueueMerge.offer(tuple);
             }
-            HashSet<Integer> leftHashSet = probingResultsGreater(tuple, rightStreamLinkedListCSSTree);
-            if (leftHashSet != null) {
-                outputCollector.emit("RightPredicate", tuple, new Values(convertHashSetToByteArray(leftHashSet), tuple.getIntegerByField("ID")));
+            BitSet leftBitSet = probingResultsGreater(tuple, rightStreamLinkedListCSSTree);
+            if (leftBitSet != null) {
+                try {
+                    outputCollector.emit("LeftPredicate", tuple, new Values(convertToByteArray(leftBitSet), tuple.getIntegerByField("ID")+"L", tuple.getLongByField(Constants.KAFKA_TIME), tuple.getLongByField(Constants.KAFKA_SPOUT_TIME),
+                            startTime,System.currentTimeMillis(), taskID, hostName));
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
                 outputCollector.ack(tuple);
 
             }
+            leftArrayList.add(new TupleModel(tuple.getIntegerByField("Revenue"), tuple.getIntegerByField("ID")));
+            if(leftArrayList.size()==100000){
+                CSSTreeUpdated cssTreeUpdated= new CSSTreeUpdated(4);
+                for(int i=0;i<leftArrayList.size();i++){
+                    cssTreeUpdated.insert(leftArrayList.get(i).getTuple(),leftArrayList.get(i).getId());
+                }
+                leftStreamLinkedListCSSTree.add(cssTreeUpdated);
+                leftArrayList= new ArrayList<>();
+            }
         }
-        if (tuple.getSourceStreamId().equals("RightStream")) {
+        if (tuple.getSourceStreamId().equals("StreamS")) {
+            long startTime=System.currentTimeMillis();
             if (rightStreamMergeGreater) {
                 rightStreamGreaterQueueMerge.offer(tuple);
             }
-            HashSet<Integer> rightHashSet = probingResultsSmaller(tuple, leftStreamLinkedListCSSTree);
-            if (rightHashSet != null) {
+            BitSet rightBitSet = probingResultsSmaller(tuple, leftStreamLinkedListCSSTree);
+            if (rightBitSet != null) {
 
-                outputCollector.emit("RightPredicate", tuple, new Values(convertHashSetToByteArray(rightHashSet), tuple.getIntegerByField("ID")));
+                try {
+                    outputCollector.emit("RightPredicate", tuple, new Values(convertToByteArray(rightBitSet), tuple.getIntegerByField("ID")+"R", tuple.getValue(2), tuple.getValue(3),
+                            startTime, System.currentTimeMillis(),taskID, hostName));
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
                 outputCollector.ack(tuple);
+            }
+            rightArrayList.add(new TupleModel(tuple.getIntegerByField("Cost"), tuple.getIntegerByField("ID")));
+            if(rightArrayList.size()==100000){
+                CSSTreeUpdated cssTreeUpdated= new CSSTreeUpdated(4);
+                for(int i=0;i<rightArrayList.size();i++){
+                    cssTreeUpdated.insert(rightArrayList.get(i).getTuple(),rightArrayList.get(i).getId());
+                }
+                rightStreamLinkedListCSSTree.add(cssTreeUpdated);
+                rightArrayList= new ArrayList<>();
             }
         }
 
         if (tuple.getSourceStreamId().equals(leftStreamGreater)) {
-            leftInsertionTupleGreater(tuple);
+            try {
+                bufferedWriter.write("LEft"+ tuple.getValue(0)+","+tuple.getValue(1)+","+System.currentTimeMillis()+"\n");
+                this.bufferedWriter.flush();
+                leftInsertionTupleGreater(tuple);
+            } catch (Exception e) {
+                try {
+                    bufferedWriter.write("LEft==="+ e+"\n");
+                    this.bufferedWriter.flush();
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                }
+
+                e.printStackTrace();
+            }
         }
         if (tuple.getSourceStreamId().equals(rightStreamGreater)) {
-            rightInsertionTupleGreater(tuple);
+            try {
+                bufferedWriter.write("Right"+ tuple.getValue(0)+","+tuple.getValue(1)+","+System.currentTimeMillis()+"\n");
+                this.bufferedWriter.flush();
+                rightInsertionTupleGreater(tuple);
+            } catch (IOException e) {
+                try {
+                    bufferedWriter.write("Right=="+ e+"\n");
+                    this.bufferedWriter.flush();
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                }
+
+                e.printStackTrace();
+            }
         }
         if (tuple.getSourceStreamId().equals("LeftCheckForMerge")) {
-
+            LeftMergeTimeR=tuple.getLongByField("Time");
             leftStreamMergeGreater = true;
+
         }
         if (tuple.getSourceStreamId().equals("RightCheckForMerge")) {
-
+            RightMergeTimeS=tuple.getLongByField("Time");
             rightStreamMergeGreater = true;
         }
         if (leftBooleanTupleRemovalCounter && rightBooleanTupleRemovalCounter) {
@@ -106,102 +180,98 @@ public class RightPredicateImmutableCSSBolt extends BaseRichBolt {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer outputFieldsDeclarer) {
-
-        outputFieldsDeclarer.declareStream("RightPredicate", new Fields(Constants.RIGHT_HASH_SET, Constants.TUPLE_ID));
-        outputFieldsDeclarer.declareStream("RightMergeBitSet", new Fields(Constants.RIGHT_HASH_SET, Constants.TUPLE_ID));
+        outputFieldsDeclarer.declareStream("LeftPredicate", new Fields(Constants.LEFT_HASH_SET, Constants.TUPLE_ID, Constants.KAFKA_SPOUT_TIME, Constants.KAFKA_TIME, "StartEvaluationTime","EndEvaluationTime",
+                "TaskId","HostName"));
+        outputFieldsDeclarer.declareStream("RightPredicate", new Fields(Constants.RIGHT_HASH_SET, Constants.TUPLE_ID, Constants.KAFKA_SPOUT_TIME, Constants.KAFKA_TIME, "StartEvaluationTime","EndEvaluationTime",
+                "TaskId","HostName"));
+        outputFieldsDeclarer.declareStream("RightMergeBitSet", new Fields(Constants.RIGHT_HASH_SET, Constants.TUPLE_ID, "MergeTimeR","MergecompleteTime", "MergeTupleEvaluationTime", "taskID", "hostName"));
 
     }
 
-    public HashSet<Integer> probingResultsGreater(Tuple tuple, LinkedList<CSSTree> linkedListCSSTree) {
-        HashSet<Integer> hashSet = new HashSet<>();
+    public BitSet probingResultsGreater(Tuple tuple, LinkedList<CSSTreeUpdated> linkedListCSSTree) {
+      //  HashSet<Integer> hashSet = new HashSet<>();
+        BitSet bitSet= new BitSet();
         if (!linkedListCSSTree.isEmpty()) {
             tupleRemovalCount++;
-            for (CSSTree cssTree : linkedListCSSTree) {
-                hashSet.addAll(cssTree.searchGreater(tuple.getIntegerByField("Revenue")));
+            for (CSSTreeUpdated cssTree : linkedListCSSTree) {
+               cssTree.searchSmallerBitSet(tuple.getIntegerByField("Revenue"), bitSet);
 
             }
-            return hashSet;
+            return bitSet;
 
         }
         return null;
     }
 
-    public HashSet<Integer> probingResultsSmaller(Tuple tuple, LinkedList<CSSTree> linkedListCSSTree) {
-        HashSet<Integer> hashSet = new HashSet<>();
+    public BitSet probingResultsSmaller(Tuple tuple, LinkedList<CSSTreeUpdated> linkedListCSSTree) {
+        //HashSet<Integer> hashSet = new HashSet<>();
+        BitSet bitSet= new BitSet();
         if (!linkedListCSSTree.isEmpty()) {
             tupleRemovalCount++;
-            for (CSSTree cssTree : linkedListCSSTree) {
-                hashSet.addAll(cssTree.searchSmaller(tuple.getIntegerByField("Cost")));
+            for (CSSTreeUpdated cssTree : linkedListCSSTree) {
+               cssTree.searchGreaterBitSet(tuple.getIntegerByField("Cost"), bitSet);
 
             }
-            return hashSet;
+            return bitSet;
 
         }
         return null;
     }
 
-    public void leftInsertionTupleGreater(Tuple tuple) {
+    public void leftInsertionTupleGreater(Tuple tuple) throws IOException {
 
         if (tuple.getBooleanByField(Constants.BATCH_CSS_FLAG)) {
             leftStreamLinkedListCSSTree.add(leftStreamCSSTree);
-            if (leftStreamMergeGreater) {
-                int i = 0;
-                for (Tuple tuples : leftStreamGreaterQueueMerge) {
-                    HashSet hashSet = leftStreamCSSTree.searchSmaller(tuples.getIntegerByField("Revenue"));
-                    i = i + 1;
-                    outputCollector.emit("RightMergeBitSet", new Values(convertHashSetToByteArray(hashSet), i));
-                }
-                leftStreamGreaterQueueMerge = new LinkedList<>();
-                leftStreamMergeGreater = false;
-            }
-            leftStreamCSSTree = new CSSTree(Constants.ORDER_OF_CSS_TREE);
+//            if (leftStreamMergeGreater) {
+//                long completeTime=System.currentTimeMillis();
+//                int i = 0;
+//                for (Tuple tuples : leftStreamGreaterQueueMerge) {
+//                    BitSet bitSet= new BitSet();
+//                    leftStreamCSSTree.searchSmallerBitSet(tuples.getIntegerByField("Revenue"),bitSet);
+//                    i = i + 1;
+//                    outputCollector.emit("RightMergeBitSet", new Values(convertToByteArray(bitSet), i, LeftMergeTimeR,completeTime, System.currentTimeMillis(), taskID, hostName));
+//                }
+//                leftStreamGreaterQueueMerge = new LinkedList<>();
+//                leftStreamMergeGreater = false;
+//            }
+            leftStreamCSSTree = new CSSTreeUpdated(Constants.ORDER_OF_CSS_TREE);
             tupleRemovalCount = tupleRemovalCount + Constants.MUTABLE_WINDOW_SIZE;
             if (tupleRemovalCount >= Constants.IMMUTABLE_CSS_PART_REMOVAL) {
                 this.leftBooleanTupleRemovalCounter = true;
             }
         } else {
 
-            leftStreamCSSTree.insertBulkUpdate(tuple.getIntegerByField(Constants.BATCH_CSS_TREE_KEY),
-                    convertToIntegerList(tuple.getBinaryByField(Constants.BATCH_CSS_TREE_VALUES)));
+            leftStreamCSSTree.insert(tuple.getIntegerByField(Constants.BATCH_CSS_TREE_KEY),
+                    tuple.getIntegerByField(Constants.BATCH_CSS_TREE_VALUES));
         }
     }
 
-    public void rightInsertionTupleGreater(Tuple tuple) {
+    public void rightInsertionTupleGreater(Tuple tuple) throws IOException {
 
         if (tuple.getBooleanByField(Constants.BATCH_CSS_FLAG)) {
             rightStreamLinkedListCSSTree.add(rightStreamCSSTree);
-            if (rightStreamMergeGreater) {
-                int i = 0;
-                for (Tuple tuples : rightStreamGreaterQueueMerge) {
-                    i = i + 1;
-                    HashSet hashSet = rightStreamCSSTree.searchGreater(tuples.getIntegerByField("Cost"));
-                    outputCollector.emit("RightMergeBitSet", new Values(convertHashSetToByteArray(hashSet), i));
-                }
-                rightStreamGreaterQueueMerge = new LinkedList<>();
-                rightStreamMergeGreater = false;
-            }
-            rightStreamCSSTree = new CSSTree(Constants.ORDER_OF_CSS_TREE);
+//            if (rightStreamMergeGreater) {
+//                long completeTime=System.currentTimeMillis();
+//                int i = 0;
+//                for (Tuple tuples : rightStreamGreaterQueueMerge) {
+//                    BitSet bitSet= new BitSet();
+//                    i = i + 1;
+//                   rightStreamCSSTree.searchSmallerBitSet(tuples.getIntegerByField("Cost"),bitSet);
+//                    outputCollector.emit("RightMergeBitSet", new Values(convertToByteArray(bitSet), i, RightMergeTimeS, completeTime,System.currentTimeMillis(), taskID, hostName));
+//                }
+//                rightStreamGreaterQueueMerge = new LinkedList<>();
+//                rightStreamMergeGreater = false;
+//            }
+            rightStreamCSSTree = new CSSTreeUpdated(Constants.ORDER_OF_CSS_TREE);
             tupleRemovalCount = tupleRemovalCount + Constants.MUTABLE_WINDOW_SIZE;
             if (tupleRemovalCount >= Constants.IMMUTABLE_CSS_PART_REMOVAL) {
                 this.rightBooleanTupleRemovalCounter = true;
             }
         } else {
 
-            rightStreamCSSTree.insertBulkUpdate(tuple.getIntegerByField(Constants.BATCH_CSS_TREE_KEY),
-                    convertToIntegerList(tuple.getBinaryByField(Constants.BATCH_CSS_TREE_VALUES)));
+            rightStreamCSSTree.insert(tuple.getIntegerByField(Constants.BATCH_CSS_TREE_KEY),
+                 tuple.getIntegerByField(Constants.BATCH_CSS_TREE_VALUES));
         }
-    }
-
-    public static byte[] convertHashSetToByteArray(HashSet<Integer> hashSet) {
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        try {
-            ObjectOutputStream oos = new ObjectOutputStream(bos);
-            oos.writeObject(hashSet);
-            oos.flush();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return bos.toByteArray();
     }
 
     private static List<Integer> convertToIntegerList(byte[] byteArray) {
@@ -212,5 +282,13 @@ public class RightPredicateImmutableCSSBolt extends BaseRichBolt {
             integerList.add(nextByte);
         }
         return integerList;
+    }
+    public synchronized byte[] convertToByteArray(Serializable object) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (ObjectOutputStream objectOutputStream = new ObjectOutputStream(baos)) {
+            objectOutputStream.writeObject(object);
+            objectOutputStream.flush();
+        }
+        return baos.toByteArray();
     }
 }

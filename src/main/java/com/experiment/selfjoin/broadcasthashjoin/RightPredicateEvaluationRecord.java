@@ -18,10 +18,10 @@ public class RightPredicateEvaluationRecord extends BaseRichBolt {
     @Override
     public void prepare(Map<String, Object> map, TopologyContext topologyContext, OutputCollector outputCollector) {
         try{
-            this.bufferedWriter= new BufferedWriter(new FileWriter(new File("/home/adeel/Data/Results///RightPredicateEvaluationRecord.csv")));
+            this.bufferedWriter= new BufferedWriter(new FileWriter(new File("/home/adeel/Data/Results/RightPredicateEvaluationRecord.csv")));
             this.bufferedWriter.write(Constants.TUPLE_ID+","+Constants.KAFKA_TIME+","+
                     Constants.KAFKA_SPOUT_TIME+","+Constants.SPLIT_BOLT_TIME+","+Constants.TASK_ID_FOR_SPLIT_BOLT+","+
-                    Constants.HOST_NAME_FOR_SPLIT_BOLT+","+"EvaluationStartTime, EvaluationEndTime, taskID, hostName \n");
+                    Constants.HOST_NAME_FOR_SPLIT_BOLT+","+"EvaluationStartTime, EvaluationEndTime,TupleSize, taskID, hostName \n");
             this.bufferedWriter.flush();
         }catch (Exception e){
 
@@ -31,7 +31,7 @@ public class RightPredicateEvaluationRecord extends BaseRichBolt {
     @Override
     public void execute(Tuple tuple) {
         try{
-            this.bufferedWriter.write(tuple.getValue(0)+","+tuple.getValue(1)+","+tuple.getValue(2)+","+tuple.getValue(3)+","+tuple.getValue(4)+","+tuple.getValue(5)+","+tuple.getValue(6)+","+tuple.getValue(7)+","+tuple.getValue(8)+","+tuple.getValue(9)+"\n");
+            this.bufferedWriter.write(tuple.getValue(0)+","+tuple.getValue(1)+","+tuple.getValue(2)+","+tuple.getValue(3)+","+tuple.getValue(4)+","+tuple.getValue(5)+","+tuple.getValue(6)+","+tuple.getValue(7)+","+tuple.getValue(8)+","+tuple.getValue(9)+","+tuple.getValue(10)+"\n");
             this.bufferedWriter.flush();
         }catch (Exception e){
 

@@ -1,13 +1,8 @@
 package com.experiment.selfjoin;
 
-import clojure.lang.Cons;
 import com.baselinealgorithm.chainbplusandcss.*;
 import com.baselinealgorithm.chainindexbplustree.JoinerBoltBplusTree;
-import com.baselinealgorithm.chainindexbplustree.LeftStreamPredicateBplusTree;
-import com.baselinealgorithm.chainindexbplustree.RightStreamPredicateBplusTree;
 import com.baselinealgorithm.chainindexrbst.JoinerBoltBST;
-import com.baselinealgorithm.chainindexrbst.LeftPredicateBoltBST;
-import com.baselinealgorithm.chainindexrbst.RightPredicateBoltBST;
 import com.configurationsandconstants.iejoinandbaseworks.Configuration;
 import com.configurationsandconstants.iejoinandbaseworks.Constants;
 import com.experiment.selfjoin.bplustree.LeftStreamPredicateBplusTreeSelfJoin;
@@ -15,22 +10,16 @@ import com.experiment.selfjoin.bplustree.RecordBolt;
 import com.experiment.selfjoin.bplustree.RightStreamPredicateBplusTreeSelfJoin;
 import com.experiment.selfjoin.broadcasthashjoin.*;
 import com.experiment.selfjoin.csstree.*;
+import com.experiment.selfjoin.csstree.RecordMutablePart;
 import com.experiment.selfjoin.iejoinproposed.*;
 import com.experiment.selfjoin.redblacktree.LeftPredicateBoltBSTSelfJoin;
 import com.experiment.selfjoin.redblacktree.RightPredicateBoltBSTSelfJoin;
-import com.proposed.iejoinandbplustreebased.IEJoinWithLinkedList;
-import com.proposed.iejoinandbplustreebased.JoinerBoltForBitSetOperation;
-import com.proposed.iejoinandbplustreebased.MutableBPlusTreeBolt;
-import com.proposed.iejoinandbplustreebased.PermutationBolt;
-import com.stormiequality.test.Spout;
+import com.stormiequality.inputdata.Spout;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.storm.Config;
 import org.apache.storm.LocalCluster;
 import org.apache.storm.StormSubmitter;
-import org.apache.storm.generated.AlreadyAliveException;
-import org.apache.storm.generated.AuthorizationException;
-import org.apache.storm.generated.InvalidTopologyException;
 import org.apache.storm.kafka.spout.FirstPollOffsetStrategy;
 import org.apache.storm.kafka.spout.KafkaSpout;
 import org.apache.storm.kafka.spout.KafkaSpoutConfig;
@@ -40,13 +29,11 @@ import org.apache.storm.tuple.Values;
 import redis.clients.jedis.Jedis;
 
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 
 public class Topology {
     public static void main(String[] args) throws Exception {
 
-        new Topology().BCHJ();
+        new Topology().SplitJoin();
 
     }
 
@@ -396,6 +383,67 @@ public class Topology {
             }
 
             jedis.close();
+
+    }
+    public void SplitJoin() throws Exception {
+        Config config = new Config();
+        Map<String, Object> map = Configuration.configurationConstantForStreamIDs();
+        config.setNumWorkers(10);
+        config.registerSerialization(java.util.BitSet.class);
+        config.registerSerialization(java.util.HashSet.class);
+        config.registerSerialization(java.util.concurrent.atomic.AtomicLong.class);
+        List<String> workerChildopts = new ArrayList<>();
+        workerChildopts.add("-Xmx2g");
+        workerChildopts.add("-Xss8m");
+        config.put(Config.TOPOLOGY_WORKER_CHILDOPTS, workerChildopts);
+        config.setNumAckers(4);
+
+        TopologyBuilder builder = new TopologyBuilder();
+        final int[] id = {0};
+        String groupId = "kafka-reader-group";
+        // Kafka Spout for reading tuples:
+
+        KafkaSpoutConfig<String, String> kafkaSpoutConfigForStreamR = KafkaSpoutConfig.builder("192.168.122.160:9093,192.168.122.231:9094", "selfjoin")
+                .setProp(ConsumerConfig.GROUP_ID_CONFIG, groupId)
+                .setProp(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class)
+                .setProp(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class)
+                .setProcessingGuarantee(KafkaSpoutConfig.ProcessingGuarantee.AT_LEAST_ONCE)
+                .setRecordTranslator(record -> {
+                    String[] splitValues = record.value().split(","); // Split record.value() based on a delimiter, adjust it as needed
+                    double value1, value2 = 0;
+                    //  int id=0;
+                    try {
+                        value1 = Double.parseDouble(splitValues[5]);
+                        value2 = Double.parseDouble(splitValues[11]);
+                        //    id= Integer.parseInt(splitValues[splitValues.length - 2]);
+
+
+                    } catch (NumberFormatException e) {
+                        value1 = 0;
+                        value2 = 0;
+                        //  id=0;
+                    }
+                    long kafkaTime = Long.parseLong(splitValues[splitValues.length - 1]);
+                    // Extract the second value
+                    id[0]++;
+                    //String value3 = splitValues[2];
+
+                    return new Values((int) Math.round(value1), (int) Math.round(value2), id[0], kafkaTime, System.currentTimeMillis());
+                }, new Fields("distance", "amount", "ID", "kafkaTime", "Time"), "StreamR")
+                .setFirstPollOffsetStrategy(FirstPollOffsetStrategy.UNCOMMITTED_LATEST)
+                .build();
+        builder.setSpout(Constants.KAFKA_SPOUT, new KafkaSpout<>(kafkaSpoutConfigForStreamR), 1);
+        // builder.setSpout(Constants.KAFKA_SPOUT, new Spout(1000), 1);
+        builder.setBolt("SplitBolt", new SplitJoinSplitBolt("LeftPredicate","RightPredicate"))
+                .fieldsGrouping(Constants.KAFKA_SPOUT, "StreamR", new Fields("ID"));
+        builder.setBolt("LeftPredicate", new LeftPredicateEvaluation()).directGrouping("SplitBolt","LeftInsertion").allGrouping("SplitBolt","LeftSearch").setNumTasks(10);
+        builder.setBolt("RightPredicate", new RightPredicateEvaluation()).directGrouping("SplitBolt","RightInsertion").allGrouping("SplitBolt","RightSearch").setNumTasks(10);
+        builder.setBolt("Joiner", new Joiner()).fieldsGrouping("LeftPredicate","Left", new Fields(Constants.TUPLE_ID)).
+                fieldsGrouping("RightPredicate","Right",new Fields(Constants.TUPLE_ID)).setNumTasks(30);
+        builder.setBolt("LeftPredicateResult", new LeftPredicateEvaluationRecord()).shuffleGrouping("LeftPredicate","LeftRecord");
+        builder.setBolt("RightPredicateResult", new RightPredicateEvaluationRecord()).shuffleGrouping("RightPredicate","RightRecord");
+        builder.setBolt("JoinerRecord", new JoinerRecord()).shuffleGrouping("Joiner","JoinerStream");
+      StormSubmitter.submitTopology("selfjoinChainedIndex", config, builder.createTopology());
 
     }
 }

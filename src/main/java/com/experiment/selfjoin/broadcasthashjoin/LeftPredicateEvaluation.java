@@ -56,7 +56,7 @@ public class LeftPredicateEvaluation extends BaseRichBolt {
                     collector.emit("Left", new Values(tuple.getIntegerByField(Constants.TUPLE_ID), bytesArray));
                     Values recordValues = new Values(tuple.getIntegerByField(Constants.TUPLE_ID), tuple.getValueByField(Constants.KAFKA_TIME),
                             tuple.getValueByField(Constants.KAFKA_SPOUT_TIME), tuple.getValueByField(Constants.SPLIT_BOLT_TIME), tuple.getValueByField(Constants.TASK_ID_FOR_SPLIT_BOLT),
-                            tuple.getValueByField(Constants.HOST_NAME_FOR_SPLIT_BOLT), startTime, endTime, taskID, hostName);
+                            tuple.getValueByField(Constants.HOST_NAME_FOR_SPLIT_BOLT), startTime, endTime,leftWindow.size(), taskID, hostName);
                     collector.emit("LeftRecord", recordValues);
                 }
             } catch (IOException e) {
@@ -72,7 +72,7 @@ public class LeftPredicateEvaluation extends BaseRichBolt {
             long tupleRemovalTimeAfter=System.currentTimeMillis();
             Values recordValues = new Values(tuple.getIntegerByField(Constants.TUPLE_ID), 0,
                     0, 0,0,
-                    0, tupleRemovalTime, tupleRemovalTimeAfter, taskID, hostName);
+                    0, tupleRemovalTime, tupleRemovalTimeAfter, leftWindow.size(),taskID, hostName);
             collector.emit("LeftRecord", recordValues);
         }
     }
@@ -90,6 +90,6 @@ public class LeftPredicateEvaluation extends BaseRichBolt {
         outputFieldsDeclarer.declareStream("Left",new Fields(Constants.TUPLE_ID,Constants.BYTE_ARRAY));
         outputFieldsDeclarer.declareStream("LeftRecord", new Fields(Constants.TUPLE_ID,Constants.KAFKA_TIME,
                 Constants.KAFKA_SPOUT_TIME,Constants.SPLIT_BOLT_TIME,Constants.TASK_ID_FOR_SPLIT_BOLT,
-                Constants.HOST_NAME_FOR_SPLIT_BOLT,"EvaluationStartTime", "EvaluationEndTime", "taskID", "hostName"));
+                Constants.HOST_NAME_FOR_SPLIT_BOLT,"EvaluationStartTime", "EvaluationEndTime","TupleSize", "taskID", "hostName"));
     }
 }

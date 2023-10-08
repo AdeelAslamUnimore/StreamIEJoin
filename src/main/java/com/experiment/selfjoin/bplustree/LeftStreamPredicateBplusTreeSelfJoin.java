@@ -2,7 +2,7 @@ package com.experiment.selfjoin.bplustree;
 
 import com.configurationsandconstants.iejoinandbaseworks.Configuration;
 import com.configurationsandconstants.iejoinandbaseworks.Constants;
-import com.stormiequality.BTree.BPlusTree;
+import com.stormiequality.BTree.BPlusTreeUpdated;
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.OutputFieldsDeclarer;
@@ -19,7 +19,7 @@ import java.util.LinkedList;
 import java.util.Map;
 
 public class LeftStreamPredicateBplusTreeSelfJoin extends BaseRichBolt {
-    private LinkedList<BPlusTree> leftPredicateLinkedList = null;
+    private LinkedList<BPlusTreeUpdated> leftPredicateLinkedList = null;
     private int treeRemovalThresholdUserDefined;
     private int treeArchiveThresholdDuration;
     private int treeArchiveThresholdTime;
@@ -73,27 +73,27 @@ public class LeftStreamPredicateBplusTreeSelfJoin extends BaseRichBolt {
 
             if (!leftPredicateLinkedList.isEmpty()) {
                 //New insertion only active sub index structure that always exist on the right that is last index of linkedList
-                BPlusTree currentBPlusTreeDuration = leftPredicateLinkedList.getLast();
+                BPlusTreeUpdated currentBPlusTreeDuration = leftPredicateLinkedList.getLast();
                 currentBPlusTreeDuration.insert(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.TUPLE_ID));
                 treeArchiveThresholdDuration++;
                 //Archive period achieve
                 if (treeArchiveThresholdDuration == treeArchiveUserDefined) {
                     treeArchiveThresholdDuration = 0;
                     // New Object of BPlus
-                    BPlusTree bPlusTree = new BPlusTree(Constants.ORDER_OF_B_PLUS_TREE);
+                    BPlusTreeUpdated bPlusTree = new BPlusTreeUpdated(Constants.ORDER_OF_B_PLUS_TREE);
                     //Added to the linked list
                     leftPredicateLinkedList.add(bPlusTree);
                 }
             } else {
                 // When the linkedlist is empty:
-                BPlusTree bPlusTree = new BPlusTree(Constants.ORDER_OF_B_PLUS_TREE);
+                BPlusTreeUpdated bPlusTree = new BPlusTreeUpdated(Constants.ORDER_OF_B_PLUS_TREE);
                 treeArchiveThresholdDuration++;
                 bPlusTree.insert(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.TUPLE_ID));
                 leftPredicateLinkedList.add(bPlusTree);
             }
             //Search of inequality condition and insertion into the hashset
 
-            for (BPlusTree bPlusTree : leftPredicateLinkedList) {
+            for (BPlusTreeUpdated bPlusTree : leftPredicateLinkedList) {
                 BitSet integerHashSet = bPlusTree.lessThenSpecificValue(tuple.getIntegerByField(Constants.TUPLE));
                 if (integerHashSet != null) {
 
@@ -146,27 +146,27 @@ public class LeftStreamPredicateBplusTreeSelfJoin extends BaseRichBolt {
 
         if (!leftPredicateLinkedList.isEmpty()) {
             //New insertion only active sub index structure that always exist on the right that is last index of linkedList
-            BPlusTree currentBPlusTreeDuration = leftPredicateLinkedList.getLast();
+            BPlusTreeUpdated currentBPlusTreeDuration = leftPredicateLinkedList.getLast();
             currentBPlusTreeDuration.insert(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.TUPLE_ID));
             treeArchiveThresholdDuration++;
             //Archive period achieve
             if (treeArchiveThresholdDuration == treeArchiveUserDefined) {
                 treeArchiveThresholdDuration = 0;
                 // New Object of BPlus
-                BPlusTree bPlusTree = new BPlusTree(Constants.ORDER_OF_B_PLUS_TREE);
+                BPlusTreeUpdated bPlusTree = new BPlusTreeUpdated(Constants.ORDER_OF_B_PLUS_TREE);
                 //Added to the linked list
                 leftPredicateLinkedList.add(bPlusTree);
             }
         } else {
             // When the linkedlist is empty:
-            BPlusTree bPlusTree = new BPlusTree(Constants.ORDER_OF_B_PLUS_TREE);
+            BPlusTreeUpdated bPlusTree = new BPlusTreeUpdated(Constants.ORDER_OF_B_PLUS_TREE);
             treeArchiveThresholdDuration++;
             bPlusTree.insert(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.TUPLE_ID));
             leftPredicateLinkedList.add(bPlusTree);
         }
         //Search of inequality condition and insertion into the hashset
 
-        for (BPlusTree bPlusTree : leftPredicateLinkedList) {
+        for (BPlusTreeUpdated bPlusTree : leftPredicateLinkedList) {
             BitSet integerHashSet = bPlusTree.lessThenSpecificValue(tuple.getIntegerByField(Constants.TUPLE));
             if (integerHashSet != null) {
 

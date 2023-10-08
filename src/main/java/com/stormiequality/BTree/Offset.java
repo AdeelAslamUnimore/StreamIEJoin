@@ -15,8 +15,12 @@ public class Offset {
     private int index;
     private BitSet bitSet;
     private int size;
+    private double electricKey;
     public Offset(int key){
         this.key=key;
+    }
+    public Offset(double electricKey){
+        this.electricKey=electricKey;
     }
     public Offset(int key, int index) {
         this.key = key;
@@ -31,6 +35,13 @@ public class Offset {
     }
     public Offset(int key, int index, BitSet bitSet, int size) {
         this.key = key;
+        this.index = index;
+        this.bitSet=bitSet;
+        this.size=size;
+
+    }
+    public Offset(double electricKey, int index, BitSet bitSet, int size) {
+        this.electricKey = electricKey;
         this.index = index;
         this.bitSet=bitSet;
         this.size=size;
@@ -67,7 +78,16 @@ public class Offset {
     public Integer getKeyForSearch() {
         return Integer.valueOf(key);
     }
+    public Double getElectricKeyForSearch() {
+        return Double.valueOf(electricKey);
+    }
+    public double getElectricKey() {
+        return electricKey;
+    }
 
+    public void setElectricKey(double electricKey) {
+        this.electricKey = electricKey;
+    }
     @Override
     public String toString() {
         return "Offset{" +

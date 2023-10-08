@@ -10,10 +10,9 @@ import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
 import org.apache.storm.tuple.Values;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.ObjectOutputStream;
+import java.io.*;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.*;
 
 public class LeftPredicateImmutableCSSBolt extends BaseRichBolt {
@@ -40,6 +39,16 @@ public class LeftPredicateImmutableCSSBolt extends BaseRichBolt {
     // Output collector
     private OutputCollector outputCollector;
 
+    // Metrics  for Merging and MutableTupleEvaluation
+    private long LeftMergeTimeR;
+    private long RightMergeTimeS;
+    private int taskID;
+    private String hostName;
+    private BufferedWriter bufferedWriter;
+    //
+    private ArrayList<TupleModel> leftArrayList;
+    private ArrayList<TupleModel> rightArrayList;
+
     public LeftPredicateImmutableCSSBolt() {
         // These are the initialization of upstream streamIDS
         Map<String, Object> map = Configuration.configurationConstantForStreamIDs();
@@ -58,6 +67,16 @@ public class LeftPredicateImmutableCSSBolt extends BaseRichBolt {
         // Updated  queue during merge
         this.leftStreamSmallerQueueMerge = new LinkedList<>();
         this.rightStreamSmallerQueueMerge = new LinkedList<>();
+        this.taskID=topologyContext.getThisTaskId();
+        try {
+            this.hostName= InetAddress.getLocalHost().getHostName();
+            this.leftArrayList= new ArrayList<>();
+            this.rightArrayList= new ArrayList<>();
+
+            this.bufferedWriter= new BufferedWriter(new FileWriter(new File("/home/adeel/Data/Results/LeftPredicateImmutablle.csv")));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
         this.outputCollector = outputCollector;
 
@@ -66,49 +85,111 @@ public class LeftPredicateImmutableCSSBolt extends BaseRichBolt {
     @Override
     public void execute(Tuple tuple) {
         // Check tuple from left stream R.Duration
-        if (tuple.getSourceStreamId().equals("LeftStreamTuples")) {
+        if (tuple.getSourceStreamId().equals("StreamR")) {
+            long startTime= System.currentTimeMillis();
             // IF MERGE FLAG is ON then associated queue must be updated.
             if (leftStreamMergeSmaller) {
                 this.leftStreamSmallerQueueMerge.offer(tuple);
             }
             // Probing the results
-            HashSet<Integer> leftHashSet = probingResultsSmaller(tuple, rightStreamLinkedListCSSTree);
-           if(leftHashSet!=null) {
+           BitSet leftBitSet = probingResultsSmaller(tuple, rightStreamLinkedListCSSTree);
+
+           if(leftBitSet!=null) {
                // Only emit whole hashSet if linked list contains the tuples;
                // emit for hashset evaluation/
-               outputCollector.emit("LeftPredicate", tuple, new Values(convertHashSetToByteArray(leftHashSet), tuple.getIntegerByField("ID")));
+
+               try {
+                   outputCollector.emit("LeftPredicate", tuple, new Values(convertToByteArray(leftBitSet), tuple.getIntegerByField("ID")+"L", tuple.getLongByField(Constants.KAFKA_SPOUT_TIME),
+                           tuple.getLongByField(Constants.KAFKA_TIME), startTime, System.currentTimeMillis(), taskID, hostName));
+               } catch (IOException e) {
+                   e.printStackTrace();
+               }
                outputCollector.ack(tuple);
+           }
+           leftArrayList.add(new TupleModel(tuple.getIntegerByField("Duration"), tuple.getIntegerByField("ID")));
+           if(leftArrayList.size()==100000){
+               CSSTreeUpdated cssTreeUpdated= new CSSTreeUpdated(4);
+               for(int i=0;i<leftArrayList.size();i++){
+                   cssTreeUpdated.insert(leftArrayList.get(i).getTuple(),leftArrayList.get(i).getId());
+               }
+               leftStreamLinkedListCSSTree.add(cssTreeUpdated);
+               leftArrayList= new ArrayList<>();
            }
 
         }
         // // Check tuple from left stream S.Duration
-        if (tuple.getSourceStreamId().equals("RightStream")) {
+        if (tuple.getSourceStreamId().equals("StreamS")) {
+            long startTime= System.currentTimeMillis();
             if (rightStreamMergeSmaller) {
                 // IF MERGE FLAG is ON then associated queue must be updated.
                 this.rightStreamSmallerQueueMerge.offer(tuple);
             }
-            HashSet<Integer> rightHashSet = probingResultsGreater(tuple, leftStreamLinkedListCSSTree);
-            if(rightHashSet!=null) {
-                outputCollector.emit("LeftPredicate", tuple, new Values(convertHashSetToByteArray(rightHashSet), tuple.getIntegerByField("ID")));
+            BitSet rightBitSet = probingResultsGreater(tuple, leftStreamLinkedListCSSTree);
+            if(rightBitSet!=null) {
+                try {
+                    outputCollector.emit("RightPredicate", tuple, new Values(convertToByteArray(rightBitSet), tuple.getIntegerByField("ID")+"R",  tuple.getLongByField(Constants.KAFKA_SPOUT_TIME),
+                            tuple.getLongByField(Constants.KAFKA_TIME), startTime, System.currentTimeMillis(), taskID, hostName));
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
                 outputCollector.ack(tuple);
+            }
+            rightArrayList.add(new TupleModel(tuple.getIntegerByField("Time"), tuple.getIntegerByField("ID")));
+            if(rightArrayList.size()==100000){
+                CSSTreeUpdated cssTreeUpdated= new CSSTreeUpdated(4);
+                for(int i=0;i<rightArrayList.size();i++){
+                    cssTreeUpdated.insert(rightArrayList.get(i).getTuple(),rightArrayList.get(i).getId());
+                }
+                rightStreamLinkedListCSSTree.add(cssTreeUpdated);
+                rightArrayList= new ArrayList<>();
             }
         }
         // During merge flag that just indicate update for inserting tuples in queue
         if (tuple.getSourceStreamId().equals("LeftCheckForMerge")) {
             //this.leftStreamSmallerQueueMerge.offer(tuple);
+
             leftStreamMergeSmaller = true;
+            this.LeftMergeTimeR=tuple.getLongByField("Time");
         }
         if (tuple.getSourceStreamId().equals("RightCheckForMerge")) {
             // this.rightStreamSmallerQueueMerge.offer(tuple);
             rightStreamMergeSmaller = true;
+            this.RightMergeTimeS=tuple.getLongByField("Time");
         }
         // leftStreamSmaller If the Merging TUples arrives from R.Duration
         if (tuple.getSourceStreamId().equals(leftStreamSmaller)) {
-            leftInsertionTuplesSmaller(tuple);
+
+            try {
+                this.bufferedWriter.write("LeftSmaller"+tuple.getValue(0)+","+tuple.getValue(1)+","+System.currentTimeMillis()+"\n");
+                this.bufferedWriter.flush();
+                leftInsertionTuplesSmaller(tuple);
+            } catch (Exception e) {
+                try {
+                    this.bufferedWriter.write("LeftSmaller=="+e+"\n");
+                    this.bufferedWriter.flush();
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                }
+
+                e.printStackTrace();
+            }
         }
         //rightStream If merging tuples arrives from S.Time
         if (tuple.getSourceStreamId().equals(rightStreamSmaller)) {
-            rightInsertionTupleSmaller(tuple);
+            try {
+                this.bufferedWriter.write("RightSmaller"+tuple.getValue(0)+","+tuple.getValue(1)+","+System.currentTimeMillis()+"\n");
+                this.bufferedWriter.flush();
+                rightInsertionTupleSmaller(tuple);
+            } catch (Exception e) {
+                e.printStackTrace();
+                try {
+                    this.bufferedWriter.write("RightSmaller"+e+"\n");
+                    this.bufferedWriter.flush();
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                }
+
+            }
         }
 
 
@@ -128,60 +209,71 @@ public class LeftPredicateImmutableCSSBolt extends BaseRichBolt {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer outputFieldsDeclarer) {
-        outputFieldsDeclarer.declareStream("LeftPredicate", new Fields(Constants.LEFT_HASH_SET, Constants.TUPLE_ID));
-        outputFieldsDeclarer.declareStream("LeftMergeBitSet", new Fields(Constants.LEFT_HASH_SET, Constants.TUPLE_ID));
+        outputFieldsDeclarer.declareStream("LeftPredicate", new Fields(Constants.LEFT_HASH_SET, Constants.TUPLE_ID ,Constants.KAFKA_SPOUT_TIME, Constants.KAFKA_TIME, "StartEvaluationTime","EndEvaluationTime",
+                "TaskId","HostName"));
+        outputFieldsDeclarer.declareStream("RightPredicate", new Fields(Constants.RIGHT_HASH_SET, Constants.TUPLE_ID ,Constants.KAFKA_SPOUT_TIME, Constants.KAFKA_TIME, "StartEvaluationTime","EndEvaluationTime",
+                "TaskId","HostName"));
+        outputFieldsDeclarer.declareStream("LeftMergeBitSet", new Fields(Constants.LEFT_HASH_SET, Constants.TUPLE_ID, "MergeTimeR","MergecompleteTime", "MergeTupleEvaluationTime", "taskID", "hostName"));
 
     }
     // Probing results insert tuple R.Duration search Greater to all for every new tuple.
-    public HashSet<Integer> probingResultsSmaller(Tuple tuple, LinkedList<CSSTreeUpdated> linkedListCSSTree) {
-        HashSet<Integer> leftHashSet = new HashSet<>();
+    public BitSet probingResultsSmaller(Tuple tuple, LinkedList<CSSTreeUpdated> linkedListCSSTree) {
+       // HashSet<Integer> leftHashSet = new HashSet<>();
         // Iterate all linked list
+        BitSet bitSet= new BitSet();
         if (!linkedListCSSTree.isEmpty()) {
             tupleRemovalCount++;
             // Probe to all linked list
             for (CSSTreeUpdated cssTree : linkedListCSSTree) {
-                leftHashSet.addAll(cssTree.searchGreater(tuple.getIntegerByField("Duration")));
+               // leftHashSet.addAll(cssTree.searchGreater(tuple.getIntegerByField("Duration")));
+                cssTree.searchGreaterBitSet(tuple.getIntegerByField("Duration"), bitSet);
 
             }
-            return leftHashSet;
+            return bitSet;
 
         }
         return null;
 
     }
     // Probing results insert tuple S.Time search Greater to all for every new tuple.
-    public HashSet<Integer> probingResultsGreater(Tuple tuple, LinkedList<CSSTreeUpdated> linkedListCSSTree) {
+    public BitSet probingResultsGreater(Tuple tuple, LinkedList<CSSTreeUpdated> linkedListCSSTree) {
 
-        HashSet<Integer> rightHashSet = new HashSet<>();
+        //HashSet<Integer> rightHashSet = new HashSet<>();
+        BitSet bitSet= new BitSet();
         if (!linkedListCSSTree.isEmpty()) {
             tupleRemovalCount++;
             for (CSSTreeUpdated cssTree : linkedListCSSTree) {
 
-                rightHashSet.addAll(cssTree.searchSmaller(tuple.getIntegerByField("Time")));
+                //rightHashSet.addAll(cssTree.searchSmaller(tuple.getIntegerByField("Time")));
+                cssTree.searchSmallerBitSet(tuple.getIntegerByField("Time"),bitSet);
 
             }
-            return rightHashSet;
+            return bitSet;
 
         }
         return null;
     }
     // Insertion R.Duration insert into the CSS Tree
-    public void leftInsertionTuplesSmaller(Tuple tuple) {
+    public void leftInsertionTuplesSmaller(Tuple tuple) throws IOException {
         if (tuple.getBooleanByField(Constants.BATCH_CSS_FLAG)) { // If tuples arrive and have flag true;
             leftStreamLinkedListCSSTree.add(leftStreamCSSTree);
                 // Evaluating tuples during merge
-            if (leftStreamMergeSmaller) {
-                int i = 0;
-                for (Tuple tuples : leftStreamSmallerQueueMerge) {
-                    i = i + 1;
-                    HashSet hashSet = leftStreamCSSTree.searchGreater(tuples.getIntegerByField("Duration"));
-                    outputCollector.emit("LeftMergeBitSet", new Values(convertHashSetToByteArray(hashSet), i));
 
-                }
-                // flush the queue that maintain that tuples
-                leftStreamSmallerQueueMerge = new LinkedList<>();
-                leftStreamMergeSmaller = false; // set associated flag to false
-            }
+//            if (leftStreamMergeSmaller) {
+//                long completeMergeTime=System.currentTimeMillis();
+//                int i = 0;
+//                for (Tuple tuples : leftStreamSmallerQueueMerge) {
+//                    i = i + 1;
+//                    BitSet bitSet= new BitSet();
+//                    leftStreamCSSTree.searchGreaterBitSet(tuples.getIntegerByField("Duration"),bitSet);
+//
+//                    outputCollector.emit("LeftMergeBitSet", new Values(convertToByteArray(bitSet), i,LeftMergeTimeR,completeMergeTime,System.currentTimeMillis(), taskID, hostName));
+//
+//                }
+//                // flush the queue that maintain that tuples
+//                leftStreamSmallerQueueMerge = new LinkedList<>();
+//                leftStreamMergeSmaller = false; // set associated flag to false
+//            }
             // create new CSS tree object
             leftStreamCSSTree = new CSSTreeUpdated(Constants.ORDER_OF_CSS_TREE);
             // updated the tuple removal counter by newly added tuples from immutable part
@@ -193,26 +285,28 @@ public class LeftPredicateImmutableCSSBolt extends BaseRichBolt {
             }
         } else {
             // leftStreamCSSTree is used for inserting tuples first all upstream tuples are inserted first into css tree
-            leftStreamCSSTree.insertBulkUpdate(tuple.getIntegerByField(Constants.BATCH_CSS_TREE_KEY),
-                    convertToIntegerList(tuple.getBinaryByField(Constants.BATCH_CSS_TREE_VALUES)));
+            leftStreamCSSTree.insert(tuple.getIntegerByField(Constants.BATCH_CSS_TREE_KEY),
+                    tuple.getIntegerByField(Constants.BATCH_CSS_TREE_VALUES));
         }
     }
 
-    public void rightInsertionTupleSmaller(Tuple tuple) {
+    public void rightInsertionTupleSmaller(Tuple tuple) throws IOException {
 
         if (tuple.getBooleanByField(Constants.BATCH_CSS_FLAG)) {
             rightStreamLinkedListCSSTree.add(rightStreamCSSTree);
-            if (rightStreamMergeSmaller) {
-                int i = 0;
-                for (Tuple tuples : rightStreamSmallerQueueMerge) {
-                    i = i + 1;
-                    HashSet hashSet = rightStreamCSSTree.searchSmaller(tuples.getIntegerByField("Time"));
-                    outputCollector.emit("LeftMergeBitSet", new Values(convertHashSetToByteArray(hashSet), i));
-
-                }
-                rightStreamSmallerQueueMerge = new LinkedList<>();
-                rightStreamMergeSmaller = false;
-            }
+//            if (rightStreamMergeSmaller) {
+//                long completeMergeTime=System.currentTimeMillis();
+//                int i = 0;
+//                for (Tuple tuples : rightStreamSmallerQueueMerge) {
+//                    BitSet bitSet= new BitSet();
+//                    i = i + 1;
+//                     rightStreamCSSTree.searchGreaterBitSet(tuples.getIntegerByField("Time"),bitSet);
+//                    outputCollector.emit("LeftMergeBitSet", new Values(convertToByteArray(bitSet), i,RightMergeTimeS,completeMergeTime, System.currentTimeMillis(),taskID, hostName));
+//
+//                }
+//                rightStreamSmallerQueueMerge = new LinkedList<>();
+//                rightStreamMergeSmaller = false;
+//            }
             rightStreamCSSTree = new CSSTreeUpdated(Constants.ORDER_OF_CSS_TREE);
             tupleRemovalCount = tupleRemovalCount + Constants.MUTABLE_WINDOW_SIZE;
             if (tupleRemovalCount >= Constants.IMMUTABLE_CSS_PART_REMOVAL) {
@@ -220,8 +314,8 @@ public class LeftPredicateImmutableCSSBolt extends BaseRichBolt {
             }
         } else {
 
-            rightStreamCSSTree.insertBulkUpdate(tuple.getIntegerByField(Constants.BATCH_CSS_TREE_KEY),
-                    convertToIntegerList(tuple.getBinaryByField(Constants.BATCH_CSS_TREE_VALUES)));
+            rightStreamCSSTree.insert(tuple.getIntegerByField(Constants.BATCH_CSS_TREE_KEY),
+                    tuple.getIntegerByField(Constants.BATCH_CSS_TREE_VALUES));
 
         }
     }
@@ -236,15 +330,23 @@ public class LeftPredicateImmutableCSSBolt extends BaseRichBolt {
         return integerList;
     }
 
-    public static byte[] convertHashSetToByteArray(HashSet<Integer> hashSet) {
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        try {
-            ObjectOutputStream oos = new ObjectOutputStream(bos);
-            oos.writeObject(hashSet);
-            oos.flush();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return bos.toByteArray();
+//    public static byte[] convertHashSetToByteArray(HashSet<Integer> hashSet) {
+//        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+//        try {
+//            ObjectOutputStream oos = new ObjectOutputStream(bos);
+//            oos.writeObject(hashSet);
+//            oos.flush();
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+//        return bos.toByteArray();
+//    }
+public synchronized byte[] convertToByteArray(Serializable object) throws IOException {
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    try (ObjectOutputStream objectOutputStream = new ObjectOutputStream(baos)) {
+        objectOutputStream.writeObject(object);
+        objectOutputStream.flush();
     }
+    return baos.toByteArray();
+}
 }

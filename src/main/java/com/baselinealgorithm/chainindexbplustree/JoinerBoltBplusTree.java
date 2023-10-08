@@ -24,7 +24,7 @@ public class JoinerBoltBplusTree extends BaseRichBolt {
     private OutputCollector collector;
     private int taskID;
     private String hostName;
-    private HashMap<Integer, BitSet> hashMap;
+    private HashMap<String, BitSet> hashMap;
     public JoinerBoltBplusTree(String leftStreamID, String rightStreamID){
         this.leftStreamID=leftStreamID;
         this.rightStreamID=rightStreamID;
@@ -51,32 +51,37 @@ public class JoinerBoltBplusTree extends BaseRichBolt {
         long beforeTime=System.currentTimeMillis();
         if(tuple.getSourceStreamId().equals(leftStreamID)) {
             leftHashSet = convertToObject(tuple.getBinaryByField(Constants.LEFT_HASH_SET));
-            if(hashMap.containsKey(tuple.getIntegerByField(Constants.TUPLE_ID))){
-                hashMap.get(tuple.getIntegerByField(Constants.TUPLE_ID)).and(leftHashSet);
-                hashMap.remove(tuple.getIntegerByField(Constants.TUPLE_ID));
+            if(hashMap.containsKey(tuple.getStringByField(Constants.TUPLE_ID))){
+                hashMap.get(tuple.getStringByField(Constants.TUPLE_ID)).and(leftHashSet);
+                hashMap.remove(tuple.getStringByField(Constants.TUPLE_ID));
                 try{
-                    this.collector.emit ("Record", new Values(tuple.getIntegerByField(Constants.TUPLE_ID),beforeTime, System.currentTimeMillis(),taskID,hostName));
+                    //Constants.KAFKA_TIME, Constants.KAFKA_SPOUT_TIME, Constants.SPLIT_BOLT_TIME, Constants.TASK_ID_FOR_SPLIT_BOLT,  Constants.HOST_NAME_FOR_SPLIT_BOLT, "TupleArrivalTimeChainIndex", "TupleComputationTime", "RightPredicateTaskID","RightPredicateHostID"
+                    this.collector.emit ("Record", new Values(tuple.getStringByField(Constants.TUPLE_ID),tuple.getValue(2), tuple.getValue(3),
+                            tuple.getValue(4), tuple.getValue(5), tuple.getValue(6), tuple.getValue(7), tuple.getValue(8),
+                            tuple.getValue(9),tuple.getValue(10),beforeTime, System.currentTimeMillis(),taskID,hostName));
                     this.collector.ack(tuple);
                 }catch (Exception e){
                     e.printStackTrace();
                 }
             } else{
-                hashMap.put(tuple.getIntegerByField(Constants.TUPLE_ID),leftHashSet);
+                hashMap.put(tuple.getStringByField(Constants.TUPLE_ID),leftHashSet);
             }
         }
         if(tuple.getSourceStreamId().equals(rightStreamID)){
             rightHashSet=convertToObject(tuple.getBinaryByField(Constants.RIGHT_HASH_SET));
-            if(hashMap.containsKey(tuple.getIntegerByField(Constants.TUPLE_ID))){
-                hashMap.get(tuple.getIntegerByField(Constants.TUPLE_ID)).and(rightHashSet);
-                hashMap.remove(tuple.getIntegerByField(Constants.TUPLE_ID));
+            if(hashMap.containsKey(tuple.getStringByField(Constants.TUPLE_ID))){
+                hashMap.get(tuple.getStringByField(Constants.TUPLE_ID)).and(rightHashSet);
+                hashMap.remove(tuple.getStringByField(Constants.TUPLE_ID));
                 try{
-                    this.collector.emit ("Record", new Values(tuple.getIntegerByField(Constants.TUPLE_ID),beforeTime, System.currentTimeMillis(),taskID,hostName));
+                    this.collector.emit ("Record", new Values(tuple.getStringByField(Constants.TUPLE_ID),tuple.getValue(2), tuple.getValue(3),
+                            tuple.getValue(4), tuple.getValue(5), tuple.getValue(6), tuple.getValue(7), tuple.getValue(8),
+                            tuple.getValue(9),tuple.getValue(10),beforeTime, System.currentTimeMillis(),taskID,hostName));
                     this.collector.ack(tuple);
                 }catch (Exception e){
                     e.printStackTrace();
                 }
             } else{
-                hashMap.put(tuple.getIntegerByField(Constants.TUPLE_ID),rightHashSet);
+                hashMap.put(tuple.getStringByField(Constants.TUPLE_ID),rightHashSet);
             }
         }
 
@@ -105,7 +110,7 @@ public class JoinerBoltBplusTree extends BaseRichBolt {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer outputFieldsDeclarer) {
-        outputFieldsDeclarer.declareStream("Record", new Fields("ID","BeforeTime", "AfterTime", "TaskID","Machine") );
+        outputFieldsDeclarer.declareStream("Record", new Fields("ID",Constants.KAFKA_TIME, Constants.KAFKA_SPOUT_TIME, Constants.SPLIT_BOLT_TIME, Constants.TASK_ID_FOR_SPLIT_BOLT,  Constants.HOST_NAME_FOR_SPLIT_BOLT, "TupleArrivalTimeChainIndex", "TupleComputationTime", "RightPredicateTaskID","RightPredicateHostID","BeforeTime", "AfterTime", "TaskID","Machine") );
 
     }
     private BitSet convertToObject(byte[] byteData) {

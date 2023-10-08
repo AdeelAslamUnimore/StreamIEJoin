@@ -157,13 +157,13 @@ public class TestBolt extends BaseRichBolt {
             //   System.out.println(offsetArrayL2.get(i).getIndex()+".."+permutationArrayL1.size());
             for (int j = index; j <= off2; j++) {
                 // System.out.println(permutationArrayL2[j].getIndex());
-                bitSet.set(permutationArrayL2.get(j-1).getTuple(), true);
+                bitSet.set(permutationArrayL2.get(j-1).getTupleIndexPermutation(), true);
             }
             index = off2;
             try {
                 // System.out.println(permutationArrayL1.length + "The Length is " + offsetArrayL1.size());
                 if((permutationArrayL1.get(i).getTuple() + 1)<offsetArrayL1.size())
-                    for (int j = offsetArrayL1.get(permutationArrayL1.get(i).getTuple() + 1).getIndex(); j < permutationArrayL2.size(); j++) {
+                    for (int j = offsetArrayL1.get(permutationArrayL1.get(i).getTupleIndexPermutation() + 1).getIndex(); j < permutationArrayL2.size(); j++) {
 //            System.out.println(bitSet);
                         if (bitSet.get(j)) {
                             //System.out.println("..."+offsetArrayL1[permutationArrayEast[i]]);

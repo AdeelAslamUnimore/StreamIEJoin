@@ -13,8 +13,8 @@ public class Configuration {
     //  Config mapJoinerBoltConstant= new Config();
 
      Map<String, Object> mapJoinerBoltConstant= new HashMap<>();
-      mapJoinerBoltConstant.put("LeftPredicateTuple","LeftStreamTuples");
-      mapJoinerBoltConstant.put("RightPredicateTuple","RightStream");
+      mapJoinerBoltConstant.put("LeftPredicateTuple","StreamR");
+      mapJoinerBoltConstant.put("RightPredicateTuple","StreamS");
 
 
       mapJoinerBoltConstant.put("LeftSmallerPredicateTuple","LeftSmaller");

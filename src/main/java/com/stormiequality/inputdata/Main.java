@@ -1,19 +1,13 @@
-package com.stormiequality.test;
+package com.stormiequality.inputdata;
 
 import com.correctness.iejoin.SpoutCorrectness;
-import com.esotericsoftware.kryo.Kryo;
 import com.stormiequality.benchmark.JoinBoltBTree;
 import com.stormiequality.join.*;
 import org.apache.storm.Config;
 import org.apache.storm.LocalCluster;
 import org.apache.storm.StormSubmitter;
-import org.apache.storm.serialization.DefaultKryoFactory;
 import org.apache.storm.topology.TopologyBuilder;
 import org.apache.storm.tuple.Fields;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 public class Main {
     public static void main(String[] args) throws Exception {

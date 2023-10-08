@@ -1,4 +1,4 @@
-package com.stormiequality.test;
+package com.stormiequality.inputdata;
 
 public class TestingDomain {
     private int id;

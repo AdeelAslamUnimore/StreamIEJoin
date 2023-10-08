@@ -40,6 +40,7 @@ public class IEJoinWithLinkedList extends BaseRichBolt {
     private ArrayList<Offset> listRightOffset;
     private String leftStreamOffset;
     private String rightSteamOffset;
+    private int testingCounter;
     /*
         This counter is used for flush out the data structures that holds the keys.
      */
@@ -57,15 +58,28 @@ public class IEJoinWithLinkedList extends BaseRichBolt {
     private Queue<Tuple> leftStreamQueue;
     private Queue<Tuple> rightStreamQueue;
     private LinkedList<IEJoinModel> linkedListIEJoinModel;
+    private String R1;
+    private String R2;
+    private String S1;
+    private String S2;
     //
     private int taskIndexTest=0;
     private IEJoinModel ieJoinModel;
+    //Map for Left Permutation
+    private HashMap<Integer, ArrayList<Permutation>> mapLeftPermutation;
+    // Map for Right Permutation
+    private HashMap<Integer, ArrayList<Permutation>> mapRightPermutation;
+    //map for Left offset
+    private HashMap<Integer, ArrayList<Offset>> mapLeftOffset;
+    // Map for Right Offset
+    private HashMap<Integer, ArrayList<Offset>> mapRightOffset;
+
 
     /*
         All initilizations either for data structures or booleans are defined
 
      */
-    public IEJoinWithLinkedList() {
+    public IEJoinWithLinkedList(String R1, String R2, String S1, String S2) {
         Map<String, Object> map = Configuration.configurationConstantForStreamIDs();
         this.mergeOperationStreamID = (String) map.get("MergingFlag");
         this.leftStreamID = (String) map.get("LeftPredicateTuple");
@@ -74,6 +88,10 @@ public class IEJoinWithLinkedList extends BaseRichBolt {
         this.rightSteamOffset = (String) map.get("RightBatchOffset");
         this.leftStreamPermutation = (String) map.get("LeftBatchPermutation");
         this.rightSteamPermutation = (String) map.get("RightBatchPermutation");
+        this.R1=R1;
+        this.R2=R2;
+        this.S1=S1;
+        this.S2=S2;
     }
 
     @Override
@@ -92,6 +110,11 @@ public class IEJoinWithLinkedList extends BaseRichBolt {
         linkedListIEJoinModel = new LinkedList<>();
         this.taskIndexTest= topologyContext.getThisTaskIndex();
         this.ieJoinModel = new IEJoinModel();
+        // Initilization of HashTable
+        this.mapLeftPermutation= new HashMap<>();
+        this.mapRightPermutation= new HashMap<>();
+        this.mapLeftOffset= new HashMap<>();
+        this.mapRightOffset= new HashMap<>();
         this.tupleRemovalCounter = Constants.MUTABLE_WINDOW_SIZE;
 
     }
@@ -126,39 +149,68 @@ public class IEJoinWithLinkedList extends BaseRichBolt {
                     mergeOperationTupleProbing(leftStreamQueue, rightStreamQueue);
                     flagDuringMerge = false;
                 }
+                // Probing Result
                 String streamID = tuple.getSourceStreamId();
                 lookUpOperation(tuple, streamID);
             }
         }
         /*
-        This is for left permutation computation input tuple is added into this array
+        This is for left permutation computation input tuple is added into this array here true is indicator it is left
          */
         if (tuple.getSourceStreamId().equals(leftStreamPermutation)) {
-            permutationComputation(tuple, true, listLeftPermutation);
+            permutationComputation(tuple, true);
+//            mapLeftPermutation.put(tuple.getIntegerByField(Constants.IDENTIFIER),listLeftPermutation);
+//            listLeftPermutation= new ArrayList<>();
         }
         /*
         This is for right stream permutation computation input stream tuple will add in this array
          */
         if (tuple.getSourceStreamId().equals(rightSteamPermutation)) {
-            permutationComputation(tuple, false, listRightPermutation);
+            permutationComputation(tuple, false);
+//            mapRightPermutation.put(tuple.getIntegerByField(Constants.IDENTIFIER),listRightPermutation);
+//            listRightPermutation= new ArrayList<>();
         }
         /*
         This is for left stream offset computation input stream tuple will add in this array
          */
         if (tuple.getSourceStreamId().equals(leftStreamOffset)) {
-            offsetComputation(tuple, true, listLeftOffset);
+            offsetComputation(tuple, true);
+//            mapLeftOffset.put(tuple.getIntegerByField(Constants.IDENTIFIER),listLeftOffset);
+//            listLeftOffset= new ArrayList<>();
         }
         /*
         This is for right stream offset computation input stream tuple will add in this array
          */
         if (tuple.getSourceStreamId().equals(rightSteamOffset)) {
-            offsetComputation(tuple, false, listRightOffset);
+            offsetComputation(tuple, false);
+
+//            mapRightOffset.put(tuple.getIntegerByField(Constants.IDENTIFIER),listRightOffset);
+//            listRightOffset= new ArrayList<>();
         }
         if (checkConditionForAllPermutationAndOffsetArrays(isLeftStreamPermutation, isRightStreamPermutation, isLeftStreamOffset, isRightStreamOffset)) {
+            List<Integer> idList = new ArrayList<>(mapLeftPermutation.keySet());
+            for(int id:idList) {
+                if(mapRightPermutation.containsKey(id)&&mapLeftOffset.containsKey(id)&&mapRightOffset.containsKey(id)){
+                   System.out.println(mapLeftPermutation.get(id).size()+"Left Permutation ");
+                    System.out.println(mapRightPermutation.get(id).size()+"Right Permutation ");
+                    System.out.println(mapLeftOffset.get(id).size()+"The mapLeft");
+                    System.out.println(mapRightOffset.get(id).size()+"The map Right Offser");
+                   // System.exit(-1);
+                    ieJoinModel.setLeftStreamPermutation(mapLeftPermutation.get(id));
+                    ieJoinModel.setRightStreamPermutation(mapRightPermutation.get(id));
+                    ieJoinModel.setRightStreamOffset(mapRightOffset.get(id));
+                    ieJoinModel.setLeftStreamOffset(mapLeftOffset.get(id));
+                    ieJoinModel.setTupleRemovalCounter(mapLeftPermutation.get(id).size() + mapRightPermutation.get(id).size());
+                    this.linkedListIEJoinModel.add(ieJoinModel);
+                    System.out.println(linkedListIEJoinModel.size()+"===LinkedListSize");
+                    ieJoinModel = new IEJoinModel();
+                    mapLeftPermutation.remove(id);
+                    mapRightPermutation.remove(id);
+                    mapRightOffset.remove(id);
+                    mapLeftOffset.remove(id);
+            }}
+            // Tuple Removing threshold also set it to the according for the Asynchronize window
 
-            ieJoinModel.setTupleRemovalCounter(this.listLeftPermutation.size() + this.listRightPermutation.size());
-            this.linkedListIEJoinModel.add(0, ieJoinModel);
-            ieJoinModel = new IEJoinModel();
             this.isLeftStreamOffset = false;
             this.isRightStreamOffset = false;
             this.isRightStreamPermutation = false;
@@ -167,8 +219,11 @@ public class IEJoinWithLinkedList extends BaseRichBolt {
             this.listRightPermutation = new ArrayList<>();
             this.listLeftOffset = new ArrayList<>();
             this.listRightOffset = new ArrayList<>();
+            if(!linkedListIEJoinModel.isEmpty())
             if(linkedListIEJoinModel.getFirst().getTupleRemovalCounter()>=Constants.IMMUTABLE_WINDOW_SIZE){
+                System.out.println("Tuples are removing"+linkedListIEJoinModel.size());
                 linkedListIEJoinModel.remove(linkedListIEJoinModel.getFirst());
+                System.out.println("Tuples are removed"+linkedListIEJoinModel.size());
             }
 
 
@@ -182,17 +237,17 @@ public class IEJoinWithLinkedList extends BaseRichBolt {
     public void declareOutputFields(OutputFieldsDeclarer outputFieldsDeclarer) {
 
     }
-
+// Give proper name to the fields
     private void lookUpOperation(Tuple tuple, String streamID) {
         tupleRemovalCounter++;
         // If tuple is from left predicate then it perform operation for evaluation of tuples from right
         if (streamID.equals(leftStreamID)) {
 
-            rightPredicateEvaluation(tuple.getIntegerByField("Duration"), tuple.getIntegerByField("Revenue"));
+            rightPredicateEvaluation(tuple.getIntegerByField(R1), tuple.getIntegerByField(R2));
         } else {
 
             // If tuple is from right predicate then it perform operation for evaluation of tuples from left
-            leftPredicateEvaluation(tuple.getIntegerByField("Time"), tuple.getIntegerByField("Cost"));
+            leftPredicateEvaluation(tuple.getIntegerByField(S1), tuple.getIntegerByField(S2));
         }
         // bulk removal;
         // Re initialise the data to for freeing the memory
@@ -220,23 +275,27 @@ public class IEJoinWithLinkedList extends BaseRichBolt {
      * @param tuple                tuple input streaming tuple
      * @param flag                 is sent from upstream processing stream to indicate it last tuple this is signature for its associated
      *                             isLeftStreamOrRightStreamPermutation to be true
-     * @param permutationArrayList a immutable list that which needs to be fill
+
      */
-    private void permutationComputation(Tuple tuple, boolean flag, ArrayList<Permutation> permutationArrayList) {
+    private void permutationComputation(Tuple tuple, boolean flag) {
         if (flag) {
             if (tuple.getValueByField(Constants.BATCH_COMPLETION_FLAG).equals(true)) {
                 isLeftStreamPermutation = true;
-                this.ieJoinModel.setLeftStreamPermutation(permutationArrayList);
+                mapLeftPermutation.put(tuple.getIntegerByField(Constants.IDENTIFIER),listLeftPermutation);
+                listLeftPermutation= new ArrayList<>();
 
             } else {
-                permutationArrayList.add(new Permutation(tuple.getIntegerByField(Constants.PERMUTATION_COMPUTATION_INDEX)));
+                listLeftPermutation.add(new Permutation(tuple.getIntegerByField(Constants.PERMUTATION_COMPUTATION_INDEX)));
+                // permutationArrayList.add(new Permutation(tuple.getIntegerByField(Constants.PERMUTATION_COMPUTATION_INDEX)));
             }
         } else {
             if (tuple.getValueByField(Constants.BATCH_COMPLETION_FLAG).equals(true)) {
-                isRightStreamPermutation = true;
-                this.ieJoinModel.setRightStreamPermutation(permutationArrayList);
+                  isRightStreamPermutation = true;
+                mapRightPermutation.put(tuple.getIntegerByField(Constants.IDENTIFIER),listRightPermutation);
+                listRightPermutation= new ArrayList<>();
             } else {
-                permutationArrayList.add(new Permutation(tuple.getIntegerByField(Constants.PERMUTATION_COMPUTATION_INDEX)));
+                listRightPermutation.add(new Permutation(tuple.getIntegerByField(Constants.PERMUTATION_COMPUTATION_INDEX)));
+                // permutationArrayList.add(new Permutation(tuple.getIntegerByField(Constants.PERMUTATION_COMPUTATION_INDEX)));
             }
         }
     }
@@ -248,29 +307,44 @@ public class IEJoinWithLinkedList extends BaseRichBolt {
      * @param tuple           tuple input streaming tuple
      * @param flag            is sent from upstream processing stream to indicate it last tuple this is signature for its associated
      *                        isLeftStreamOrRightStreamPermutation to be true
-     * @param offsetArrayList a immutable list that which needs to be fill
+
      */
 
-    private void offsetComputation(Tuple tuple, boolean flag, ArrayList<Offset> offsetArrayList) {
+    private void offsetComputation(Tuple tuple, boolean flag) {
         if (flag) {
             if (tuple.getValueByField(Constants.BATCH_COMPLETION_FLAG).equals(true)) {
                 isLeftStreamOffset = true;
-                this.ieJoinModel.setLeftStreamOffset(offsetArrayList);
+                mapLeftOffset.put(tuple.getIntegerByField(Constants.IDENTIFIER),listLeftOffset);
+               System.out.println("lis+Left==="+listLeftOffset.size());
+                testingCounter=0;
+              listLeftOffset= new ArrayList<>();
+                // Left Stream offset now in map
+              //  this.ieJoinModel.setLeftStreamOffset(offsetArrayList);
             } else {
+
+
                 byte[] presenceBit = tuple.getBinaryByField(Constants.BYTE_ARRAY);
                 BitSet presenceBitSetConversion = convertToObject(presenceBit);
-                offsetArrayList.add(new Offset(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.OFFSET_TUPLE_INDEX),
+                listLeftOffset.add(new Offset(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.OFFSET_TUPLE_INDEX),
                         presenceBitSetConversion, tuple.getIntegerByField(Constants.OFFSET_SIZE_OF_TUPLE)));
+                testingCounter=testingCounter+1;
             }
         } else {
             if (tuple.getValueByField(Constants.BATCH_COMPLETION_FLAG).equals(true)) {
+                        // Right Stream Offset now in map
+                //this.ieJoinModel.setRightStreamOffset(offsetArrayList);
                 isRightStreamOffset = true;
-                this.ieJoinModel.setRightStreamOffset(offsetArrayList);
+                System.out.println("lis+Right"+listRightOffset.size());
+                mapRightOffset.put(tuple.getIntegerByField(Constants.IDENTIFIER),listRightOffset);
+
+                listRightOffset= new ArrayList<>();
+
             } else {
                 byte[] presenceBit = tuple.getBinaryByField(Constants.BYTE_ARRAY);
                 BitSet presenceBitSetConversion = convertToObject(presenceBit);
-                offsetArrayList.add(new Offset(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.OFFSET_TUPLE_INDEX),
+                listRightOffset.add(new Offset(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.OFFSET_TUPLE_INDEX),
                         presenceBitSetConversion, tuple.getIntegerByField(Constants.OFFSET_SIZE_OF_TUPLE)));
+
             }
         }
     }
@@ -285,7 +359,7 @@ public class IEJoinWithLinkedList extends BaseRichBolt {
      * @param key             that is new key to probe
      * @return SearchModel that has a key and a bit for actual presence check
      */
-    private SearchModel searchKeyForRightStream(ArrayList<Offset> offsetArrayList, int key) {
+    private SearchModel searchKeyForRightStream(ArrayList<Offset> offsetArrayList, int  key) {
         SearchModel searchModel = new SearchModel();
         Offset offset = new Offset(key);
         Comparator<Offset> comparator = new Comparator<Offset>() {
@@ -295,6 +369,7 @@ public class IEJoinWithLinkedList extends BaseRichBolt {
         };
         int low = 0;
         int high = offsetArrayList.size() - 1;
+
         int result = -1;
 
         while (low <= high) {
@@ -349,10 +424,17 @@ public class IEJoinWithLinkedList extends BaseRichBolt {
         for (IEJoinModel ieJoinModel : this.linkedListIEJoinModel) {
 
             ieJoinModel.setTupleRemovalCounter(ieJoinModel.getTupleRemovalCounter() + 1);
+           // k
+
             SearchModel offsetSearchKeySecond = searchKeyForRightStream(ieJoinModel.getRightStreamOffset(), tuple2);
+         //   System.out.println(offsetSearchKeySecond.getIndexPosition());
             BitSet bitSet = new BitSet();
             int count = 0;
-            int offset = ieJoinModel.getRightStreamOffset().get(offsetSearchKeySecond.getIndexPosition()).getIndex() - 1;
+            int index=offsetSearchKeySecond.getIndexPosition();
+            if(index<0){
+                index=0;
+            }
+            int offset = ieJoinModel.getRightStreamOffset().get(index).getIndex() - 1;
 
             offset = offset - 1;
             // System.exit(-1);
@@ -362,13 +444,18 @@ public class IEJoinWithLinkedList extends BaseRichBolt {
 
                     try {
 
-                        bitSet.set(ieJoinModel.getRightStreamPermutation().get(j).getTuple() - 1, true);
+                        bitSet.set(ieJoinModel.getRightStreamPermutation().get(j).getTupleIndexPermutation() - 1, true);
                     } catch (IndexOutOfBoundsException e) {
                         e.printStackTrace();
                     }
                 }
+
                 SearchModel offsetSearchKeyFirst = searchKeyForRightStream(ieJoinModel.getLeftStreamOffset(), tuple1);
-                Offset offset1 = ieJoinModel.getLeftStreamOffset().get(offsetSearchKeyFirst.getIndexPosition());
+               int indexTuple2=offsetSearchKeyFirst.getIndexPosition();
+                if(indexTuple2<0){
+                    indexTuple2=0;
+                }
+                Offset offset1 = ieJoinModel.getLeftStreamOffset().get(indexTuple2);
                 int off = offset1.getIndex() - 1;
                 int size = ieJoinModel.getLeftStreamPermutation().size();
                 if (offset1.getBitSet().get(0) && offsetSearchKeyFirst.getBitSet().get(0)) {
@@ -445,33 +532,37 @@ public class IEJoinWithLinkedList extends BaseRichBolt {
        first it switch on all permutation location bits from the identified position to the end .
        Similarly, for probing it consider first key that identified  offset array left and scan it to the start for probing.
            */
-    private void leftPredicateEvaluation(int tuple1, int tuple2) {
+    private void leftPredicateEvaluation(int  tuple1, int tuple2) {
 // Linked List
         for (IEJoinModel ieJoinModel : this.linkedListIEJoinModel) {
 
             ieJoinModel.setTupleRemovalCounter(ieJoinModel.getTupleRemovalCounter() + 1);
+
             int offsetSearchKeySecond = searchKeyForLeftStream(ieJoinModel.getRightStreamOffset(), tuple2);
+            if(offsetSearchKeySecond<0){
+                offsetSearchKeySecond=0;
+            }
             int count = 0;
             BitSet bitSet = new BitSet();
             for (int i = offsetSearchKeySecond; i < ieJoinModel.getLeftStreamPermutation().size(); i++) {
 
                 try {
-                    bitSet.set(ieJoinModel.getLeftStreamPermutation().get(i).getTuple() - 1, true);
+                    bitSet.set(ieJoinModel.getLeftStreamPermutation().get(i).getTupleIndexPermutation() - 1, true);
                 } catch (IndexOutOfBoundsException e) {
                     e.printStackTrace();
                 }
             }
             int offsetSearchKeyFirst = searchKeyForLeftStream(ieJoinModel.getLeftStreamOffset(), tuple1) - 1;
             // Checking the equalities
-            for (int i = offsetSearchKeyFirst; i < -1; i--) {
+            for (int i = offsetSearchKeyFirst; i>-1; i--) {
                 // Check the equality to find first not equal element while back tracing.
-                if (ieJoinModel.getLeftStreamOffset().get(i).getKey() != offsetSearchKeyFirst) {
+                if (ieJoinModel.getLeftStreamOffset().get(i).getKey() != ieJoinModel.getLeftStreamOffset().get(offsetSearchKeyFirst).getKey()) {
                     offsetSearchKeyFirst = i;
                     break;
 
                 }
             }
-            for (int i = offsetSearchKeyFirst; i < -1; i--) {
+            for (int i = offsetSearchKeyFirst; i >-1; i--) {
                 if (bitSet.get(i)) {
                     count++;
                 }

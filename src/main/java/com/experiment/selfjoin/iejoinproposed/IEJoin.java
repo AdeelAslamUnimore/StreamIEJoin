@@ -89,7 +89,7 @@ public class IEJoin extends BaseRichBolt {
         if (tuple.getSourceStreamId().equals(mergeOperationStreamID)) {
 
             flagDuringMerge = tuple.getBooleanByField(Constants.MERGING_OPERATION_FLAG);
-            this.mergingTime = tuple.getLongByField(Constants.MERGING_TIME);
+            this.mergingTime = tuple.getLongByField(Constants.MERGING_START_TIME);
         }
         if ((tuple.getSourceStreamId().equals("StreamR"))) {
 
@@ -117,10 +117,10 @@ public class IEJoin extends BaseRichBolt {
                 if (mapForHandlingOverflow.containsKey(leftCountForOverflow)) {
                     PermutationData permutationDataOverFlow = mapForHandlingOverflow.get(leftCountForOverflow);
                     permutationDataOverFlow.setListLeftPermutation(listLeftPermutation);
-                    permutationDataOverFlow.setMergingTimeForEndTuple(tuple.getLongByField(Constants.MERGING_TIME));
+                    permutationDataOverFlow.setMergingTimeForEndTuple(tuple.getLongByField(Constants.MERGING_START_TIME));
                     mapForHandlingOverflow.replace(leftCountForOverflow, permutationDataOverFlow);
                 } else {
-                    permutationData.setMergingTimeForEndTuple(tuple.getLongByField(Constants.MERGING_TIME));
+                    permutationData.setMergingTimeForEndTuple(tuple.getLongByField(Constants.MERGING_START_TIME));
                     permutationData.setListLeftPermutation(listLeftPermutation);
                     mapForHandlingOverflow.put(leftCountForOverflow, permutationData);
                 }
@@ -143,10 +143,10 @@ public class IEJoin extends BaseRichBolt {
                 if (mapForHandlingOverflow.containsKey(rightCountForOverflow)) {
                     PermutationData permutationDataOverFlow = mapForHandlingOverflow.get(rightCountForOverflow);
                     permutationDataOverFlow.setListRightPermutation(listRightPermutation);
-                    permutationDataOverFlow.setMergingTimeForEndTuple(tuple.getLongByField(Constants.MERGING_TIME));
+                    permutationDataOverFlow.setMergingTimeForEndTuple(tuple.getLongByField(Constants.MERGING_START_TIME));
                     mapForHandlingOverflow.replace(rightCountForOverflow, permutationDataOverFlow);
                 } else {
-                    permutationData.setMergingTimeForEndTuple(tuple.getLongByField(Constants.MERGING_TIME));
+                    permutationData.setMergingTimeForEndTuple(tuple.getLongByField(Constants.MERGING_START_TIME));
                     permutationData.setListRightPermutation(listRightPermutation);
                     mapForHandlingOverflow.put(rightCountForOverflow, permutationData);
                 }
@@ -216,7 +216,7 @@ public class IEJoin extends BaseRichBolt {
         for (int i = 0; i < listRightPermutation.size(); i++) {
             try {
                 int ids = listRightPermutation.get(i).getId();
-                listPermutationSelfJoin.add(new PermutationSelfJoin(holdingList[ids], listRightPermutation.get(i).getTuple(), listLeftPermutation.get(i).getTuple()));
+                listPermutationSelfJoin.add(new PermutationSelfJoin(holdingList[ids], listRightPermutation.get(i).getTupleIndexPermutation(), listLeftPermutation.get(i).getTupleSelfJoin()));
             } catch (IndexOutOfBoundsException e) {
                 listPermutationSelfJoin.add(new PermutationSelfJoin(holdingList[listRightPermutation.size() - 1], listRightPermutation.get(i).getId(), listLeftPermutation.get(i).getId()));
 

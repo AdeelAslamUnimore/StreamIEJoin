@@ -56,7 +56,7 @@ public class RightPredicateEvaluation extends BaseRichBolt {
                     collector.emit("Right", new Values(tuple.getIntegerByField(Constants.TUPLE_ID), bytesArray));
                     Values recordValues = new Values(tuple.getIntegerByField(Constants.TUPLE_ID), tuple.getValueByField(Constants.KAFKA_TIME),
                             tuple.getValueByField(Constants.KAFKA_SPOUT_TIME), tuple.getValueByField(Constants.SPLIT_BOLT_TIME), tuple.getValueByField(Constants.TASK_ID_FOR_SPLIT_BOLT),
-                            tuple.getValueByField(Constants.HOST_NAME_FOR_SPLIT_BOLT), startTime, endTime, taskID, hostName);
+                            tuple.getValueByField(Constants.HOST_NAME_FOR_SPLIT_BOLT), startTime, endTime,rightWindow.size(), taskID, hostName);
                     collector.emit("RightRecord", recordValues);
                 }
             } catch (IOException e) {
@@ -72,7 +72,7 @@ public class RightPredicateEvaluation extends BaseRichBolt {
             long tupleRemovalTimeAfter=System.currentTimeMillis();
             Values recordValues = new Values(tuple.getIntegerByField(Constants.TUPLE_ID), 0,
                     0, 0,0,
-                    0, tupleRemovalTime, tupleRemovalTimeAfter, taskID, hostName);
+                    0, tupleRemovalTime, tupleRemovalTimeAfter,0, taskID, hostName);
             collector.emit("RightRecord", recordValues);
         }
     }
@@ -89,6 +89,6 @@ public class RightPredicateEvaluation extends BaseRichBolt {
         outputFieldsDeclarer.declareStream("Right",new Fields(Constants.TUPLE_ID,Constants.BYTE_ARRAY));
         outputFieldsDeclarer.declareStream("RightRecord", new Fields(Constants.TUPLE_ID,Constants.KAFKA_TIME,
                 Constants.KAFKA_SPOUT_TIME,Constants.SPLIT_BOLT_TIME,Constants.TASK_ID_FOR_SPLIT_BOLT,
-                Constants.HOST_NAME_FOR_SPLIT_BOLT,"EvaluationStartTime", "EvaluationEndTime", "taskID", "hostName"));
+                Constants.HOST_NAME_FOR_SPLIT_BOLT,"EvaluationStartTime", "EvaluationEndTime", "TupleSize","taskID", "hostName"));
     }
 }

@@ -1,3 +1,3 @@
 Manifest-Version: 1.0
-Main-Class: com.experiment.selfjoin.Topology
+Main-Class: com.baselinealgorithm.chainbplusandcss.CSSBasedTopology
 

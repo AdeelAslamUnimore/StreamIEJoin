@@ -118,9 +118,12 @@ public class MutableBPlusTree extends BaseRichBolt {
                 Constants.KAFKA_TIME, Constants.KAFKA_SPOUT_TIME, Constants.SPLIT_BOLT_TIME, Constants.TASK_ID_FOR_SPLIT_BOLT, Constants.HOST_NAME_FOR_SPLIT_BOLT, "TupleArrivalTime",
                 Constants.LESSER_PREDICATE_EVALUATION_TIME_BOLT, Constants.MUTABLE_BOLT_TASK_ID, Constants.MUTABLE_BOLT_MACHINE));
         //Permutation
-        outputFieldsDeclarer.declareStream(permutationComputationStreamID, new Fields(Constants.TUPLE, Constants.PERMUTATION_TUPLE_IDS, Constants.BATCH_COMPLETION_FLAG, Constants.MERGING_TIME));
+        outputFieldsDeclarer.declareStream(permutationComputationStreamID, new Fields(Constants.TUPLE, Constants.PERMUTATION_TUPLE_IDS, Constants.BATCH_COMPLETION_FLAG, Constants.MERGING_START_TIME));
         //Merge
-        outputFieldsDeclarer.declareStream(mergeOperationStreamID, new Fields(Constants.MERGING_OPERATION_FLAG, Constants.MERGING_TIME));
+        outputFieldsDeclarer.declareStream(mergeOperationStreamID, new Fields(Constants.MERGING_OPERATION_FLAG, Constants.MERGING_START_TIME));
+
+        outputFieldsDeclarer.declareStream("WindowCount",  new Fields("WindowSize"));
+
 
     }
 
@@ -228,6 +231,15 @@ public class MutableBPlusTree extends BaseRichBolt {
 
         this.outputCollector.emitDirect(downStreamTaskID, streamID, tuple, new Values(0, 0, true, System.currentTimeMillis()));
         this.outputCollector.ack(tuple);
+        if(this.operator.equals(">")){
+            for(int i=0;i<downStreamTasksForIEJoin.size();i++) {
+                if(i>downStreamTaskID) {
+                    outputCollector.emitDirect(downStreamTasksForIEJoin.get(i), "WindowCount", tuple, new Values(Constants.MUTABLE_WINDOW_SIZE));
+                    outputCollector.ack(tuple);
+                }
+            }
+        }
+
     }
 
     public synchronized void executeMethodSync(Tuple tuple){

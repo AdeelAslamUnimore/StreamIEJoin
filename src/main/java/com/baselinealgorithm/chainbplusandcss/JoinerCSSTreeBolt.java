@@ -10,23 +10,25 @@ import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
 import org.apache.storm.tuple.Values;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
+import java.io.*;
 import java.net.InetAddress;
 import java.util.BitSet;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.Map;
 
 public class JoinerCSSTreeBolt extends BaseRichBolt {
-    private BitSet leftHashSet;
-    private BitSet rightHashSet;
+
     private String leftStreamID;
     private String rightStreamID;
     private OutputCollector outputCollector;
     private String result;
     private int taskID;
     private String hostName;
+    private Map<String, BitSet> mapForRecordEvaluation;
+  //  private Map<String, String > recordMap;
+    private BufferedWriter writer;
+    private StringBuilder stringBuilder;
+    private int recordCounter;
     public JoinerCSSTreeBolt(String leftStreamID, String rightStreamID){
         Map<String, Object> map = Configuration.configurationConstantForStreamIDs();
         this.leftStreamID=leftStreamID;
@@ -39,7 +41,15 @@ public class JoinerCSSTreeBolt extends BaseRichBolt {
         taskID= topologyContext.getThisTaskId();
         this.outputCollector=outputCollector;
         try{
+            this.mapForRecordEvaluation = new HashMap<>();
+         //   this.recordMap= new HashMap<>();
+
             hostName= InetAddress.getLocalHost().getHostName();
+            this.stringBuilder= new StringBuilder();
+            this.writer= new BufferedWriter(new FileWriter(new File("/home/adeel/Data/Results/"+taskID+"JoinerImmutable.csv")));
+            this.writer.write("TUPLE_ID ,KAFKA_SPOUT_TIME, KAFKA_TIME, StartEvaluationTime,EndEvaluationTime,TaskId,HostName, EvaluationStartTimeBitSet, EvaluationEndTimeBitSet, TaskID, HostName \n");
+           this.writer.flush();
+            this.recordCounter=0;
         }catch (Exception e){
 
         }
@@ -47,28 +57,61 @@ public class JoinerCSSTreeBolt extends BaseRichBolt {
 
     @Override
     public void execute(Tuple tuple) {
-        int streamID=(Integer) tuple.getValue(1);
+        //int streamID=(Integer) tuple.getValue(1);
         long time=System.currentTimeMillis();
+
         if(tuple.getSourceStreamId().equals(leftStreamID)) {
-            leftHashSet = convertToObject(tuple.getBinaryByField(Constants.LEFT_HASH_SET));
+
+           BitSet leftHashSet = convertToObject(tuple.getBinaryByField(Constants.LEFT_HASH_SET));
+            if(mapForRecordEvaluation.containsKey(tuple.getStringByField(Constants.TUPLE_ID))){
+                mapForRecordEvaluation.get(tuple.getStringByField(Constants.TUPLE_ID)).and(leftHashSet);
+                mapForRecordEvaluation.remove(tuple.getStringByField(Constants.TUPLE_ID));
+              recordCounter++;
+              //  if(!recordMap.containsKey(tuple.getStringByField(Constants.TUPLE_ID))) {
+                    stringBuilder.append(tuple.getStringByField(Constants.TUPLE_ID) + "," + tuple.getValue(2) + "," +
+                            tuple.getValue(3) + "," + tuple
+                            .getValue(4) + "," + tuple.getValue(5) + "," + tuple.getValue(6) + "," + tuple.getValue(7) + "," + time + "," +
+                            System.currentTimeMillis() + "," + taskID + "," + hostName + "\n");
+                }
+            else{ mapForRecordEvaluation.put(tuple.getStringByField(Constants.TUPLE_ID), leftHashSet);
+            }
+//              recordMap.put(tuple.getStringByField(Constants.TUPLE_ID),tuple.getStringByField(Constants.TUPLE_ID)+","+tuple.getValue(2)+","+
+//                      tuple.getValue(3)+","+tuple
+//                      .getValue(4)+","+tuple.getValue(5)+","+tuple.getValue(6)+","+tuple.getValue(7)+","+time+","+
+//                      System.currentTimeMillis()+","+taskID+","+hostName);
+
+            }
          //System.out.println("LeftHashSet"+leftHashSet);
-        }
+
         if(tuple.getSourceStreamId().equals(rightStreamID)){
-            rightHashSet=convertToObject(tuple.getBinaryByField(Constants.RIGHT_HASH_SET));
+
+            BitSet rightHashSet=convertToObject(tuple.getBinaryByField(Constants.RIGHT_HASH_SET));
+            if(mapForRecordEvaluation.containsKey(tuple.getStringByField(Constants.TUPLE_ID))){
+                mapForRecordEvaluation.get(tuple.getStringByField(Constants.TUPLE_ID)).and(rightHashSet);
+                mapForRecordEvaluation.remove(tuple.getStringByField(Constants.TUPLE_ID));
+                recordCounter++;
+                stringBuilder.append(tuple.getStringByField(Constants.TUPLE_ID)+","+tuple.getValue(2)+","+
+                        tuple.getValue(3)+","+tuple
+                        .getValue(4)+","+tuple.getValue(5)+","+tuple.getValue(6)+","+tuple.getValue(7)+","+time+","+
+                        System.currentTimeMillis()+","+taskID+","+hostName+"\n");
+            }else{
+                mapForRecordEvaluation.put(tuple.getStringByField(Constants.TUPLE_ID), rightHashSet);
+            }
+
           //  System.out.println("rightStreamID"+rightHashSet);
         }
-        if(leftHashSet!=null&&rightHashSet!=null){
-            leftHashSet.and(rightHashSet);
-            long timeAfterCalculation= System.currentTimeMillis();
-            leftHashSet=null;
-            rightHashSet=null;
-            this.outputCollector.emit(result, tuple, new Values( time, timeAfterCalculation,streamID,taskID,hostName));
-            this.outputCollector.ack(tuple);
-        }
-        this.outputCollector.emit(tuple.getSourceStreamId(), tuple, new Values(tuple
-                .getValue(1), tuple.getValue(2),tuple.getValue(3),tuple.getValue(4),tuple.getValue(5),
-                tuple.getValue(6),tuple.getValue(7),tuple.getValue(8), tuple.getValue(9),tuple.getValue(10)));
-        this.outputCollector.ack(tuple);
+
+   if(recordCounter==1000){
+          recordCounter=0;
+          try{
+
+              this.writer.write(stringBuilder.toString());
+              this.writer.flush();
+              stringBuilder= new StringBuilder();
+          }catch (Exception e){
+              e.printStackTrace();
+          }
+      }
 
     }
 
@@ -86,17 +129,17 @@ public class JoinerCSSTreeBolt extends BaseRichBolt {
 
 
     }
-    public static HashSet<Integer> convertByteArrayToHashSet(byte[] byteArray) {
-        HashSet<Integer> hashSet = null;
-        try {
-            ByteArrayInputStream bis = new ByteArrayInputStream(byteArray);
-            ObjectInputStream ois = new ObjectInputStream(bis);
-            hashSet = (HashSet<Integer>) ois.readObject();
-        } catch (IOException | ClassNotFoundException e) {
-            e.printStackTrace();
-        }
-        return hashSet;
-    }
+//    public static HashSet<Integer> convertByteArrayToHashSet(byte[] byteArray) {
+//        HashSet<Integer> hashSet = null;
+//        try {
+//            ByteArrayInputStream bis = new ByteArrayInputStream(byteArray);
+//            ObjectInputStream ois = new ObjectInputStream(bis);
+//            hashSet = (HashSet<Integer>) ois.readObject();
+//        } catch (IOException | ClassNotFoundException e) {
+//            e.printStackTrace();
+//        }
+//        return hashSet;
+//    }
     private BitSet convertToObject(byte[] byteData) {
         try (ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(byteData);
              ObjectInputStream objectInputStream = new ObjectInputStream(byteArrayInputStream)) {

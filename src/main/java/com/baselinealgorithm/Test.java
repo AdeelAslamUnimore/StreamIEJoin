@@ -1,9 +1,7 @@
 package com.baselinealgorithm;
 
-import com.baselinealgorithm.chainbplusandcss.CSSTree;
-import com.correctness.iejoin.CSSTreeUpdated;
 import com.proposed.iejoinandbplustreebased.IEJoinModel;
-import com.stormiequality.BTree.BPlusTree;
+import com.stormiequality.BTree.BPlusTreeUpdated;
 
 import java.util.*;
 
@@ -13,7 +11,7 @@ public class Test {
 
     public static void main(String[] args) {
 
-        BPlusTree my_object = new BPlusTree(4);
+        BPlusTreeUpdated my_object = new BPlusTreeUpdated(4);
 
         my_object.insert(2, 12);
         my_object.insert(4, 11);

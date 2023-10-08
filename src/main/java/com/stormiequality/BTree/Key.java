@@ -11,6 +11,9 @@ public class Key implements Serializable {
     /** The key. */
     int key;
 
+
+
+    double electric_key;
     /** The list of values for the key. Set only for external nodes*/
     List<Integer> values;
     // This is the tmpID during permutation array
@@ -25,6 +28,14 @@ public class Key implements Serializable {
      */
     public Key(int key, int value) {
         this.key = key;
+        if (null == this.values) {
+            values = new ArrayList<Integer>();
+        }
+        this.values.add(value);
+    }
+
+    public Key(double electric_key, int value){
+        this.electric_key=electric_key;
         if (null == this.values) {
             values = new ArrayList<Integer>();
         }
@@ -52,7 +63,10 @@ public class Key implements Serializable {
         this.key = key;
         this.values = new ArrayList<Integer>();
     }
-
+    public Key(double key) {
+        this.electric_key = key;
+        this.values = new ArrayList<Integer>();
+    }
     /**
      * Gets the key.
      *
@@ -92,7 +106,13 @@ public class Key implements Serializable {
        // this.values.sort(Comparator.naturalOrder());
         //Collections.sort(this.values);
     }
+    public double getElectric_key() {
+        return electric_key;
+    }
 
+    public void setElectric_key(double electric_key) {
+        this.electric_key = electric_key;
+    }
     public List<Integer> getTmpIDs() {
         return tmpIDs;
     }

@@ -1,6 +1,6 @@
 package com.correctness.iejoin;
 
-import com.stormiequality.BTree.BPlusTree;
+import com.stormiequality.BTree.BPlusTreeUpdated;
 import com.stormiequality.BTree.Key;
 import com.stormiequality.BTree.Node;
 import com.stormiequality.BTree.Offset;
@@ -16,10 +16,10 @@ import java.sql.*;
 import java.util.*;
 
 public class TestCorrectness {
-    static BPlusTree durationBPlusTree = null;
-    private BPlusTree revenueBplusTree = null;
-    private BPlusTree timeBPlusTree = null;
-    private BPlusTree costBPlusTree = null;
+    static BPlusTreeUpdated durationBPlusTree = null;
+    private BPlusTreeUpdated revenueBplusTree = null;
+    private BPlusTreeUpdated timeBPlusTree = null;
+    private BPlusTreeUpdated costBPlusTree = null;
     static BitSet bitSet = null;
     private Connection conn;
     private int[] permutationArrayEast = null;
@@ -50,7 +50,7 @@ public class TestCorrectness {
     private Connection testConnection() throws Exception {
         conn = DriverManager.getConnection("jdbc:mysql://131.175.204.209/transaction_schema?" +
                 "user=root&password=5EK^g?`<D4w2P^(Z");
-        BPlusTree bPlusTree = new BPlusTree(4);
+        BPlusTreeUpdated bPlusTree = new BPlusTreeUpdated(4);
         //  bPlusTree.initialize(4);
         String query = "select * from east";
         Statement stmt = conn.createStatement();
@@ -176,10 +176,10 @@ public class TestCorrectness {
 //        }
 
 
-        BPlusTree bPlusTreeEastDuration = new BPlusTree(4);
-        BPlusTree bPlusTreeEastRevenue = new BPlusTree(4);
-        BPlusTree bPlusTreeWestTime = new BPlusTree(4);
-        BPlusTree bPlusTreeWestCost = new BPlusTree(4);
+        BPlusTreeUpdated bPlusTreeEastDuration = new BPlusTreeUpdated(4);
+        BPlusTreeUpdated bPlusTreeEastRevenue = new BPlusTreeUpdated(4);
+        BPlusTreeUpdated bPlusTreeWestTime = new BPlusTreeUpdated(4);
+        BPlusTreeUpdated bPlusTreeWestCost = new BPlusTreeUpdated(4);
         for (East east : eastArrayList) {
             bPlusTreeEastDuration.insert(east.getDuration(), east.getId_East());
             bPlusTreeEastRevenue.insert(east.getRevenue(), east.getId_East());
@@ -279,7 +279,7 @@ public class TestCorrectness {
         return arrayAListPermutation;
     }
 
-    public ArrayList<Offset> offsetComputation(Node nodeForLeft, BPlusTree rightBTree, OutputCollector collector, int taskId, String streamID, String nodeName, Tuple
+    public ArrayList<Offset> offsetComputation(Node nodeForLeft, BPlusTreeUpdated rightBTree, OutputCollector collector, int taskId, String streamID, String nodeName, Tuple
             tuple) {
         offsetComputationExtremeCase(nodeForLeft, rightBTree);
         //   System.exit(-1);
@@ -367,14 +367,14 @@ public class TestCorrectness {
             //   System.out.println(offsetArrayL2.get(i).getIndex()+".."+permutationArrayL1.size());
             for (int j = index; j <= off2; j++) {
                 // System.out.println(permutationArrayL2[j].getIndex());
-                bitSet.set(permutationArrayL2.get(j - 1).getTuple(), true);
+                bitSet.set(permutationArrayL2.get(j - 1).getTupleIndexPermutation(), true);
             }
             // System.out.println(bitSet);
             index = off2;
             try {
                 // System.out.println(permutationArrayL1.length + "The Length is " + offsetArrayL1.size());
                 if ((permutationArrayL1.get(i).getTuple() + 1) < offsetArrayL1.size())
-                    for (int j = offsetArrayL1.get(permutationArrayL1.get(i).getTuple() + 1).getIndex(); j < permutationArrayL2.size(); j++) {
+                    for (int j = offsetArrayL1.get(permutationArrayL1.get(i).getTupleIndexPermutation() + 1).getIndex(); j < permutationArrayL2.size(); j++) {
 //            System.out.println(bitSet);
                         if (bitSet.get(j)) {
                             //System.out.println("..."+offsetArrayL1[permutationArrayEast[i]]);
@@ -408,13 +408,13 @@ public class TestCorrectness {
                 for (int j = 0; j <= offset; j++) {
 
                     try {
-                        bitSet.set(permutationArrayL2.get(j).getTuple() - 1, true);
+                        bitSet.set(permutationArrayL2.get(j).getTupleIndexPermutation() - 1, true);
 
                     } catch (IndexOutOfBoundsException e) {
                         System.out.println(permutationArrayL2.size() + "..." + offset);
                     }
                 }
-                int permutationArray = permutationArrayL1.get(i).getTuple() - 1;
+                int permutationArray = permutationArrayL1.get(i).getTupleIndexPermutation() - 1;
                 Offset offset1 = offsetArrayL1.get(permutationArray);
                 int off = offset1.getIndex() - 1;
 
@@ -526,7 +526,7 @@ public class TestCorrectness {
         return conn;
     }
 
-    public ArrayList<Offset> offsetComputationExtremeCase(Node nodeForLeft, BPlusTree rightBTree) {
+    public ArrayList<Offset> offsetComputationExtremeCase(Node nodeForLeft, BPlusTreeUpdated rightBTree) {
         ArrayList<Offset> offsetArrayList = new ArrayList<>();
         int key = nodeForLeft.getKeys().get(0).getKey(); // FirstKEy Added
         boolean check = false;
@@ -536,7 +536,7 @@ public class TestCorrectness {
         int globalCount = 0;
         int startingIndexForNext = 0;
         BitSet bitset1 = null;
-        int sizeOfvalues = 0;
+       int sizeOfvalues = 0;
         for (int i = 0; i < node.getKeys().size(); i++) {
             if (node.getKeys().get(i).getKey() < key) {
                 globalCount += node.getKeys().get(i).getValues().size();
@@ -680,10 +680,10 @@ public class TestCorrectness {
     public void computeComputationForBPlusTree() throws Exception {
         ArrayList<East> eastArrayList = new TestCorrectness().eastArrayList();
         ArrayList<West> westArrayList = new TestCorrectness().westArrayList();
-        BPlusTree bPlusTreeWestTime = new BPlusTree(4);
-        BPlusTree bPlusTreeWestCost = new BPlusTree(4);
-        BPlusTree bPlusTreeEastDuration = new BPlusTree(4);
-        BPlusTree bPlusTreeEastRevenue = new BPlusTree(4);
+        BPlusTreeUpdated bPlusTreeWestTime = new BPlusTreeUpdated(4);
+        BPlusTreeUpdated bPlusTreeWestCost = new BPlusTreeUpdated(4);
+        BPlusTreeUpdated bPlusTreeEastDuration = new BPlusTreeUpdated(4);
+        BPlusTreeUpdated bPlusTreeEastRevenue = new BPlusTreeUpdated(4);
         long time1 = System.currentTimeMillis();
 
         for (int k = 0; k < 50000; k++) {
@@ -883,10 +883,10 @@ public class TestCorrectness {
 //        }
 
 
-        BPlusTree bPlusTreeEastDuration = new BPlusTree(4);
-        BPlusTree bPlusTreeEastRevenue = new BPlusTree(4);
-        BPlusTree bPlusTreeWestTime = new BPlusTree(4);
-        BPlusTree bPlusTreeWestCost = new BPlusTree(4);
+        BPlusTreeUpdated bPlusTreeEastDuration = new BPlusTreeUpdated(4);
+        BPlusTreeUpdated bPlusTreeEastRevenue = new BPlusTreeUpdated(4);
+        BPlusTreeUpdated bPlusTreeWestTime = new BPlusTreeUpdated(4);
+        BPlusTreeUpdated bPlusTreeWestCost = new BPlusTreeUpdated(4);
         for (East east : eastArrayList) {
             bPlusTreeEastDuration.insert(east.getDuration(), east.getId_East());
             bPlusTreeEastRevenue.insert(east.getRevenue(), east.getId_East());
