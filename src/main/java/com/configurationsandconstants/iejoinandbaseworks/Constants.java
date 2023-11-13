@@ -20,8 +20,8 @@ public class Constants {
     public static final String LEFT_PREDICATE_BOLT = "left_stream";
     public static final String RIGHT_PREDICATE_BOLT = "right_stream";
     public static final String BIT_SET_EVALUATION_BOLT ="bitset_evaluation";
-    public static final int MUTABLE_WINDOW_SIZE =500000; // Adjust it according to the parallelism for down stream IEJoin task.
-    public static final int IMMUTABLE_WINDOW_SIZE =1000000;
+    public static final int MUTABLE_WINDOW_SIZE =15000; // Adjust it according to the parallelism for down stream IEJoin task.
+    public static final int IMMUTABLE_WINDOW_SIZE =225000;
     public static final int SLIDING_COUNT=500000;
 
     //// Constant for benchMarks///

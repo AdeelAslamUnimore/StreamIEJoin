@@ -35,15 +35,15 @@ public class RecordBitSetJoin extends BaseRichBolt {
           //  this.counterForRecord=0;
             this.stringBuilderLeft = new StringBuilder();
             this.stringBuilderRight = new StringBuilder();
-            leftStreamWriter = new BufferedWriter(new FileWriter(new File("/home/adeel/Data/Results/leftStream"+".csv")));
-            rightStreamWriter = new BufferedWriter(new FileWriter(new File("/home/adeel/Data/Results/rightStream"+".csv")));
+            leftStreamWriter = new BufferedWriter(new FileWriter(new File("/home/adeel/Data/Results//leftStream"+".csv")));
+            rightStreamWriter = new BufferedWriter(new FileWriter(new File("/home/adeel/Data/Results//rightStream"+".csv")));
             leftStreamWriter.write(Constants.TUPLE_ID + "," +
                     Constants.KAFKA_TIME + "," + Constants.KAFKA_SPOUT_TIME + "," + Constants.SPLIT_BOLT_TIME + "," + Constants.TASK_ID_FOR_SPLIT_BOLT + "," + Constants.HOST_NAME_FOR_SPLIT_BOLT + "," + "TupleArrivalTime" + "," +
-                    Constants.GREATER_PREDICATE_EVALUATION_TIME_BOLT + "," + Constants.MUTABLE_BOLT_TASK_ID + "," + Constants.MUTABLE_BOLT_MACHINE + ",EvaluationStartTime , EvaluationEndTime,TasksID, HostName \n");
+                    Constants.GREATER_PREDICATE_EVALUATION_TIME_BOLT + "," + Constants.MUTABLE_BOLT_TASK_ID + "," + Constants.MUTABLE_BOLT_MACHINE + ",EvaluationStartTime , EvaluationEndTime,tmp_ID, TasksID, HostName \n");
             leftStreamWriter.flush();
             rightStreamWriter.write(Constants.TUPLE_ID + "," +
                     Constants.KAFKA_TIME + "," + Constants.KAFKA_SPOUT_TIME + "," + Constants.SPLIT_BOLT_TIME + "," + Constants.TASK_ID_FOR_SPLIT_BOLT + "," + Constants.HOST_NAME_FOR_SPLIT_BOLT + "," + "TupleArrivalTime" + "," +
-                    Constants.GREATER_PREDICATE_EVALUATION_TIME_BOLT + "," + Constants.MUTABLE_BOLT_TASK_ID + "," + Constants.MUTABLE_BOLT_MACHINE + ",EvaluationStartTime,EvaluationEndTime,TasksID, HostName \n");
+                    Constants.GREATER_PREDICATE_EVALUATION_TIME_BOLT + "," + Constants.MUTABLE_BOLT_TASK_ID + "," + Constants.MUTABLE_BOLT_MACHINE + ",EvaluationStartTime,EvaluationEndTime,tmp_ID,TasksID, HostName \n");
 
             rightStreamWriter.flush();
         }
@@ -59,7 +59,7 @@ public class RecordBitSetJoin extends BaseRichBolt {
             counterLeft++;
             this.stringBuilderLeft.append(tuple.getValue(0)+","+tuple
                     .getValue(1)+","+tuple.getValue(2)+","+ tuple.getValue(3)+","+ tuple.getValue(4)+","+ tuple.getValue(5)+","+
-                    tuple.getValue(6)+","+tuple.getValue(7)+","+tuple.getValue(8)+","+ tuple.getValue(9)+","+ tuple.getValue(10)+","+tuple.getValue(11)+","+tuple.getValue(12)+","+tuple.getValue(13)+"\n");
+                    tuple.getValue(6)+","+tuple.getValue(7)+","+tuple.getValue(8)+","+ tuple.getValue(9)+","+ tuple.getValue(10)+","+tuple.getValue(11)+","+tuple.getValue(12)+","+tuple.getValue(13)+","+tuple.getValue(14)+"\n");
             if(counterLeft==1000){
 
                 try {
@@ -78,7 +78,7 @@ public class RecordBitSetJoin extends BaseRichBolt {
             counterRight++;
             this.stringBuilderRight.append(tuple.getValue(0)+","+tuple
                     .getValue(1)+","+tuple.getValue(2)+","+ tuple.getValue(3)+","+ tuple.getValue(4)+","+ tuple.getValue(5)+","+
-                    tuple.getValue(6)+","+tuple.getValue(7)+","+tuple.getValue(8)+","+ tuple.getValue(9)+","+ tuple.getValue(10)+","+tuple.getValue(11)+","+tuple.getValue(12)+","+tuple.getValue(13)+"\n");
+                    tuple.getValue(6)+","+tuple.getValue(7)+","+tuple.getValue(8)+","+ tuple.getValue(9)+","+ tuple.getValue(10)+","+tuple.getValue(11)+","+tuple.getValue(12)+","+tuple.getValue(13)+","+tuple.getValue(14)+"\n");
             if(counterRight==1000){
                 try {
                     this.rightStreamWriter.write(stringBuilderRight.toString());

@@ -46,7 +46,8 @@ public class ResultBoltIEJoinOperation extends BaseRichBolt {
             bufferedWriterRecordIEJoin = new BufferedWriter(new FileWriter(new File("/home/adeel/Data/Results/bufferedWriterRecordIEJoin.csv")));
             bufferedWriterRecordMergingTuple = new BufferedWriter(new FileWriter(new File("/home/adeel/Data/Results/bufferedWriterRecordMergingTuple.csv")));
             bufferedWriterRecordEvaluationTuple = new BufferedWriter(new FileWriter(new File("/home/adeel/Data/Results/bufferedWriterRecordEvaluationTuple.csv")));
-            bufferedWriterRecordIEJoin.write("ID,KafkaTime,Kafka_SPOUT_TIME, TupleArrivalTime, TupleEvaluationTime, Task, Host \n");
+           bufferedWriterRecordIEJoin.write("ID,KafkaTime,Kafka_SPOUT_TIME, TupleArrivalTime, TupleEvaluationTime, tupleRemovalCounter, Task, Host , ThreadName , index\n");
+          //  bufferedWriterRecordIEJoin.write("ID,KafkaTime,Kafka_SPOUT_TIME, TupleArrivalTime, TupleEvaluationTime, Task, Host \n");
             bufferedWriterRecordIEJoin.flush();
             bufferedWriterRecordMergingTuple.write("MergeStartTime, MergeEndTime, MergeComputationStartPermuation, MergeEndTimeWithPermutation, Task, Host \n");
             bufferedWriterRecordMergingTuple.flush();
@@ -65,7 +66,11 @@ public class ResultBoltIEJoinOperation extends BaseRichBolt {
         if (tuple.getSourceStreamId().equals(recordIEJoinStreamID)) {
             this.recordIEJoinCounter++;
             recordIEJoinStringBuilder.append(tuple.getValue(0) + "," + tuple.getValue(1) + "," + tuple.getValue(2) +
-                    "," + tuple.getValue(3) + "," + tuple.getValue(4) + "," + tuple.getValue(5) + "," + tuple.getValue(6)  +"\n");
+                    "," + tuple.getValue(3) + "," + tuple.getValue(4) + "," + tuple.getValue(5) + "," + tuple.getValue(6) + "," + tuple.getValue(7) +"\n");
+
+
+//            recordIEJoinStringBuilder.append(tuple.getValue(0) + "," + tuple.getValue(1) + "," + tuple.getValue(2) +
+//                    "," + tuple.getValue(3) + "," + tuple.getValue(4) + "," + tuple.getValue(5) + "," + tuple.getValue(6)  + "," + tuple.getValue(7) + "," + tuple.getValue(8) +"\n");
         }
         if (tuple.getSourceStreamId().equals(mergingTuplesRecord)) {
 

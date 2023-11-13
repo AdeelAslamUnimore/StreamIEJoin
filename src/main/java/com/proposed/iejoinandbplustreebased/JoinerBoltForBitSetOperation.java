@@ -33,6 +33,14 @@ public class JoinerBoltForBitSetOperation extends BaseRichBolt {
     //
     private HashMap<String,BitSet> mapBitSetRightStream;
 
+    //BitSet for Test
+    private BitSet bitSetLeft;
+    //Bitset for Right
+    private BitSet bitSetRight;
+    // private LeftID
+    private String leftID;
+    // private RightID
+    private String rightID;
     // The buffered writer left stream
 //    BufferedWriter leftStreamWriter;
 //    // The buffered writer right stream
@@ -97,6 +105,91 @@ public class JoinerBoltForBitSetOperation extends BaseRichBolt {
      */
     @Override
     public void execute(Tuple tuple) {
+     testEvaluationData(tuple);
+      //  executeHashBased(tuple);
+    }
+
+    @Override
+    public void declareOutputFields(OutputFieldsDeclarer outputFieldsDeclarer) {
+      Fields fields= new Fields(  Constants.TUPLE_ID, Constants.KAFKA_TIME,
+                Constants.KAFKA_SPOUT_TIME, Constants.SPLIT_BOLT_TIME, Constants.TASK_ID_FOR_SPLIT_BOLT, Constants.HOST_NAME_FOR_SPLIT_BOLT, "TupleArrivalTime",
+                Constants.GREATER_PREDICATE_EVALUATION_TIME_BOLT, Constants.MUTABLE_BOLT_TASK_ID,Constants.MUTABLE_BOLT_MACHINE, "startEvalutionTime","EndEvaluationTime","tmp_ID","TaskID","MachineID");
+        outputFieldsDeclarer.declareStream(leftPredicateSourceStreamID, fields);
+        Fields rightFields= new Fields(  Constants.TUPLE_ID,Constants.KAFKA_TIME,
+                Constants.KAFKA_SPOUT_TIME, Constants.SPLIT_BOLT_TIME, Constants.TASK_ID_FOR_SPLIT_BOLT, Constants.HOST_NAME_FOR_SPLIT_BOLT,"TupleArrivalTime",
+                Constants.LESSER_PREDICATE_EVALUATION_TIME_BOLT, Constants.MUTABLE_BOLT_TASK_ID,Constants.MUTABLE_BOLT_MACHINE,"startEvalutionTime","EndEvaluationTime","tmp_ID","TaskID","MachineID");
+        outputFieldsDeclarer.declareStream(rightPredicateSourceStreamID, rightFields);
+
+
+    }
+
+    // Convert the byte array from source stream to original array
+    private BitSet convertToObject(byte[] byteData) {
+        try (ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(byteData);
+             ObjectInputStream objectInputStream = new ObjectInputStream(byteArrayInputStream)) {
+            Object object = objectInputStream.readObject();
+            if (object instanceof BitSet) {
+                return (BitSet) object;
+            } else {
+                throw new IllegalArgumentException("Invalid object type after deserialization");
+            }
+        } catch (ClassNotFoundException | IOException e) {
+            e.printStackTrace();
+            // Handle the exception appropriately
+        }
+        return null; // Return null or handle the failure case accordingly
+    }
+    public void testEvaluationData(Tuple tuple){
+        if (tuple.getSourceStreamId().equals(leftPredicateSourceStreamID)){
+
+            long tupleStartTime = System.currentTimeMillis();
+
+            // Extract the byte array representing the left stream predicate bit set.
+            byte[] byteArrayPredicateLeftBitSet = tuple.getBinaryByField(Constants.BYTE_ARRAY);
+
+            // Convert the byte array to a BitSet representing the left stream predicate.
+            BitSet predicateBitSetLeftStream = convertToObject(byteArrayPredicateLeftBitSet);
+            if(bitSetLeft!=null){
+                predicateBitSetLeftStream.and(bitSetLeft);
+                bitSetLeft=null;
+                this.outputCollector.emit(leftPredicateSourceStreamID, new Values(tuple
+                        .getValue(1), tuple.getValue(2), tuple.getValue(3), tuple.getValue(4), tuple.getValue(5),
+                        tuple.getValue(6), tuple.getValue(7), tuple.getValue(8), tuple.getValue(9), tuple.getValue(10),
+                        tupleStartTime, System.currentTimeMillis(), leftID, taskID, hostName));
+
+
+            }
+            else{
+                bitSetLeft= predicateBitSetLeftStream;
+                leftID=tuple.getStringByField(Constants.TUPLE_ID);
+            }
+        }
+        if (tuple.getSourceStreamId().equals(rightPredicateSourceStreamID)){
+
+            long tupleStartTime = System.currentTimeMillis();
+
+            // Extract the byte array representing the left stream predicate bit set.
+            byte[] byteArrayPredicateRightBitSet = tuple.getBinaryByField(Constants.BYTE_ARRAY);
+
+            // Convert the byte array to a BitSet representing the left stream predicate.
+            BitSet predicateBitSetRightStream = convertToObject(byteArrayPredicateRightBitSet);
+            if(bitSetRight!=null){
+                predicateBitSetRightStream.and(bitSetRight);
+                bitSetRight=null;
+                this.outputCollector.emit(rightPredicateSourceStreamID, new Values(tuple
+                        .getValue(1), tuple.getValue(2), tuple.getValue(3), tuple.getValue(4), tuple.getValue(5),
+                        tuple.getValue(6), tuple.getValue(7), tuple.getValue(8), tuple.getValue(9), tuple.getValue(10),
+                        tupleStartTime, System.currentTimeMillis(), rightID, taskID, hostName));
+
+            }
+            else{
+                bitSetRight= predicateBitSetRightStream;
+                rightID=tuple.getStringByField(Constants.TUPLE_ID);
+            }
+        }
+    }
+
+    public void executeHashBased(Tuple tuple){
         if (tuple.getSourceStreamId().equals(leftPredicateSourceStreamID)) {
             // Check if the left stream predicate for the tuple exists in the bit set map.
             if (mapBitSetLeftStream.containsKey(tuple.getStringByField(Constants.TUPLE_ID))) {
@@ -119,7 +212,7 @@ public class JoinerBoltForBitSetOperation extends BaseRichBolt {
                 this.outputCollector.emit(leftPredicateSourceStreamID, new Values(tuple
                         .getValue(1), tuple.getValue(2), tuple.getValue(3), tuple.getValue(4), tuple.getValue(5),
                         tuple.getValue(6), tuple.getValue(7), tuple.getValue(8), tuple.getValue(9), tuple.getValue(10),
-                        tupleStartTime, System.currentTimeMillis(), taskID, hostName));
+                        tupleStartTime, System.currentTimeMillis(),tuple.getStringByField(Constants.TUPLE_ID), taskID, hostName));
 
                 // Acknowledge the tuple processing.
                 this.outputCollector.ack(tuple);
@@ -153,7 +246,7 @@ public class JoinerBoltForBitSetOperation extends BaseRichBolt {
                 this.outputCollector.emit(rightPredicateSourceStreamID, new Values(tuple
                         .getValue(1), tuple.getValue(2), tuple.getValue(3), tuple.getValue(4), tuple.getValue(5),
                         tuple.getValue(6), tuple.getValue(7), tuple.getValue(8), tuple.getValue(9), tuple.getValue(10),
-                        tupleStartTime, System.currentTimeMillis(), taskID, hostName));
+                        tupleStartTime, System.currentTimeMillis(), tuple.getStringByField(Constants.TUPLE_ID), taskID, hostName));
 
                 // Acknowledge the tuple processing.
                 this.outputCollector.ack(tuple);
@@ -164,37 +257,6 @@ public class JoinerBoltForBitSetOperation extends BaseRichBolt {
                 mapBitSetRightStream.put(tuple.getStringByField(Constants.TUPLE_ID), predicateBitSetRightStream);
             }
 
-    }
-    }
-
-    @Override
-    public void declareOutputFields(OutputFieldsDeclarer outputFieldsDeclarer) {
-      Fields fields= new Fields(  Constants.TUPLE_ID, Constants.KAFKA_TIME,
-                Constants.KAFKA_SPOUT_TIME, Constants.SPLIT_BOLT_TIME, Constants.TASK_ID_FOR_SPLIT_BOLT, Constants.HOST_NAME_FOR_SPLIT_BOLT, "TupleArrivalTime",
-                Constants.GREATER_PREDICATE_EVALUATION_TIME_BOLT, Constants.MUTABLE_BOLT_TASK_ID,Constants.MUTABLE_BOLT_MACHINE, "startEvalutionTime","EndEvaluationTime","TaskID","MachineID");
-        outputFieldsDeclarer.declareStream(leftPredicateSourceStreamID, fields);
-        Fields rightFields= new Fields(  Constants.TUPLE_ID,Constants.KAFKA_TIME,
-                Constants.KAFKA_SPOUT_TIME, Constants.SPLIT_BOLT_TIME, Constants.TASK_ID_FOR_SPLIT_BOLT, Constants.HOST_NAME_FOR_SPLIT_BOLT,"TupleArrivalTime",
-                Constants.LESSER_PREDICATE_EVALUATION_TIME_BOLT, Constants.MUTABLE_BOLT_TASK_ID,Constants.MUTABLE_BOLT_MACHINE,"startEvalutionTime","EndEvaluationTime","TaskID","MachineID");
-        outputFieldsDeclarer.declareStream(rightPredicateSourceStreamID, rightFields);
-
-
-    }
-
-    // Convert the byte array from source stream to original array
-    private BitSet convertToObject(byte[] byteData) {
-        try (ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(byteData);
-             ObjectInputStream objectInputStream = new ObjectInputStream(byteArrayInputStream)) {
-            Object object = objectInputStream.readObject();
-            if (object instanceof BitSet) {
-                return (BitSet) object;
-            } else {
-                throw new IllegalArgumentException("Invalid object type after deserialization");
-            }
-        } catch (ClassNotFoundException | IOException e) {
-            e.printStackTrace();
-            // Handle the exception appropriately
         }
-        return null; // Return null or handle the failure case accordingly
     }
 }

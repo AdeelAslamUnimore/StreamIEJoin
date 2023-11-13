@@ -2,8 +2,6 @@ package com.experiment.selfjoin.iejoinproposed;
 
 import com.configurationsandconstants.iejoinandbaseworks.Configuration;
 import com.configurationsandconstants.iejoinandbaseworks.Constants;
-import com.internodeparallelisim.iejoin.ListNode;
-import com.internodeparallelisim.iejoin.WorkerThread;
 import com.stormiequality.join.Permutation;
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
@@ -12,11 +10,9 @@ import org.apache.storm.topology.base.BaseRichBolt;
 import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
 import org.apache.storm.tuple.Values;
+import redis.clients.jedis.Jedis;
 
-import java.io.BufferedWriter;
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.FileWriter;
+import java.io.*;
 import java.net.InetAddress;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
@@ -24,7 +20,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class LinkedListIEJoin extends BaseRichBolt {
+public class DistributedCacheLinkedListIEJoin extends BaseRichBolt {
     private boolean isLeftStreamPermutation;
     private boolean isRightStreamPermutation;
     private ArrayList<Permutation> listLeftPermutation;
@@ -39,10 +35,6 @@ public class LinkedListIEJoin extends BaseRichBolt {
     private LinkedHashMap<Integer, PermutationData> mapForHandlingOverflow;
     private int leftCountForOverflow;
     private int rightCountForOverflow;
-
-    private BufferedWriter bufferedWriter;
-
-
     private OutputCollector outputCollector;
     private LinkedList<ArrayList<PermutationSelfJoin>> linkedList;
     /// Time Taken
@@ -54,9 +46,15 @@ public class LinkedListIEJoin extends BaseRichBolt {
     private String mergeRecordEvaluationStreamID;
     private long timeForMergingLeftStream;
     private long timeForMergingRightStream;
-    // String Builder
-    private StringBuilder stringBuilder;
-    public LinkedListIEJoin() {
+    private BufferedWriter bufferedWriter;
+    private int taskIndex;
+    private int distributedTuplesCounter;
+   private BufferedWriter bufferedWriterForTesting;
+
+    private StringBuilder builder;
+
+
+    public DistributedCacheLinkedListIEJoin() {
         Map<String, Object> map = Configuration.configurationConstantForStreamIDs();
         this.permutationLeft = (String) map.get("LeftBatchPermutation");
         this.permutationRight = (String) map.get("RightBatchPermutation");
@@ -76,16 +74,25 @@ public class LinkedListIEJoin extends BaseRichBolt {
         this.listLeftPermutation = new ArrayList<>();
         this.listRightPermutation = new ArrayList<>();
         this.linkedList = new LinkedList<>();
-        this.tupleRemovalCounter = Constants.MUTABLE_WINDOW_SIZE;
+        this.taskIndex=topologyContext.getThisTaskIndex();
+        if(this.taskIndex==0) {
+            this.tupleRemovalCounter = Constants.MUTABLE_WINDOW_SIZE;
+        }
         this.flagDuringMerge = false;
         this.taskID = topologyContext.getThisTaskId();
         this.mapForHandlingOverflow = new LinkedHashMap<>();
         this.leftCountForOverflow = 0;
         this.rightCountForOverflow = 0;
+        this.taskIndex=topologyContext.getThisTaskIndex();
+        this.distributedTuplesCounter=0;
+
+
 
         try {
-            this.stringBuilder= new StringBuilder();
-             bufferedWriter= new BufferedWriter(new FileWriter(new File("D://VLDB Format//TestingRecords//"+topologyContext.getThisTaskId()+"IEJoin.csv")));
+
+          this. bufferedWriter= new BufferedWriter(new FileWriter(new File("D://VLDB Format//TestingRecords//"+topologyContext.getThisTaskId()+"IEJoin.csv")));
+            this. bufferedWriterForTesting= new BufferedWriter(new FileWriter(new File("D://VLDB Format//TestingRecords//"+topologyContext.getThisTaskId()+"IEJoinTesting.csv")));
+
             this.hostName = InetAddress.getLocalHost().getHostName();
         } catch (Exception e) {
             e.printStackTrace();
@@ -103,13 +110,62 @@ public class LinkedListIEJoin extends BaseRichBolt {
         }
         if ((tuple.getSourceStreamId().equals("StreamR"))) {
 
-
             if (flagDuringMerge) {
                 this.queueDuringMerge.offer(tuple);
             }
 
             if (!linkedList.isEmpty()) {
                 tupleRemovalCounter++; // Add the counter information later for window update
+               // Distributed Cache-maintain with respect to first counter
+
+                if(this.taskIndex==0) {
+                    distributedTuplesCounter++;
+                    if (distributedTuplesCounter==20){
+                        DistributedCache distributedCache = new DistributedCache("192.168.122.1", 6379);
+                        distributedCache.setValue("WindowCounter", tupleRemovalCounter);
+                        try {
+                            bufferedWriterForTesting.write("Writing,"+distributedTuplesCounter+
+                                    ","+tupleRemovalCounter+","+tuple.getIntegerByField(Constants.TUPLE_ID)+","+
+                                    tuple.getLongByField(Constants.KAFKA_TIME)+","+System.currentTimeMillis()+"\n");
+                            bufferedWriterForTesting.flush();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                        distributedTuplesCounter=0;
+                        distributedCache.close();
+
+                }
+
+                }
+
+                // Checking distributed caching:
+
+                if((taskIndex!=0)){
+                    distributedTuplesCounter=distributedTuplesCounter+1;
+                    if(distributedTuplesCounter==200) {
+
+                        DistributedCache distributedCache = new DistributedCache("192.168.122.1", 6379);
+                        int num = distributedCache.getValue("WindowCounter");
+                       // this.tupleRemovalCounter = num;
+//                        if(num>=0) {
+                            if (num > this.tupleRemovalCounter) {
+                                this.tupleRemovalCounter = num;
+                            }
+                        try {
+                            bufferedWriterForTesting.write(tuple.getIntegerByField(Constants.TUPLE_ID)+","+
+                                    ","+tupleRemovalCounter+","+num+","+
+                                    tuple.getLongByField(Constants.KAFKA_TIME)+","+System.currentTimeMillis()+"\n");
+                            bufferedWriterForTesting.flush();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+//                        }
+
+                        distributedCache.close();
+                        distributedTuplesCounter=0;
+                    }
+                }
+
                 int numCores = Runtime.getRuntime().availableProcessors(); // getting number of cores;
                 // Initilize the worker threads according to the available  processors
                 WorkerThreadForLookup[] workerThreads= new WorkerThreadForLookup[numCores];
@@ -118,9 +174,9 @@ public class LinkedListIEJoin extends BaseRichBolt {
                 Lock lock = new ReentrantLock();
                 AtomicInteger currentIndex = new AtomicInteger(); // Initialize the current index
                 for (int i = 0; i < numCores; i++) {
-                    workerThreads[i] = new WorkerThreadForLookup(tuple,outputCollector,linkedList,latch,lock,  currentIndex, tupleRemovalCounter, taskID,hostName, bufferedWriter);
+                    workerThreads[i] = new WorkerThreadForLookup(tuple,outputCollector,linkedList,latch,lock, currentIndex, tupleRemovalCounter,taskID,hostName, bufferedWriter);
                     workerThreads[i].start();
-                   // currentIndex++;
+                    // currentIndex++;
                 }
 
                 try {
@@ -128,21 +184,18 @@ public class LinkedListIEJoin extends BaseRichBolt {
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-               if(tupleRemovalCounter>=Constants.IMMUTABLE_WINDOW_SIZE){
-                   linkedList.removeFirst();
-                 //  tupleRemovalCounter= tupleRemovalCounter-Constants.MUTABLE_WINDOW_SIZE;
-                   tupleRemovalCounter= tupleRemovalCounter-100000;
-               }
+                if(tupleRemovalCounter>=Constants.IMMUTABLE_WINDOW_SIZE){
+                    linkedList.removeFirst();
+                    //  tupleRemovalCounter= tupleRemovalCounter-Constants.MUTABLE_WINDOW_SIZE;
+                    tupleRemovalCounter= tupleRemovalCounter-50000;
+                }
             }
         }
-        if(tuple.getSourceStreamId().equals("WindowCount")){
-
-            if(linkedList.isEmpty()) {
-                tupleRemovalCounter = tupleRemovalCounter + tuple.getIntegerByField("WindowSize");
-
-                outputCollector.ack(tuple);
-            }
-        }
+        //
+//        if(tuple.getSourceStreamId().equals("WindowCount")){
+//            if(linkedList.isEmpty())
+//                tupleRemovalCounter= tupleRemovalCounter+ tuple.getIntegerByField("WindowSize");
+//        }
 
         if (permutationLeft.equals(tuple.getSourceStreamId())) {
 
@@ -200,18 +253,46 @@ public class LinkedListIEJoin extends BaseRichBolt {
         }
         if (!mapForHandlingOverflow.isEmpty()) {
             Iterator<Integer> iterator = mapForHandlingOverflow.keySet().iterator();
+//            try {
+//                bufferedWriterForTesting.write("Write"+
+//                        ","+mapForHandlingOverflow.size()+"\n");
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
 
             while (iterator.hasNext()) {
                 int key = iterator.next();
                 PermutationData permutationDataForMap = mapForHandlingOverflow.get(key);
                 if (permutationDataForMap.getListLeftPermutation() != null && permutationDataForMap.getListRightPermutation() != null) {
                     permutationComputation(permutationDataForMap.getListLeftPermutation(), permutationDataForMap.getListRightPermutation(), permutationDataForMap.getMergingTimeForEndTuple());
+                 //   iterator.remove(); // Use the iterator's remove method to safely remove the element from the map
                     mapForHandlingOverflow.remove(key);
-                   // iterator.remove(); // Use the iterator's remove method to safely remove the element from the map
                     isLeftStreamPermutation = false;
                     isRightStreamPermutation = false;
+//                    if((taskIndex!=0)){
+//                        // distributedTuplesCounter=distributedTuplesCounter+1;
+//                        // if(distributedTuplesCounter==100) {
+//                        DistributedCache distributedCache = new DistributedCache("192.168.122.1", 6379);
+//                        tupleRemovalCounter= distributedCache.getValue("WindowCounter");
+//                        try {
+//                            //  tupleRemovalCounter=num;
+//                            distributedTuplesCounter++;
+//                            bufferedWriterForTesting.write("Reading,"+distributedTuplesCounter+
+//                                    ","+tupleRemovalCounter+","+
+//                                    mapForHandlingOverflow.size()+"\n");
+//                            bufferedWriterForTesting.flush();
+//                        } catch (IOException e) {
+//                            e.printStackTrace();
+//                        }
+//
+//                        distributedCache.close();
+//
+//                    }
                 }
+
             }
+
+
         }
 
     }
@@ -237,9 +318,10 @@ public class LinkedListIEJoin extends BaseRichBolt {
 
     private synchronized void permutationComputation(ArrayList<Permutation> listLeftPermutation, ArrayList<Permutation> listRightPermutation, long timeForMergingLeftStream) {
 
+
         long timeBeforePermutationComputation = System.currentTimeMillis();
         ArrayList<PermutationSelfJoin> listPermutationSelfJoin = new ArrayList<>(Constants.MUTABLE_WINDOW_SIZE);
-        int[] holdingList = new int[20000000];
+        int[] holdingList = new int[5000000];
         int counter = 1;
         for (int i = 0; i < listLeftPermutation.size(); i++) {
             //for (int ids : listLeftPermutation.get(i).getListOfIDs()) {

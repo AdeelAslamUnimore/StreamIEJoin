@@ -39,9 +39,9 @@ public class ResultBoltBitOperation extends BaseRichBolt {
         this.stringBuilderResultJoiner= new StringBuilder();
         this.counter = 0;
         try {
-            bufferedWriterLeftStream = new BufferedWriter(new FileWriter(new File("/home/adeel/Data/Results/IEJoinBitSetEvaluationLeftStream.csv")));
-            bufferedWriterRightStream = new BufferedWriter(new FileWriter(new File("/home/adeel/Data/Results/IEJoinBitSetEvaluationRightStream.csv")));
-            bufferedWriterResultsJoiner = new BufferedWriter(new FileWriter(new File("/home/adeel/Data/Results/IEJoinBitSetEvaluationStreamJoiner.csv")));
+            bufferedWriterLeftStream = new BufferedWriter(new FileWriter(new File("D://VLDB Format//TestingRecords//IEJoinBitSetEvaluationLeftStream.csv")));
+            bufferedWriterRightStream = new BufferedWriter(new FileWriter(new File("D://VLDB Format//TestingRecords//IEJoinBitSetEvaluationRightStream.csv")));
+            bufferedWriterResultsJoiner = new BufferedWriter(new FileWriter(new File("D://VLDB Format//TestingRecords//IEJoinBitSetEvaluationStreamJoiner.csv")));
 
             //    bufferedWriter= new BufferedWriter(new FileWriter(new File("/home/adeel/Data/Results/BitSetEvaluation.csv")));
             String greaterEvaluation = Constants.TUPLE_ID + "," +

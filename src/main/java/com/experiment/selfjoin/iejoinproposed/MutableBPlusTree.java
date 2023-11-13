@@ -2,6 +2,7 @@ package com.experiment.selfjoin.iejoinproposed;
 
 import com.configurationsandconstants.iejoinandbaseworks.Configuration;
 import com.configurationsandconstants.iejoinandbaseworks.Constants;
+import com.stormiequality.BTree.BPlusTreeUpdated;
 import com.stormiequality.BTree.BPlusTreeWithTmpForPermutation;
 import com.stormiequality.BTree.Node;
 import org.apache.storm.task.OutputCollector;
@@ -23,7 +24,7 @@ import java.util.Map;
 
 public class MutableBPlusTree extends BaseRichBolt {
     //left stream for MutableBPlusTree
-    private BPlusTreeWithTmpForPermutation bPlusTree;
+    private BPlusTreeUpdated bPlusTree;
     // mergeIntervalCount;
     private int mergeIntervalCount;
     // mergeIntervalDefinedByTheUser
@@ -72,7 +73,7 @@ public class MutableBPlusTree extends BaseRichBolt {
 
     @Override
     public void prepare(Map<String, Object> map, TopologyContext topologyContext, OutputCollector outputCollector) {
-        this.bPlusTree = new BPlusTreeWithTmpForPermutation(Constants.ORDER_OF_B_PLUS_TREE);
+        this.bPlusTree = new BPlusTreeUpdated(Constants.ORDER_OF_B_PLUS_TREE);
         this.outputCollector = outputCollector;
         this.mergeIntervalCount = 0;
         this.downStreamTasksForIEJoin = topologyContext.getComponentTasks(Constants.OFFSET_AND_IE_JOIN_BOLT_ID);
@@ -148,7 +149,7 @@ public class MutableBPlusTree extends BaseRichBolt {
     public void greaterPredicateEvaluation(Tuple tuple) {
         if (tuple.getSourceStreamId().equals(leftStreamGreater)) {
             tmpIDForPermutationForStreamR++;
-            bPlusTree.insert(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.TUPLE_ID), tmpIDForPermutationForStreamR);
+            bPlusTree.insert(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.TUPLE_ID));
 
             BitSet bitSet = bPlusTree.lessThenSpecificValue(tuple.getIntegerByField(Constants.TUPLE));
             if (bitSet != null) {
@@ -173,7 +174,7 @@ public class MutableBPlusTree extends BaseRichBolt {
         if (tuple.getSourceStreamId().equals(rightStreamSmaller)) {
             tmpIDForPermutationForStreamR++;
             // Inserting the tuple into the BTree location;
-            bPlusTree.insert(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.TUPLE_ID), tmpIDForPermutationForStreamR);
+            bPlusTree.insert(tuple.getIntegerByField(Constants.TUPLE), tuple.getIntegerByField(Constants.TUPLE_ID));
             // Evaluating Tuples from right stream BPlus Tree.
             BitSet bitSet = bPlusTree.greaterThenSpecificValue(tuple.getIntegerByField(Constants.TUPLE));
             if (bitSet != null) {
@@ -205,8 +206,8 @@ public class MutableBPlusTree extends BaseRichBolt {
         // Left Most Node for Stream S
         emitTuplePermutation(batch, tuple, permutationComputationStreamID, downStreamTasksForIEJoin.get(idForDownStreamTasksForIEJoin));
         tmpIDForPermutationForStreamR = 0;
-        idForDownStreamTasksForIEJoin++;
-        bPlusTree = new BPlusTreeWithTmpForPermutation(Constants.ORDER_OF_B_PLUS_TREE);
+        idForDownStreamTasksForIEJoin=idForDownStreamTasksForIEJoin+1;
+        bPlusTree = new BPlusTreeUpdated(Constants.ORDER_OF_B_PLUS_TREE);
         mergeIntervalCount = 0;
         if (idForDownStreamTasksForIEJoin >= downStreamTasksForIEJoin.size()) {
             idForDownStreamTasksForIEJoin = 0;
@@ -233,11 +234,12 @@ public class MutableBPlusTree extends BaseRichBolt {
         this.outputCollector.ack(tuple);
         if(this.operator.equals(">")){
             for(int i=0;i<downStreamTasksForIEJoin.size();i++) {
-                if(i>downStreamTaskID) {
+                if(downStreamTasksForIEJoin.get(i)>downStreamTaskID) {
                     outputCollector.emitDirect(downStreamTasksForIEJoin.get(i), "WindowCount", tuple, new Values(Constants.MUTABLE_WINDOW_SIZE));
-                    outputCollector.ack(tuple);
+                   outputCollector.ack(tuple);
                 }
             }
+
         }
 
     }

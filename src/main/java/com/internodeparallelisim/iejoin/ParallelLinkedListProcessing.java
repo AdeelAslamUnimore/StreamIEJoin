@@ -4,12 +4,14 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 public class ParallelLinkedListProcessing {
     public static void main(String[] args) {
-        // Create your linked list
+        for(int i=1;i<10;i++)
+      new ParallelLinkedListProcessing().test(i);
+    }
+
+    public synchronized void test(int num){
         LinkedList<ListNode> linkedList = new LinkedList<>();
         ListNode listNode= new ListNode(14);
         ListNode listNode1= new ListNode(15);
@@ -43,9 +45,9 @@ public class ParallelLinkedListProcessing {
         WorkerThread[] threads = new WorkerThread[numCores];
         Queue<ListNode> workQueue = new LinkedList<>(linkedList);
         CountDownLatch latch = new CountDownLatch(numCores);
-        Lock listLock = new ReentrantLock();
+
         for (int i = 0; i < numCores; i++) {
-            threads[i] = new WorkerThread(linkedList, latch,listLock);
+            threads[i] = new WorkerThread(workQueue, latch);
             threads[i].start();
         }
 
@@ -54,5 +56,7 @@ public class ParallelLinkedListProcessing {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+        System.out.println("I am here ");
+
     }
 }

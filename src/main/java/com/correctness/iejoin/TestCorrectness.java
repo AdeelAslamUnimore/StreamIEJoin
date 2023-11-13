@@ -38,11 +38,11 @@ public class TestCorrectness {
 
 
 //
-//        new TestCorrectness().insertEast(100000);
+      new TestCorrectness().insertEast(100000);
 //        new TestCorrectness().insertWest(100000);
 
     //    new TestCorrectness().test();
-        new TestCorrectness().permutationAndComputationArray();
+     //   new TestCorrectness().permutationAndComputationArray();
 
 
     }
@@ -474,8 +474,8 @@ public class TestCorrectness {
 
             id_East = id_East + 1;
             id = id + 1;
-            duration = random.nextInt(100000);
-            revenue = random.nextInt(100000);
+            duration = random.nextInt(25000);
+            revenue = random.nextInt(25000);
             core = random.nextInt(100000);
             preparedStatement = conn.prepareStatement(insertQuery);
             preparedStatement.setInt(1, id_East);

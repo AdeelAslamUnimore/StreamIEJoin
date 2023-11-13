@@ -25,7 +25,7 @@ public class IEJoin extends BaseRichBolt {
     private String permutationRight;
     private String mergeOperationStreamID;
     private boolean flagDuringMerge; //For tuple
-    private int tupleRemovalCounter = 0;
+    private  int tupleRemovalCounter = 0;
     private Queue<Tuple> queueDuringMerge;
     private String leftStreamID;
     private LinkedHashMap<Integer, PermutationData> mapForHandlingOverflow;
@@ -234,6 +234,8 @@ public class IEJoin extends BaseRichBolt {
         }
         timeDuringMerge = System.currentTimeMillis() - timeDuringMerge;
         if (tupleRemovalCounter >= Constants.IMMUTABLE_WINDOW_SIZE) {
+//            for(int i=0;i<5;i++)
+//                linkedList.remove(linkedList.get(i));
             linkedList.remove(linkedList.getFirst());
             tupleRemovalCounter = Constants.MUTABLE_WINDOW_SIZE;
 
