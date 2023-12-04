@@ -79,6 +79,38 @@ Make sure to include POM files in your program
 
     </dependencies>
 ```
+## How to run a code
+### Parameter setting
+In code their is a static class. constant "com.configurationsandconstants.iejoinandbaseworks" update your
+- sliding window
+- slide interval
+- tree order
+### Self Join query
+Use class Topology from this package "com.experiment.selfjoin" 
+-Call method in main the args[0] is kafkaservers, args[1] is topic name
+- Adjust the record translator part of code as input to SPO-Join as example of NYC taxi data set it is 
+```
+  String[] splitValues = record.value().split(","); // Split record.value() based on a delimiter, adjust it as needed
+                    double value1, value2 = 0;
+                    //  int id=0;
+                    try {
+                        value1 = Double.parseDouble(splitValues[5]);
+                        value2 = Double.parseDouble(splitValues[11]);
+                        //    id= Integer.parseInt(splitValues[splitValues.length - 2]);
 
+
+                    } catch (NumberFormatException e) {
+                        value1 = 0;
+                        value2 = 0;
+                        //  id=0;
+                    }
+                    long kafkaTime = Long.parseLong(splitValues[splitValues.length - 1]);
+                    // Extract the second value
+                    id[0]++;
+                    //String value3 = splitValues[2];
+
+                    return new Values((int) Math.round(value1), (int) Math.round(value2), id[0], kafkaTime, System.currentTimeMillis());
+                }, new Fields("distance", "amount", "ID", "kafkaTime", "Time"), "StreamR")
+```
 
 
