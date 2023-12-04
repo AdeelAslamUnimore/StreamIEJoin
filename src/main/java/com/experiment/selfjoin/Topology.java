@@ -33,7 +33,7 @@ import java.util.*;
 public class Topology {
     public static void main(String[] args) throws Exception {
 
-        new Topology().IEJoin();
+        new Topology().SPOJoin(args[0],args[1]);
 
     }
 
@@ -59,7 +59,7 @@ public class Topology {
         cluster.submitTopology("Storm", config, builder.createTopology());
     }
 
-    public void IEJoin() throws Exception {
+    public void SPOJoin(String kafkaservers, String topicName) throws Exception {
 
         Config config = new Config();
         Map<String, Object> map = Configuration.configurationConstantForStreamIDs();
@@ -79,37 +79,37 @@ public class Topology {
 
         // Kafka Spout for reading tuples:
 
-//        KafkaSpoutConfig<String, String> kafkaSpoutConfigForStreamR = KafkaSpoutConfig.builder("192.168.122.160:9093,192.168.122.231:9094", "selfjoin")
-//                .setProp(ConsumerConfig.GROUP_ID_CONFIG, groupId)
-//                .setProp(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class)
-//                .setProp(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class)
-//                .setProcessingGuarantee(KafkaSpoutConfig.ProcessingGuarantee.AT_LEAST_ONCE)
-//                .setRecordTranslator(record -> {
-//                    String[] splitValues = record.value().split(","); // Split record.value() based on a delimiter, adjust it as needed
-//                    double value1, value2 = 0;
-//                    //  int id=0;
-//                    try {
-//                        value1 = Double.parseDouble(splitValues[5]);
-//                        value2 = Double.parseDouble(splitValues[11]);
-//                        //    id= Integer.parseInt(splitValues[splitValues.length - 2]);
-//
-//
-//                    } catch (NumberFormatException e) {
-//                        value1 = 0;
-//                        value2 = 0;
-//                        //  id=0;
-//                    }
-//                    long kafkaTime = Long.parseLong(splitValues[splitValues.length - 1]);
-//                    // Extract the second value
-//                    id[0]++;
-//                    //String value3 = splitValues[2];
-//
-//                    return new Values((int) Math.round(value1), (int) Math.round(value2), id[0], kafkaTime, System.currentTimeMillis());
-//                }, new Fields("distance", "amount", "ID", "kafkaTime", "Time"), "StreamR")
-//                .setFirstPollOffsetStrategy(FirstPollOffsetStrategy.UNCOMMITTED_LATEST)
-//                .build(); 03435242370
-//        builder.setSpout(Constants.KAFKA_SPOUT, new KafkaSpout<>(kafkaSpoutConfigForStreamR), 1);
-         builder.setSpout(Constants.KAFKA_SPOUT, new Spout(1000));
+        KafkaSpoutConfig<String, String> kafkaSpoutConfigForStreamR = KafkaSpoutConfig.builder(kafkaservers, topicName)
+                .setProp(ConsumerConfig.GROUP_ID_CONFIG, groupId)
+                .setProp(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class)
+                .setProp(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class)
+                .setProcessingGuarantee(KafkaSpoutConfig.ProcessingGuarantee.AT_LEAST_ONCE)
+                .setRecordTranslator(record -> {
+                    String[] splitValues = record.value().split(","); // Split record.value() based on a delimiter, adjust it as needed
+                    double value1, value2 = 0;
+                    //  int id=0;
+                    try {
+                        value1 = Double.parseDouble(splitValues[5]);
+                        value2 = Double.parseDouble(splitValues[11]);
+                        //    id= Integer.parseInt(splitValues[splitValues.length - 2]);
+
+
+                    } catch (NumberFormatException e) {
+                        value1 = 0;
+                        value2 = 0;
+                        //  id=0;
+                    }
+                    long kafkaTime = Long.parseLong(splitValues[splitValues.length - 1]);
+                    // Extract the second value
+                    id[0]++;
+                    //String value3 = splitValues[2];
+
+                    return new Values((int) Math.round(value1), (int) Math.round(value2), id[0], kafkaTime, System.currentTimeMillis());
+                }, new Fields("distance", "amount", "ID", "kafkaTime", "Time"), "StreamR")
+                .setFirstPollOffsetStrategy(FirstPollOffsetStrategy.UNCOMMITTED_LATEST)
+                .build();
+        builder.setSpout(Constants.KAFKA_SPOUT, new KafkaSpout<>(kafkaSpoutConfigForStreamR), 1);
+     //    builder.setSpout(Constants.KAFKA_SPOUT, new Spout(1000));
         builder.setBolt(Constants.SPLIT_BOLT, new SplitBolt())
                 .fieldsGrouping(Constants.KAFKA_SPOUT, "StreamR", new Fields("ID"));
         builder.setBolt(Constants.LEFT_PREDICATE_BOLT, new MutableBPlusTree(">", (String) map.get("LeftBatchPermutation")))
@@ -159,9 +159,8 @@ public class Topology {
 
 //        builder.setBolt(Constants.IEJOIN_BOLT_RESULT, new ResultBoltIEJoinOperation()).shuffleGrouping(Constants.OFFSET_AND_IE_JOIN_BOLT_ID, (String) map.get("MergingTuplesRecord"))
 //                .shuffleGrouping(Constants.OFFSET_AND_IE_JOIN_BOLT_ID, (String) map.get("MergingTupleEvaluation")).shuffleGrouping(Constants.OFFSET_AND_IE_JOIN_BOLT_ID, (String) map.get("IEJoinResult"));
-           LocalCluster cluster = new LocalCluster();
-           cluster.submitTopology("Storm", config, builder.createTopology());
-  //StormSubmitter.submitTopology("selfjoinIE", config, builder.createTopology());
+
+  StormSubmitter.submitTopology("selfjoinSPOJoin", config, builder.createTopology());
     }
 
     public void BplusTree() throws Exception {
