@@ -140,7 +140,7 @@ To deploy your project, it is suggested to create a JAR file and submit it to th
 ## Deploying the JAR as a Storm Topology
 
 1. **Rename the JAR File:**
-   - Rename the generated JAR file to a suitable name. For example, if your JAR file is named `NYCSELFJOIN.jar`, you might rename it to `storm_topology.jar`.
+   - Rename the generated JAR file to a suitable name. For example, for self join re-named `NYCSELFJOIN.jar`.
 
 2. **Transfer the JAR to the Master Node:**
    - Transfer the renamed JAR file to the master node of your cluster using a tool like `scp` or any other method that suits your environment.
