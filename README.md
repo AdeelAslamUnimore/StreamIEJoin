@@ -11,6 +11,10 @@ This SPO is depicted by the Figure given below. New Tuple from any field is firs
 ### Setting Up the Cluster
 
 Follow these guidelines to set up your cluster for running in cluster mode. Detailed instructions for each component can be found in the relevant links provided:
+Fundamental requirement:
+- Java above 1.8
+- Python 3.5
+- OS Linux perfer on all nodes
 
 #### Nimbus (Master Node):
 - Set up Nimbus as the master node.
@@ -35,6 +39,15 @@ Follow these guidelines to set up your cluster for running in cluster mode. Deta
 #### Time Sync:
 - Use Nimbus node as the time sync server.
 - Ensure all nodes are synchronized for accurate time.
+## Code POM Files
+Make sure to include POM files in your program
+```
+        <dependency>
+            <groupId> org.apache.storm</groupId>
+            <artifactId> storm-core</artifactId>
+            <version>2.4.0</version>
+        </dependency>
+```
 
 
 
