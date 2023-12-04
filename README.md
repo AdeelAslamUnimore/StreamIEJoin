@@ -39,7 +39,7 @@ Fundamental requirement:
 #### Time Sync:
 - Use Nimbus node as the time sync server.
 - Ensure all nodes are synchronized for accurate time.
-## Code POM Files
+## Code POM Files:
 Make sure to include POM files in your program
 ```
         <dependencies>
@@ -80,37 +80,38 @@ Make sure to include POM files in your program
     </dependencies>
 ```
 ## How to run a code
-### Parameter setting
-In code their is a static class. constant "com.configurationsandconstants.iejoinandbaseworks" update your
-- sliding window
-- slide interval
-- tree order
-### Self Join query
-Use class Topology from this package "com.experiment.selfjoin" 
--Call method in main the args[0] is kafkaservers, args[1] is topic name
--Adjust the record translator part of code as input to SPO-Join as example of NYC taxi data set it is 
+## Parameter Settings
+
+In the code, there is a static class `com.configurationsandconstants.iejoinandbaseworks` containing constants. Update the following constants for your configuration:
+
+- **Sliding Window:** Adjust the sliding window constant in the `com.configurationsandconstants.iejoinandbaseworks` class.
+
+- **Slide Interval:** Modify the slide interval constant in the same class.
+
+- **Tree Order:** Update the tree order constant as needed.
+
+## Self Join Query
+
+### Using Class Topology from "com.experiment.selfjoin"
+
+1. Call the method in the main class with the following parameters:
+   - `args[0]`: Kafka servers
+   - `args[1]`: Topic name
+
+2. Adjust the record translator part of the code. For example, in the NYC taxi dataset, it may look like this:
+
+   ```java
+   String[] splitValues = record.value().split(","); // Split record.value() based on a delimiter, adjust it as needed
+   double value1, value2 = 0;
+   try {
+       value1 = Double.parseDouble(splitValues[5]);
+       value2 = Double.parseDouble(splitValues[11]);
+   } catch (NumberFormatException e) {
+       value1 = 0;
+       value2 = 0;
+   }
+   long kafkaTime = Long.parseLong(splitValues[splitValues.length - 1]);
+   int[] id = {0}; // Assuming id is an integer array, adjust as needed
+   return new Values((int) Math.round(value1), (int) Math.round(value2), id[0], kafkaTime, System.currentTimeMillis());
 ```
-  String[] splitValues = record.value().split(","); // Split record.value() based on a delimiter, adjust it as needed
-                    double value1, value2 = 0;
-                    //  int id=0;
-                    try {
-                        value1 = Double.parseDouble(splitValues[5]);
-                        value2 = Double.parseDouble(splitValues[11]);
-                        //    id= Integer.parseInt(splitValues[splitValues.length - 2]);
-
-
-                    } catch (NumberFormatException e) {
-                        value1 = 0;
-                        value2 = 0;
-                        //  id=0;
-                    }
-                    long kafkaTime = Long.parseLong(splitValues[splitValues.length - 1]);
-                    // Extract the second value
-                    id[0]++;
-                    //String value3 = splitValues[2];
-
-                    return new Values((int) Math.round(value1), (int) Math.round(value2), id[0], kafkaTime, System.currentTimeMillis());
-                }, new Fields("distance", "amount", "ID", "kafkaTime", "Time"), "StreamR")
-```
-
 
