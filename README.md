@@ -137,5 +137,29 @@ To deploy your project, it is suggested to create a JAR file and submit it to th
    - Select the artifact you just created.
    - Choose `Build`.
    - The JAR file will be created in the `out/artifacts` directory of your project.
-### Deploy it to the cluster 
+## Deploying the JAR as a Storm Topology
+
+1. **Rename the JAR File:**
+   - Rename the generated JAR file to a suitable name. For example, if your JAR file is named `NYCSELFJOIN.jar`, you might rename it to `storm_topology.jar`.
+
+2. **Transfer the JAR to the Master Node:**
+   - Transfer the renamed JAR file to the master node of your cluster using a tool like `scp` or any other method that suits your environment.
+
+3. **Run the Storm Topology:**
+   - Use the following command to submit and run the Storm topology on the cluster:
+     ```bash
+     storm jar storm_topology.jar com.proposed.iejoinandbplustreebased.CrossJoinTopology Kafka1:9092 selfjoin
+     ```
+     - Replace `storm_topology.jar` with the actual name of your JAR file.
+     - `com.proposed.iejoinandbplustreebased.CrossJoinTopology` is the main class for your Storm topology. Adjust it based on your project structure.
+     - `Kafka1:9092` is the Kafka server information.
+     - `selfjoin` is the topic name.
+
+### Cross Join
+
+For cross join functionality, use the `com.proposed.iejoinandbplustreebased` package. Adjust your topology demands in the respective package according to your project requirements.
+
+For example, you might need to modify the parameters, configurations, or logic within the `CrossJoinTopology` class to achieve the desired cross join behavior.
+
+Ensure that the input data, Kafka configuration, and any other relevant settings are appropriately configured for the cross join operation.
 
