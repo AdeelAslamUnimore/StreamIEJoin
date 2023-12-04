@@ -12,8 +12,8 @@ This SPO is depicted by the Figure given below. New Tuple from any field is firs
 
 Follow these guidelines to set up your cluster for running in cluster mode. Detailed instructions for each component can be found in the relevant links provided:
 Fundamental requirement:
-- Java above 1.8
-- Python 3.5
+- Java >= 1.8
+- Python >= 3.5
 - OS Linux perfer on all nodes
 
 #### Nimbus (Master Node):
@@ -162,4 +162,16 @@ For cross join functionality, use the `com.proposed.iejoinandbplustreebased` pac
 For example, you might need to modify the parameters, configurations, or logic within the `CrossJoinTopology` class to achieve the desired cross join behavior.
 
 Ensure that the input data, Kafka configuration, and any other relevant settings are appropriately configured for the cross join operation.
+
+## Need Help or Have Questions?
+
+If you encounter any issues while running or have questions about the project, feel free to reach out for assistance:
+
+**Contact:**
+- Adeel Aslam
+- Email: [adeel.aslam@unimore.it](mailto:adeel.aslam@unimore.it)
+
+We're here to help and support your experience with this project!
+
+
 
