@@ -113,5 +113,29 @@ In the code, there is a static class `com.configurationsandconstants.iejoinandba
    long kafkaTime = Long.parseLong(splitValues[splitValues.length - 1]);
    int[] id = {0}; // Assuming id is an integer array, adjust as needed
    return new Values((int) Math.round(value1), (int) Math.round(value2), id[0], kafkaTime, System.currentTimeMillis());
-```
+### Deploy the topology on cluster:
+To deploy your project, it is suggested to create a JAR file and submit it to the master node of the cluster. Follow the steps below, preferably using IntelliJ IDEA:
+
+1. **Create a Compiled JAR Using Maven:**
+   - Open your project in IntelliJ IDEA.
+   - Ensure that you have a `pom.xml` file in the root of your project.
+   - In IntelliJ, navigate to the Maven tool window (usually on the right side).
+   - Run the "clean" and "install" goals to compile and package your project into a JAR file.
+   - The JAR file will be created in the `target` directory of your project.
+
+2. **Create a JAR Using IntelliJ IDEA Artifacts:**
+   - Open your project in IntelliJ IDEA.
+   - Navigate to `File` > `Project Structure`.
+   - In the Project Structure dialog, go to `Artifacts`.
+   - Click on the `+` icon and select `JAR` > `From modules with dependencies...`.
+   - Choose the module containing your main class.
+   - Set the `Main Class` to your main class.
+   - Click `OK` to close the dialog.
+
+3. **Build the Artifact:**
+   - Go to `Build` > `Build Artifacts`.
+   - Select the artifact you just created.
+   - Choose `Build`.
+   - The JAR file will be created in the `out/artifacts` directory of your project.
+### Deploy it to the cluster 
 
