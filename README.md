@@ -88,7 +88,7 @@ In code their is a static class. constant "com.configurationsandconstants.iejoin
 ### Self Join query
 Use class Topology from this package "com.experiment.selfjoin" 
 -Call method in main the args[0] is kafkaservers, args[1] is topic name
-- Adjust the record translator part of code as input to SPO-Join as example of NYC taxi data set it is 
+-Adjust the record translator part of code as input to SPO-Join as example of NYC taxi data set it is 
 ```
   String[] splitValues = record.value().split(","); // Split record.value() based on a delimiter, adjust it as needed
                     double value1, value2 = 0;
